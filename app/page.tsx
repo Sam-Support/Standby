@@ -7,7 +7,8 @@ import { platformStats, upcomingEvents } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ compte?: string }> }) {
+  const { compte } = await searchParams;
   const db = await getDb();
   const events = await upcomingEvents(db, { limit: 6 });
   const salons = (await upcomingEvents(db, { kind: "salon", limit: 3 })).filter((e) => daysUntil(e.startsOn) >= 0);
@@ -15,6 +16,7 @@ export default async function Home() {
 
   return (
     <>
+      {compte === "supprime" && <p className="note ok">Votre compte est supprimé. Merci d’avoir utilisé standby.</p>}
       <section className="hero">
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           <span className="clay s lab" style={{ alignSelf: "flex-start", padding: "9px 14px", borderRadius: 14, color: "#1B2150", display: "inline-flex", gap: 8, alignItems: "center" }}>

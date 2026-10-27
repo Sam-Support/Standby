@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { supabaseAdmin, supabaseEnabled } from "@/lib/integrations/supabase";
 
@@ -73,6 +73,16 @@ export async function getFile(key: string): Promise<Buffer | null> {
   } catch {
     return null;
   }
+}
+
+export async function deleteFile(key: string | null | undefined) {
+  if (!key) return;
+  const { bucket, objectPath } = split(key);
+  if (supabaseEnabled()) {
+    await supabaseAdmin().storage.from(bucket).remove([objectPath]);
+    return;
+  }
+  await rm(path.join(LOCAL_ROOT, bucket, objectPath), { force: true });
 }
 
 /** URL servie par l'application (contrôle d'accès dans /api/fichiers). */

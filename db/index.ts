@@ -24,6 +24,10 @@ export function getDb(): Promise<Db> {
 }
 
 async function init(): Promise<Db> {
+  if (process.env.VITEST) {
+    // les tests passent leur propre base : ouvrir celle du développement en parallèle du serveur la corromprait
+    throw new Error("getDb() est interdit dans les tests : passez la base créée par createPgliteDb().");
+  }
   const url = process.env.DATABASE_URL;
   if (url) {
     const { default: postgres } = await import("postgres");

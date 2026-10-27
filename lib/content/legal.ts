@@ -84,7 +84,7 @@ export const CGU: DocSection[] = [
   },
 ];
 
-export const cgv = (feePct: string): DocSection[] => [
+export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
   {
     title: "Champ d’application",
     body: [
@@ -117,7 +117,11 @@ export const cgv = (feePct: string): DocSection[] => [
   },
   {
     title: "Modification et annulation",
-    body: ["Toute modification ou annulation s’effectue depuis l’espace entreprise. Les conditions financières applicables selon le délai de prévenance sont les suivantes : [barème d’annulation à compléter]."],
+    body: [
+      "Toute modification ou annulation s’effectue depuis l’espace entreprise. Les frais d’annulation dépendent du délai entre l’annulation et le premier jour réservé (montage compris) :",
+      cancellation,
+      "Le pourcentage s’applique à la rémunération prévue des commerciaux ayant accepté leur mission à la date d’annulation, majorée des frais de service et de la TVA ; ces commerciaux reçoivent la même proportion de leur rémunération à titre d’indemnité. Le barème applicable est celui en vigueur à la confirmation de la réservation. Le montant exact est affiché avant toute annulation. [Barème à valider juridiquement.]",
+    ],
   },
   { title: "Réclamations", body: ["Toute réclamation relative à une prestation doit être adressée via la page {Contact|/contact} dans un délai de [délai] jours suivant la fin de l’événement."] },
   { title: "Droit applicable", body: ["Les présentes conditions sont soumises au droit français. En cas de litige, et à défaut d’accord amiable, les tribunaux compétents sont ceux du ressort du siège de l’éditeur."] },
@@ -160,11 +164,16 @@ export const CONFIDENTIALITE: DocSection[] = [
       "Les données sont accessibles aux équipes habilitées de standby, aux entreprises exposantes et aux commerciaux pour les seules missions concernées, et à nos prestataires techniques (hébergement, base de données, e-mails, lecture des cartes), de paiement et de paie dans la limite de leurs missions. Elles ne sont jamais vendues.",
     ],
   },
-  { title: "Durées de conservation", body: ["Comptes : pendant la relation contractuelle puis [durée]. Pièces comptables : 10 ans. Leads : [durée] après remise à l’entreprise. Traceurs : 13 mois maximum."] },
+  {
+    title: "Durées de conservation",
+    body: [
+      "Comptes : pendant la relation contractuelle puis [durée], ou jusqu’à leur suppression par l’utilisateur. Pièces comptables : 10 ans, rattachées à un compte anonymisé en cas de suppression. Leads : supprimés automatiquement après la durée fixée par standby ([durée, 365 jours par défaut]). Traceurs : 13 mois maximum.",
+    ],
+  },
   {
     title: "Vos droits",
     body: [
-      "Vous disposez des droits d’accès, de rectification, d’effacement, d’opposition, de limitation et de portabilité, ainsi que du droit de définir des directives post-mortem. Pour les exercer : [adresse e-mail]. Vous pouvez introduire une réclamation auprès de la CNIL (cnil.fr).",
+      "Vous disposez des droits d’accès, de rectification, d’effacement, d’opposition, de limitation et de portabilité, ainsi que du droit de définir des directives post-mortem. Depuis la page {Mes données personnelles|/compte}, vous téléchargez vos données et supprimez votre compte vous-même. Pour toute autre demande : [adresse e-mail]. Vous pouvez introduire une réclamation auprès de la CNIL (cnil.fr).",
     ],
   },
   {

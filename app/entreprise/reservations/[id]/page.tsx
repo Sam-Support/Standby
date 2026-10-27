@@ -13,6 +13,11 @@ import { companyDashboard } from "@/lib/services/company-views";
 import { bookingLeads, templateColumns } from "@/lib/services/leads";
 import { fileUrl } from "@/lib/storage";
 import { cancel } from "@/app/reserver/actions";
+import { cancellationSchedule } from "@/lib/cancellation";
+import type { CancellationRecord } from "@/lib/services/billing";
+import { CANCELLABLE, cancellationTerms } from "@/lib/services/cancellation";
+import { getPricing } from "@/lib/settings";
+import { ReviewForm } from "./review-form";
 
 export const metadata = { title: "Réservation" };
 
@@ -30,7 +35,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const [payment] = await db.select().from(s.payments).where(eq(s.payments.bookingId, id));
   const quote = (booking.quote as typeof ctx.quote | null) ?? ctx.quote;
   const team = ctx.assignments.filter((a) => a.status !== "selectionne");
-  const canCancel = ["brouillon", "envoyee", "partielle", "confirmee"].includes(booking.status);
+  const canCancel = CANCELLABLE.includes(booking.status);
+  const terms = canCancel ? await cancellationTerms(db, booking) : null;
+  const schedule = cancellationSchedule((await getPricing(db, booking.confirmedAt ?? new Date())).cancellation);
+  const cancelled = booking.status === "annulee" ? (booking.cancellation as CancellationRecord | null) : null;
+  const canReview = ["validee", "payee"].includes(booking.status);
+  const reviews = canReview ? await db.select().from(s.reviews).where(eq(s.reviews.bookingId, id)) : [];
 
   return (
     <>
@@ -76,6 +86,19 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             ))}
           </section>
+
+          {canReview && (
+            <section className="clay panel" id="avis">
+              <h2>Noter votre équipe</h2>
+              <p className="muted small">Vos notes guident le matching des prochains exposants. Un seul avis par personne et par événement.</p>
+              {team
+                .filter((a) => a.status === "acceptee")
+                .map((a) => {
+                  const r = reviews.find((x) => x.freelancerId === a.freelancerId);
+                  return <ReviewForm key={a.id} a={a} given={r ? { rating: r.rating, comment: r.comment } : undefined} />;
+                })}
+            </section>
+          )}
 
           {booking.status === "heures_a_valider" && row && (
             <section className="clay panel">
@@ -160,15 +183,43 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </p>
             )}
           </section>
-          {canCancel && (
+          {canCancel && terms && (
             <section className="clay panel">
               <h2>Annuler</h2>
+              <div className="stack" style={{ gap: 6 }}>
+                {schedule.map((r) => (
+                  <div key={r.when} className="dev">
+                    <span>{r.when}</span>
+                    <b>{r.bps === 0 ? "gratuit" : `${r.bps / 100} %`}</b>
+                  </div>
+                ))}
+              </div>
               <p className="muted small">
-                Les conditions financières dépendent du délai de prévenance (voir les <Link href="/cgv">CGV</Link>). Les commerciaux sont prévenus immédiatement.
+                Le pourcentage s’applique à la rémunération prévue des commerciaux qui ont déjà accepté, frais de service et TVA en sus ; ils reçoivent
+                la même part en indemnité. Voir les <Link href="/cgv">CGV</Link>.
               </p>
-              <ActionForm action={cancel.bind(null, id)}>
+              <p className={`note${terms.totalHtCents > 0 ? "" : " ok"}`}>
+                Annulation aujourd’hui ({terms.label}) :{" "}
+                {terms.totalHtCents > 0 ? `${euros(terms.totalHtCents)} HT, soit ${euros(terms.totalTtcCents)} TTC (${terms.bps / 100} %)` : "sans frais"}
+              </p>
+              <ActionForm action={cancel.bind(null, id)} className="stack">
+                {terms.totalHtCents > 0 && (
+                  <label className="check">
+                    <input type="checkbox" name="accept" required />
+                    J’accepte les frais d’annulation de {euros(terms.totalTtcCents)} TTC.
+                  </label>
+                )}
                 <Submit className="clay s btn sm danger" pending="Annulation…">Annuler la réservation</Submit>
               </ActionForm>
+            </section>
+          )}
+          {cancelled && (
+            <section className="clay panel">
+              <h2>Annulation</h2>
+              <p className="small">
+                Annulée {cancelled.label}
+                {cancelled.waived ? " · frais offerts" : cancelled.totalHtCents > 0 ? ` · frais de ${euros(cancelled.totalTtcCents)} TTC (${cancelled.bps / 100} %)` : " · sans frais"}
+              </p>
             </section>
           )}
           <Link className="small" href={`/contact?ref=${booking.ref}`}>Une question sur cette réservation ?</Link>

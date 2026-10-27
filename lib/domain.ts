@@ -160,8 +160,8 @@ export const ASSIGNMENT_STATUS_LABELS: Record<string, { label: string; tone: "" 
   annulee: { label: "Annulée", tone: "" },
 };
 
-// Clés de tarification (valeurs entières : points de base pour les %, centimes pour les montants)
-export const PRICING_DEFAULTS: Record<string, { value: number; label: string; unit: "bps" | "cents" }> = {
+// Réglages versionnés (valeurs entières : points de base pour les %, centimes pour les montants, jours)
+export const PRICING_DEFAULTS: Record<string, { value: number; label: string; unit: "bps" | "cents" | "days" }> = {
   service_fee_bps: { value: 1200, label: "Frais de service exposant", unit: "bps" },
   freelancer_commission_bps: { value: 0, label: "Commission prélevée sur les commerciaux", unit: "bps" },
   vat_bps: { value: 2000, label: "TVA", unit: "bps" },
@@ -172,6 +172,15 @@ export const PRICING_DEFAULTS: Record<string, { value: number; label: string; un
   "floor:chef": { value: 3600, label: "Tarif plancher · Chef·fe de stand", unit: "cents" },
   "floor:animateur": { value: 2300, label: "Tarif plancher · Animateur·rice", unit: "cents" },
   "floor:demonstrateur": { value: 2500, label: "Tarif plancher · Démonstrateur·rice produit", unit: "cents" },
+  // Barème d'annulation (selon le nombre de jours avant le premier jour réservé)
+  cancel_free_days: { value: 14, label: "Annulation gratuite à partir de (jours avant le 1er jour)", unit: "days" },
+  cancel_tier1_days: { value: 7, label: "Palier 1 : à partir de (jours avant)", unit: "days" },
+  cancel_tier1_bps: { value: 3000, label: "Palier 1 : frais d’annulation", unit: "bps" },
+  cancel_tier2_days: { value: 2, label: "Palier 2 : à partir de (jours avant)", unit: "days" },
+  cancel_tier2_bps: { value: 5000, label: "Palier 2 : frais d’annulation", unit: "bps" },
+  cancel_last_bps: { value: 10000, label: "Dernière minute (ou événement commencé) : frais d’annulation", unit: "bps" },
+  // RGPD
+  leads_retention_days: { value: 365, label: "Conservation des leads après réception", unit: "days" },
 };
 
 export const AVATAR_COLORS = ["#82C9FF", "#B39BFF", "#FF8CB6", "#FFCD4A", "#68D1A4", "#4D58EE"];

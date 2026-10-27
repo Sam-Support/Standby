@@ -37,10 +37,15 @@ test.describe("accessibilité (axe, WCAG 2.1 AA)", () => {
   test("espace entreprise et parcours de réservation", async ({ page }) => {
     await dismissCookies(page);
     await login(page, ACCOUNTS.entreprise);
-    for (const path of ["/entreprise", "/entreprise/profil", "/reserver", "/notifications"]) {
+    for (const path of ["/entreprise", "/entreprise/profil", "/reserver", "/notifications", "/compte"]) {
       await page.goto(path);
       await expectAccessible(page);
     }
+    // détail d'une réservation confirmée : barème et panneau d'annulation
+    await page.goto("/entreprise");
+    await page.getByRole("link", { name: "Supply Chain Event" }).click();
+    await page.getByRole("heading", { name: "Annuler" }).waitFor();
+    await expectAccessible(page);
     await page.goto("/reserver/nouveau?salon=equiphotel-2026");
     await page.waitForURL(/\/equipe$/);
     await expectAccessible(page);
@@ -61,7 +66,7 @@ test.describe("accessibilité (axe, WCAG 2.1 AA)", () => {
   test("administration", async ({ page }) => {
     await dismissCookies(page);
     await login(page, ACCOUNTS.admin);
-    for (const path of ["/admin", "/admin/salons", "/admin/tarification", "/admin/inscrits?tous=1", "/admin/reservations", "/admin/finances"]) {
+    for (const path of ["/admin", "/admin/salons", "/admin/tarification", "/admin/inscrits?tous=1", "/admin/reservations", "/admin/finances", "/admin/avis"]) {
       await page.goto(path);
       await expectAccessible(page);
     }

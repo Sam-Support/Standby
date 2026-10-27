@@ -20,6 +20,30 @@ async function validatedMinutes(db: Db, assignmentIds: string[]) {
   return m;
 }
 
+/** Numérotation continue par année : F-2026-00001. */
+export async function nextInvoiceNumber(db: Db) {
+  const year = new Date().getFullYear();
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(s.invoices)
+    .where(gte(s.invoices.issuedAt, new Date(`${year}-01-01T00:00:00Z`)));
+  return `F-${year}-${String(n + 1).padStart(5, "0")}`;
+}
+
+/** Indemnités d'annulation enregistrées sur la réservation (voir services/cancellation). */
+export type CancellationRecord = {
+  bps: number;
+  label: string;
+  daysBefore: number;
+  waived: boolean;
+  subtotalCents: number;
+  serviceFeeCents: number;
+  totalHtCents: number;
+  vatCents: number;
+  totalTtcCents: number;
+  compensations: { assignmentId: string; freelancerId: string; amountCents: number }[];
+};
+
 /** Heures toutes validées : facture, débit de l'exposant, puis paie. */
 export async function finalizeBooking(db: Db, bookingId: string) {
   const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, bookingId));
@@ -48,16 +72,11 @@ export async function finalizeBooking(db: Db, bookingId: string) {
   const vatCents = Math.round((totalHtCents * pricing.vatBps) / 10000);
   const totalTtcCents = totalHtCents + vatCents;
 
-  const year = new Date().getFullYear();
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(s.invoices)
-    .where(gte(s.invoices.issuedAt, new Date(`${year}-01-01T00:00:00Z`)));
   const [invoice] = await db
     .insert(s.invoices)
     .values({
       bookingId: b.id,
-      number: `F-${year}-${String(n + 1).padStart(5, "0")}`,
+      number: await nextInvoiceNumber(db),
       lines: [...lines, { label: `Frais de service (${pricing.serviceFeeBps / 100} %)`, detail: "", totalCents: serviceFeeCents }],
       subtotalCents,
       serviceFeeCents,
@@ -73,6 +92,12 @@ export async function finalizeBooking(db: Db, bookingId: string) {
     title: `Facture ${invoice.number} disponible`,
     body: `Heures validées pour la réservation ${b.ref}. Montant TTC : ${eurosPrecise(totalTtcCents)}.`,
     link: `/entreprise/factures/${invoice.id}`,
+  });
+  await notify(db, company.ownerId, {
+    title: "Notez votre équipe",
+    body: `Comment s’est passée la réservation ${b.ref} ? Vos avis aident les prochains exposants et les commerciaux.`,
+    link: `/entreprise/reservations/${b.id}#avis`,
+    email: false,
   });
   await chargeBooking(db, payment.id);
 }
@@ -125,13 +150,23 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
   if (!p || p.status === "reussi") return;
   await db.update(s.payments).set({ status: "reussi", stripeChargeId: chargeId, error: null }).where(eq(s.payments.id, p.id));
   const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, p.bookingId));
-  await db.update(s.bookings).set({ status: "payee" }).where(eq(s.bookings.id, b.id));
-  const pricing = await getPricing(db, b.confirmedAt ?? new Date());
-  const asg = (await loadAssignments(db, b.id)).filter((a) => a.status === "acceptee");
-  const minutes = await validatedMinutes(db, asg.map((a) => a.id));
+  const all = await loadAssignments(db, b.id);
+  let due: { a: (typeof all)[number]; amount: number }[];
+  const cancelled = b.status === "annulee" ? (b.cancellation as CancellationRecord | null) : null;
+  if (cancelled) {
+    // frais d'annulation encaissés : les commerciaux qui avaient accepté reçoivent leur indemnité
+    due = cancelled.compensations
+      .map((c) => ({ a: all.find((x) => x.id === c.assignmentId)!, amount: c.amountCents }))
+      .filter((d) => d.a);
+  } else {
+    await db.update(s.bookings).set({ status: "payee" }).where(eq(s.bookings.id, b.id));
+    const pricing = await getPricing(db, b.confirmedAt ?? new Date());
+    const asg = all.filter((a) => a.status === "acceptee");
+    const minutes = await validatedMinutes(db, asg.map((a) => a.id));
+    due = asg.map((a) => ({ a, amount: payoutCents(a.hourlyRateCents, minutes.get(a.id) ?? 0, pricing.freelancerCommissionBps) }));
+  }
   const monday = nextMonday(todayIso());
-  for (const a of asg) {
-    const amount = payoutCents(a.hourlyRateCents, minutes.get(a.id) ?? 0, pricing.freelancerCommissionBps);
+  for (const { a, amount } of due) {
     if (amount <= 0) continue;
     const [payout] = await db
       .insert(s.payouts)
@@ -147,10 +182,12 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
         await audit(db, null, "payout.failed", "payout", payout.id, { message: e instanceof Error ? e.message : String(e) });
       }
     }
-    await db.update(s.freelancers).set({ missionsCount: (await missionCount(db, a.freelancerId)) }).where(eq(s.freelancers.id, a.freelancerId));
+    if (!cancelled) {
+      await db.update(s.freelancers).set({ missionsCount: await missionCount(db, a.freelancerId) }).where(eq(s.freelancers.id, a.freelancerId));
+    }
     await notify(db, a.userId, {
-      title: "Paie programmée",
-      body: `${eurosPrecise(amount)} pour la mission ${b.ref}, virement le lundi ${longDate(monday)}.`,
+      title: cancelled ? "Indemnité d’annulation programmée" : "Paie programmée",
+      body: `${eurosPrecise(amount)} pour la mission ${b.ref}${cancelled ? " (annulée par l’exposant)" : ""}, virement le lundi ${longDate(monday)}.`,
       link: "/commercial",
     });
   }

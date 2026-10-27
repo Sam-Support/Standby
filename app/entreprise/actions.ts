@@ -7,6 +7,7 @@ import { getCurrentUser, requireCompany } from "@/lib/auth/session";
 import { companyIdentity, companyLeadFormat, companyReferents, companyWeb } from "@/lib/services/accounts";
 import { validateAssignmentHours } from "@/lib/services/hours";
 import { parseLeadWorkbook } from "@/lib/services/leads";
+import { submitReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 
 export async function validateHours(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -22,6 +23,17 @@ export async function validateHours(assignmentId: string, _: FormState, fd: Form
   }
   revalidatePath("/entreprise", "layout");
   return { ok: "Heures validées." };
+}
+
+export async function reviewAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const company = await requireCompany();
+    await submitReview(await getDb(), company.id, assignmentId, Number(str(fd, "rating")), str(fd, "comment"));
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/entreprise", "layout");
+  return { ok: "Merci, votre avis est publié." };
 }
 
 export async function updateIdentity(_: FormState, fd: FormData): Promise<FormState> {

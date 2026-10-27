@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { getDb, schema as s } from "@/db";
+import type { Db } from "@/db";
+import * as s from "@/db/schema";
 import { supabaseAdmin, supabaseAnon, supabaseEnabled } from "@/lib/integrations/supabase";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -23,21 +24,17 @@ export async function createIdentity(email: string, password: string): Promise<s
 }
 
 /** À appeler une fois le profil inséré (mode local uniquement). */
-export async function storeLocalPassword(userId: string, password: string) {
+export async function storeLocalPassword(db: Db, userId: string, password: string) {
   if (supabaseEnabled()) return;
-  const db = await getDb();
-  await db
-    .insert(s.credentials)
-    .values({ userId, passwordHash: await hashPassword(password) })
-    .onConflictDoUpdate({ target: s.credentials.userId, set: { passwordHash: await hashPassword(password) } });
+  const passwordHash = await hashPassword(password);
+  await db.insert(s.credentials).values({ userId, passwordHash }).onConflictDoUpdate({ target: s.credentials.userId, set: { passwordHash } });
 }
 
-export async function verifyIdentity(email: string, password: string): Promise<string | null> {
+export async function verifyIdentity(db: Db, email: string, password: string): Promise<string | null> {
   if (supabaseEnabled()) {
     const { data, error } = await supabaseAnon().auth.signInWithPassword({ email, password });
     return error || !data.user ? null : data.user.id;
   }
-  const db = await getDb();
   const [row] = await db
     .select({ id: s.profiles.id, hash: s.credentials.passwordHash })
     .from(s.profiles)
@@ -47,11 +44,20 @@ export async function verifyIdentity(email: string, password: string): Promise<s
   return (await verifyPassword(password, row.hash)) ? row.id : null;
 }
 
-export async function updateIdentityPassword(userId: string, password: string) {
+/** Suppression de l'identité (droit à l'effacement). Le profil applicatif est anonymisé à part. */
+export async function deleteIdentity(db: Db, userId: string) {
+  if (supabaseEnabled()) {
+    const { error } = await supabaseAdmin().auth.admin.deleteUser(userId);
+    if (error && !/not found/i.test(error.message)) throw new AuthError("Suppression de l’identité impossible.");
+  }
+  await db.delete(s.credentials).where(eq(s.credentials.userId, userId));
+}
+
+export async function updateIdentityPassword(db: Db, userId: string, password: string) {
   if (supabaseEnabled()) {
     const { error } = await supabaseAdmin().auth.admin.updateUserById(userId, { password });
     if (error) throw new AuthError("Mise à jour du mot de passe impossible.");
     return;
   }
-  await storeLocalPassword(userId, password);
+  await storeLocalPassword(db, userId, password);
 }

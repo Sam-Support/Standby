@@ -5,7 +5,9 @@ import { OrderedChips } from "@/components/ordered-chips";
 import { BackLink, Chip, PageHead, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
 import { DOCUMENT_TYPES, LANGUAGES, ROLES, SIGNUP_ROLE_ORDER, SPECIALTIES, type DocumentKey } from "@/lib/domain";
+import { rating } from "@/lib/format";
 import { stripeEnabled } from "@/lib/integrations/stripe";
+import { reviewsFor } from "@/lib/services/reviews";
 import { stripeSetupAction, updateIdentityAction, updateProfileAction, uploadDocAction } from "../actions";
 
 export const metadata = { title: "Mon profil" };
@@ -18,6 +20,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const user = (await getCurrentUser())!;
   const db = await getDb();
   const docs = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id));
+  const reviews = await reviewsFor(db, { freelancerId: f.id });
   return (
     <>
       <BackLink href="/commercial">Espace commercial</BackLink>
@@ -105,6 +108,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
           </ActionForm>
         </section>
       </div>
+      <section className="clay panel" id="avis">
+        <h2>Avis reçus{f.ratingX10 ? ` · ★ ${rating(f.ratingX10)} (${f.ratingsCount})` : ""}</h2>
+        {reviews.length === 0 && <p className="muted small">Pas encore d’avis : les exposants vous notent après validation des heures.</p>}
+        {reviews.map(({ r, companyName, ref }) => (
+          <div key={r.id} className="brow" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+            <span>
+              <b aria-label={`${r.rating} sur 5`}>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</b> · {companyName} · {ref}
+            </span>
+            {r.comment && <p className="muted small">« {r.comment} »</p>}
+          </div>
+        ))}
+      </section>
     </>
   );
 }

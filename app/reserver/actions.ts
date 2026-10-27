@@ -11,7 +11,6 @@ import { createCustomer, paymentMethodSession, stripeEnabled } from "@/lib/integ
 import {
   autoSelect,
   BookingError,
-  cancelBooking,
   confirmBooking,
   getCompanyBooking,
   saveBriefStep,
@@ -21,6 +20,7 @@ import {
   toggleSelection,
 } from "@/lib/services/booking";
 import { requireVerifiedEmail } from "@/lib/services/accounts";
+import { cancelBooking, cancellationTerms } from "@/lib/services/cancellation";
 import { putFile, readUpload } from "@/lib/storage";
 
 async function ctx(id: string) {
@@ -165,10 +165,12 @@ export async function paymentSetup(id: string): Promise<FormState> {
   redirect(target);
 }
 
-export async function cancel(id: string): Promise<FormState> {
+export async function cancel(id: string, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const { db, booking } = await ctx(id);
     const user = await getCurrentUser();
+    const terms = await cancellationTerms(db, booking);
+    if (terms.totalHtCents > 0 && !fd.get("accept")) return { error: "Cochez la case pour accepter les frais d’annulation." };
     await cancelBooking(db, booking, user!.id);
   } catch (e) {
     return fail(e);

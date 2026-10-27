@@ -92,7 +92,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <section className="clay panel">
           <h2>Actions</h2>
           {["brouillon", "envoyee", "partielle", "confirmee", "en_cours"].includes(b.status) ? (
-            <ActionForm action={adminCancelAction.bind(null, b.id)}>
+            <ActionForm action={adminCancelAction.bind(null, b.id)} className="stack">
+              <label className="check">
+                <input type="checkbox" name="waive" />
+                Annuler sans frais (geste commercial, aucune indemnité versée)
+              </label>
               <Submit className="clay s btn sm danger">Annuler la réservation</Submit>
             </ActionForm>
           ) : (
