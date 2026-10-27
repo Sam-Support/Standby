@@ -11,13 +11,13 @@
 | Stockage | Supabase Storage (buckets privés, URL signées) : plaquettes, pièces, cartes de visite, xlsx |
 | Paiement | Stripe Connect (comptes Express pour les commerciaux, KYC inclus) |
 | Emails | Resend (+ React Email) ; SMS Twilio optionnel (rappel J-2) |
-| Jobs asynchrones | Inngest (ou Vercel Cron + file Postgres) : rappels, paie, OCR, relances |
+| Jobs asynchrones | Inngest (ou cron du VPS + file Postgres) : rappels, paie, OCR, relances |
 | Excel | `exceljs` / SheetJS (lecture, mapping, génération) |
 | OCR cartes | Mindee (API cartes de visite) ou modèle de vision ; repli saisie Retool |
 | CRM | HubSpot OAuth (scopes `crm.objects.contacts.write`) |
 | Back-office | Espace `/admin` dans Next.js (rôle `admin`, middleware + RLS, table `audit_log`) ; Retool optionnel en lecture seule |
-| Hébergement | Vercel (région `cdg1`) + Supabase (Paris ou Francfort) |
-| Observabilité | Sentry, PostHog (hébergement UE), logs Vercel, alertes Stripe webhooks |
+| Hébergement | **VPS** (Docker Compose : Next.js standalone + Caddy pour HTTPS) + Supabase cloud UE (Paris ou Francfort) ; voir `deploy/` |
+| Observabilité | Sentry, PostHog (hébergement UE), logs Docker, alertes Stripe webhooks |
 | Qualité | Vitest, Playwright, ESLint, axe-core (RGAA), GitHub Actions |
 
 Remarque Retool + Airtable : Retool suffit et lit directement Postgres. Airtable créerait un second référentiel, à éviter.
@@ -26,7 +26,7 @@ Remarque Retool + Airtable : Retool suffit et lit directement Postgres. Airtable
 
 ```mermaid
 flowchart LR
-  U[Navigateur] --> V[Next.js sur Vercel]
+  U[Navigateur] --> V[Caddy puis Next.js sur le VPS]
   V --> DB[(Supabase Postgres + RLS)]
   V --> ST[(Supabase Storage)]
   V --> AU[Supabase Auth]
@@ -103,8 +103,9 @@ Le design débite l'exposant après validation des heures. Une autorisation cart
 Stripe Connect : charges de plateforme, transferts vers comptes Express des commerciaux, payout planifié le lundi. Webhooks idempotents (`stripe_events`), réconciliation quotidienne.
 
 ## 7. Sécurité et conformité
-- RGPD : registre des traitements, DPA (Supabase, Vercel, Stripe, Resend, Retool), consentement cookies (CMP conforme CNIL), droit d'accès et d'effacement.
-- Secrets dans Vercel/Supabase, aucune clé côté client ; tokens CRM chiffrés.
+- RGPD : registre des traitements, DPA (Supabase, hébergeur du VPS, Stripe, Resend), consentement cookies (CMP conforme CNIL), droit d'accès et d'effacement.
+- Secrets dans un `.env` sur le VPS (droits 600, hors dépôt) et secrets GitHub pour la CI, aucune clé côté client ; tokens CRM chiffrés.
+- VPS : accès SSH par clé uniquement, pare-feu (80/443/SSH), mises à jour de sécurité automatiques, fail2ban, sauvegardes hors site, utilisateur de déploiement sans root.
 - Scan antivirus et validation MIME/taille des uploads (20 Mo), limitation de débit sur auth et upload.
 - Journal d'audit sur toute action admin (Retool).
 - RGAA : navigation clavier, contrastes ≥ 4,5, `aria-label` des icônes ; tests axe en CI.
@@ -118,7 +119,7 @@ Stripe Connect : charges de plateforme, transferts vers comptes Express des comm
 - Le design est en 1360 px : prévoir les points de rupture tablette/mobile (les artboards « fill » le supposent). Prévoir un mode `prefers-reduced-motion` et vérifier les contrastes des ombres.
 
 ## 9. Environnements
-`local` (Supabase CLI), `preview` (Vercel par PR + base de branche Supabase), `staging`, `production`. Seed de données (salons, 50+ profils fictifs) pour les démos.
+`local` (Supabase CLI), `staging` et `production` (deux stacks Docker Compose sur le VPS, domaines distincts, deux projets Supabase). Pas de preview par PR au départ ; CI = lint, typecheck, tests, build. Seed de données (salons, 50+ profils fictifs) pour les démos.
 
 ## 10. Structure du repo (proposée)
 
