@@ -22,6 +22,13 @@
       "when": 1793134431337,
       "tag": "0002_manques_produit",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793135497677,
+      "tag": "0003_validation_commerciaux",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { getDb, schema as s } from "@/db";
 import { stripe, stripeEnabled } from "@/lib/integrations/stripe";
 import { audit } from "@/lib/notify";
 import { markPaymentFailed, markPaymentSucceeded } from "@/lib/services/billing";
+import { applyStripeVerification, stripeVerification } from "@/lib/services/compliance";
 
 /** Webhook Stripe : moyen de paiement enregistré, paiement réussi/échoué, compte Connect prêt. */
 export async function POST(req: Request) {
@@ -42,6 +43,9 @@ export async function POST(req: Request) {
       case "account.updated": {
         const acct = event.data.object;
         await db.update(s.freelancers).set({ payoutsEnabled: Boolean(acct.payouts_enabled) }).where(eq(s.freelancers.stripeAccountId, acct.id));
+        // identité et compte bancaire vérifiés par Stripe : pièce d'identité et RIB validés automatiquement
+        const [f] = await db.select({ id: s.freelancers.id }).from(s.freelancers).where(eq(s.freelancers.stripeAccountId, acct.id));
+        if (f) await applyStripeVerification(db, f.id, stripeVerification(acct));
         break;
       }
     }

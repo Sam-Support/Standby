@@ -156,6 +156,12 @@ export const freelancers = pgTable("freelancers", {
   shoeSize: text("shoe_size"),
   siret: text("siret"),
   legalStatus: text("legal_status"),
+  // contrôle SIRENE : actif | ferme | introuvable | inconnu (API injoignable), nom enregistré, date du contrôle
+  siretStatus: text("siret_status").notNull().default("inconnu"),
+  siretName: text("siret_name"),
+  siretCheckedAt: timestamp("siret_checked_at", { withTimezone: true }),
+  // tant qu'il est renseigné, le profil est retiré du matching (attestation expirée, établissement fermé…)
+  blockedReason: text("blocked_reason"),
   status: freelancerStatus("status").notNull().default("brouillon"),
   stripeAccountId: text("stripe_account_id"),
   payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
@@ -174,8 +180,11 @@ export const freelancerDocuments = pgTable(
     id: id(),
     freelancerId: uuid("freelancer_id").notNull().references(() => freelancers.id, { onDelete: "cascade" }),
     type: documentType("type").notNull(),
-    path: text("path").notNull(),
+    path: text("path"), // absent quand la vérification vient de Stripe
     filename: text("filename").notNull(),
+    source: text("source").notNull().default("depot"), // depot | stripe
+    issuedOn: date("issued_on"), // date de délivrance (attestation URSSAF)
+    validUntil: date("valid_until"), // échéance (attestation URSSAF : 6 mois)
     status: reviewStatus("status").notNull().default("en_attente"),
     comment: text("comment"),
     reviewedBy: uuid("reviewed_by"),
@@ -183,6 +192,17 @@ export const freelancerDocuments = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("freelancer_documents_type_idx").on(t.freelancerId, t.type)],
+);
+
+// Relances déjà envoyées pour un document (ex. « urssaf:j30:2027-04-15 »)
+export const documentReminders = pgTable(
+  "document_reminders",
+  {
+    documentId: uuid("document_id").notNull().references(() => freelancerDocuments.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.documentId, t.kind] })],
 );
 
 export const events = pgTable("events", {

@@ -5,7 +5,9 @@ import { OrderedChips } from "@/components/ordered-chips";
 import { BackLink, Chip, PageHead, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
 import { DOCUMENT_TYPES, LANGUAGES, ROLES, SIGNUP_ROLE_ORDER, SPECIALTIES, type DocumentKey } from "@/lib/domain";
-import { rating } from "@/lib/format";
+import { daysUntil, longDate, rating } from "@/lib/format";
+import { formatSiret } from "@/lib/siret";
+import { SIRET_LABELS } from "@/lib/services/compliance";
 import { stripeEnabled } from "@/lib/integrations/stripe";
 import { reviewsFor } from "@/lib/services/reviews";
 import { stripeSetupAction, updateIdentityAction, updateProfileAction, uploadDocAction } from "../actions";
@@ -44,28 +46,55 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
         </section>
         <section className="clay panel">
           <h2>Documents et virements</h2>
+          {f.blockedReason && <p className="note err">Profil retiré du matching : {f.blockedReason}.</p>}
+          <p className="small">
+            SIRET {f.siret ? formatSiret(f.siret) : "—"} :{" "}
+            <Status tone={f.siretStatus === "actif" ? "ok" : f.siretStatus === "inconnu" ? "info" : "warn"}>{SIRET_LABELS[f.siretStatus] ?? f.siretStatus}</Status>
+          </p>
           {(["identite", "urssaf", "rib", "siret"] as DocumentKey[]).map((t) => {
             const d = docs.find((x) => x.type === t);
+            const expiresIn = d?.validUntil ? daysUntil(d.validUntil) : null;
             return (
               <ActionForm key={t} action={uploadDocAction.bind(null, t)} className="brow">
                 <div>
                   <b>{DOCUMENT_TYPES[t]}</b>
                   <br />
                   {d ? (
-                    <Status tone={d.status === "valide" ? "ok" : d.status === "refuse" ? "warn" : "info"}>
-                      {d.status === "valide" ? "Validé" : d.status === "refuse" ? `À corriger${d.comment ? ` : ${d.comment}` : ""}` : "En vérification"}
+                    <Status tone={d.status === "valide" && (expiresIn === null || expiresIn > 30) ? "ok" : d.status === "refuse" || (expiresIn !== null && expiresIn <= 30) ? "warn" : "info"}>
+                      {d.status === "valide"
+                        ? d.source === "stripe"
+                          ? "Vérifié par Stripe"
+                          : "Validé"
+                        : d.status === "refuse"
+                          ? `À corriger${d.comment ? ` : ${d.comment}` : ""}`
+                          : "En vérification"}
                     </Status>
                   ) : (
                     <span className="muted small">Non fourni</span>
                   )}
+                  {d?.validUntil && (
+                    <span className="muted small">
+                      {" "}
+                      · {expiresIn! < 0 ? `expirée le ${longDate(d.validUntil)}` : `valable jusqu’au ${longDate(d.validUntil)}`}
+                    </span>
+                  )}
                 </div>
-                <span className="inline" style={{ gap: 6 }}>
-                  <input className="input" type="file" name="doc" accept=".pdf,.jpg,.jpeg,.png" aria-label={`Déposer ${DOCUMENT_TYPES[t]}`} style={{ maxWidth: 200, minHeight: 40 }} />
-                  <Submit className="clay s btn xs ghost" pending="…">Envoyer</Submit>
-                </span>
+                {d?.source !== "stripe" && (
+                  <span className="inline" style={{ gap: 6 }}>
+                    <input className="input" type="file" name="doc" accept=".pdf,.jpg,.jpeg,.png" aria-label={`Déposer ${DOCUMENT_TYPES[t]}`} style={{ maxWidth: 200, minHeight: 40 }} />
+                    {t === "urssaf" && (
+                      <input className="input" type="date" name="issuedOn" aria-label="Date de délivrance de l’attestation" style={{ maxWidth: 160, minHeight: 40 }} />
+                    )}
+                    <Submit className="clay s btn xs ghost" pending="…">Envoyer</Submit>
+                  </span>
+                )}
               </ActionForm>
             );
           })}
+          <p className="muted small">
+            L’attestation URSSAF vaut 6 mois : vous êtes relancé·e 30 puis 7 jours avant l’échéance. Une fois les virements activés via Stripe, la pièce
+            d’identité et le RIB sont validés automatiquement.
+          </p>
           <div className="brow">
             <span>
               Virements : <Status tone={f.payoutsEnabled ? "ok" : "warn"}>{f.payoutsEnabled ? "activés" : "à activer"}</Status>

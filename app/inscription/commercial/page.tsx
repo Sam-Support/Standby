@@ -178,6 +178,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                         </p>
                       </div>
                       <input id={`doc_${t}`} className="input" type="file" name={`doc_${t}`} accept=".pdf,.jpg,.jpeg,.png" style={{ maxWidth: 280 }} />
+                      {t === "urssaf" && (
+                        <label className="field" style={{ flexBasis: "100%" }}>
+                          Date de délivrance de l’attestation (elle vaut 6 mois)
+                          <input className="input" type="date" name="urssafIssuedOn" defaultValue={d?.issuedOn ?? ""} style={{ maxWidth: 220 }} />
+                        </label>
+                      )}
                     </div>
                   );
                 })}
