@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Standby Salons
 
-## Getting Started
+Marketplace qui met en relation des **entreprises exposantes** et des **commerciaux, hôtes·ses, animateurs et interprètes indépendants** pour staffer les stands des salons professionnels et des foires.
 
-First, run the development server:
+Documentation produit : [PRD](docs/01-PRD.md) · [Flux](docs/02-FLUX.md) · [Architecture](docs/03-ARCHITECTURE.md) · [Plan](docs/04-PLAN.md)
+
+## Démarrer en local (aucun compte externe requis)
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez http://localhost:3000. Sans variable d'environnement, l'application utilise :
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- une base **PGlite** (Postgres embarqué) dans `.data/pglite`, migrée et remplie avec des données de démonstration au premier lancement ;
+- un stockage de fichiers local dans `.data/uploads` ;
+- des paiements, virements, e-mails (écrits dans la console), envois HubSpot et lecture de cartes **simulés**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Comptes de démonstration (base locale uniquement), mot de passe défini dans [`db/seed.ts`](db/seed.ts) (`DEMO_PASSWORD`) :
 
-## Learn More
+| Rôle | E-mail |
+|---|---|
+| Entreprise (Maison Lumen) | `claire@maison-lumen.test` |
+| Commercial | `karim.benali@standby.test` |
+| Admin | `admin@standby.test` |
 
-To learn more about Next.js, take a look at the following resources:
+Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Ce que fait l'application
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Accueil** : calendrier des salons, profils disponibles, inscriptions.
+- **Réservation en 5 étapes** : événement (jours, montage, horaires, stand) → équipe (postes, langues, tenue, estimation en direct) → brief (référent, plaquette, format des leads) → profils (matching pondéré, favoris, re-sélection) → récap et devis → confirmation.
+- **Espace entreprise** : réservations et acceptations, heures à valider ou ajuster, leads reçus au format du template (export Excel ou envoi HubSpot), factures, profil.
+- **Espace commercial** : missions à accepter ou refuser, déclaration des heures, dépôt des leads (Excel avec rapprochement automatique des colonnes, photos de cartes lues par Claude), revenus et virements du lundi, documents.
+- **Admin** (`/admin`) : tableau de bord et commissions, salons et foires (logos, import CSV, dates vérifiées), **tarification versionnée** (frais de service, commission, TVA, planchers par poste, majoration tenue), validation des documents, arbitrage des heures, finances, saisie des cartes, messages.
+- **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, validation des heures à J+3, virements dus.
 
-## Deploy on Vercel
+## Commandes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Serveur de développement |
+| `npm test` | Tests (calcul du devis, matching, colonnes de leads, parcours complet sur PGlite) |
+| `npm run lint` · `npm run typecheck` | Qualité |
+| `npm run build` | Build de production (`output: standalone`) |
+| `npm run db:generate` | Génère une migration après modification de `db/schema.ts` |
+| `npm run db:migrate` | Applique les migrations sur `DATABASE_URL` (aussi fait au démarrage) |
+| `npm run admin:create -- email "mot de passe" Prénom Nom` | Crée le premier administrateur |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Production (VPS + Supabase)
+
+1. **Supabase** (région UE) : récupérer `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; créer les buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
+2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `account.updated`).
+3. **Resend** (domaine vérifié), **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
+4. **VPS** : Docker, dossier `/opt/standby/staging` avec `deploy/docker-compose.yml`, `deploy/Caddyfile` et un `.env` (modèle : [`.env.example`](.env.example), droits 600).
+5. **GitHub** : environnement `staging` avec la variable `VPS_PATH` et les secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PULL_USER`, `GHCR_PULL_TOKEN`. Chaque push sur `main` validé par la CI construit l'image, la publie sur ghcr.io et la déploie.
+6. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
+
+## À compléter avant l'ouverture
+
+- Textes légaux : les passages surlignés `[…]` (éditeur, hébergeur, délais, barème d'annulation, DPO) avec votre avocat.
+- Statut des commerciaux (risque de requalification), mandat de facturation, obligations de plateforme (DAC7).
+- Accord des organisateurs avant d'afficher leurs logos (case dédiée dans l'admin).
+- Calendrier réel des salons : les événements de démonstration ne sont pas « vérifiés ».

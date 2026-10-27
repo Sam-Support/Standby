@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /entreprise
+Disallow: /commercial
+Disallow: /admin
+Disallow: /reserver
+Disallow: /notifications
+Disallow: /api/

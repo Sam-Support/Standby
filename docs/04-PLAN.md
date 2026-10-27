@@ -1,10 +1,10 @@
 # Standby Salons : Plan de réalisation
 
-Hypothèse : 1 développeur + Claude Code, périmètre complet (décision), **14 semaines** réalistes (10–12 si Stripe, HubSpot et OCR passent en phase 2). Chaque jalon se termine par une démo déployée sur Vercel.
+Hypothèse : 1 développeur + Claude Code, périmètre complet (décision), **14 semaines** réalistes (10–12 si Stripe, HubSpot et OCR passent en phase 2). Chaque jalon se termine par une démo déployée sur le VPS (staging).
 
 | Jalon | Semaines | Contenu | Critère de fin |
 |---|---|---|---|
-| M0 Fondations | 1 | Repo, Next.js, Supabase (UE), Drizzle, CI GitHub Actions, preview Vercel, Sentry, seed de base | Déploiement preview vert, `/` s'affiche |
+| M0 Fondations | 1 | Repo, Next.js, Supabase (UE), Drizzle, CI GitHub Actions, Docker + Caddy sur le VPS, déploiement staging, Sentry, seed de base | Déploiement staging automatique depuis `main`, `/` s'affiche en HTTPS |
 | M1 Design system et pages statiques | 1 à 3 | Tokens Clay, composants (Nav, Stepper, Card, Field, Button, Table…), accueil, 8 pages légales/aide, bandeau cookies, responsive | Pages = design à ±2 px, axe sans erreur bloquante |
 | M2 Comptes et onboarding | 3 à 5 | Auth, rôles, RLS, inscriptions exposant (4 étapes) et commercial (4 étapes), uploads, SIRENE, emails Resend | Un exposant et un commercial créent un compte de bout en bout |
 | M3 Catalogue et réservation | 5 à 7 | Table `events`, import CSV (Retool), étapes 1 à 3, compteurs, devis serveur, brouillon, panneau « Votre réservation » | Devis du design reproduit au centime |
@@ -27,4 +27,4 @@ Fonction livrée avec tests (unitaires pour devis/matching, E2E Playwright sur l
 1. Valider les hypothèses et points ouverts du PRD (§5 et §9).
 2. Choisir le dossier du projet et initialiser le repo (M0).
 3. Extraire les tokens et composants Clay du design (M1), puis démarrer l'accueil.
-4. Créer les comptes : Vercel, Supabase (région UE), Stripe, Resend, Retool, HubSpot dev.
+4. Créer les comptes : VPS (nom de domaine, accès SSH par clé), Supabase (région UE), Stripe, Resend, Retool, HubSpot dev.
