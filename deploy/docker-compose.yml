@@ -1,7 +1,7 @@
-# Sur le VPS : /opt/standby/<env>/docker-compose.yml + .env (droits 600)
+# Sur le VPS : /opt/standby/<env>/docker-compose.yml + .env (droits 600, modèle : .env.example)
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
+    image: ${IMAGE:-ghcr.io/sam-support/standby}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     expose:
@@ -25,6 +25,17 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - app
+    networks: [web]
+
+  # Tâches planifiées : statuts des réservations, validation J+3, virements du lundi
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    command: >
+      sh -c 'echo "*/15 * * * * wget -qO- --post-data= --header=\"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron >/dev/null 2>&1" > /etc/crontabs/root && crond -f -l 8'
     depends_on:
       - app
     networks: [web]

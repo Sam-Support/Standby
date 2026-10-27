@@ -5,20 +5,22 @@
 | Domaine | Choix |
 |---|---|
 | Front et back | Next.js (App Router) + TypeScript, Server Actions et route handlers |
-| UI | Tailwind CSS + composants maison « Clay » (design system extrait), React Hook Form + Zod |
-| Base de données | PostgreSQL (Supabase, région UE), Drizzle ORM, migrations SQL, RLS activée |
-| Auth | Supabase Auth (email/mot de passe + lien magique), rôles `exposant`, `commercial`, `admin` |
-| Stockage | Supabase Storage (buckets privés, URL signées) : plaquettes, pièces, cartes de visite, xlsx |
-| Paiement | Stripe Connect (comptes Express pour les commerciaux, KYC inclus) |
-| Emails | Resend (+ React Email) ; SMS Twilio optionnel (rappel J-2) |
-| Jobs asynchrones | Inngest (ou cron du VPS + file Postgres) : rappels, paie, OCR, relances |
-| Excel | `exceljs` / SheetJS (lecture, mapping, génération) |
-| OCR cartes | Mindee (API cartes de visite) ou modèle de vision ; repli saisie Retool |
-| CRM | HubSpot OAuth (scopes `crm.objects.contacts.write`) |
-| Back-office | Espace `/admin` dans Next.js (rôle `admin`, middleware + RLS, table `audit_log`) ; Retool optionnel en lecture seule |
+| UI | CSS « Clay » repris du design (`app/globals.css`, sans Tailwind) + composants React ; formulaires en Server Actions, contrôles natifs stylés (`:has()`) |
+| Base de données | PostgreSQL (Supabase, région UE) via Drizzle ORM en connexion directe ; migrations `db/migrations` appliquées au démarrage. Autorisations dans le code serveur (chaque requête filtrée par entreprise / commercial) ; RLS laissée active sans règle pour fermer l'API publique Supabase. En local : PGlite |
+| Auth | Supabase Auth comme fournisseur d'identité (création, vérification du mot de passe, changement), session applicative en cookie signé HMAC (30 jours) ; rôles `exposant`, `commercial`, `admin`. En local : scrypt |
+| Stockage | Supabase Storage (buckets `private` et `public`), fichiers servis par `/api/fichiers` avec contrôle d'accès. En local : `.data/uploads` |
+| Paiement | Stripe Connect : mandat SEPA ou carte enregistré à la confirmation (Checkout en mode setup), débit après validation des heures, transferts vers les comptes Express, virements hebdomadaires le lundi. Simulé sans clé |
+| Emails | Resend via son API HTTP ; notifications aussi visibles dans `/notifications` |
+| Jobs asynchrones | Conteneur cron du VPS qui appelle `/api/cron` toutes les 15 min (statuts, expiration 48 h + remplaçant, validation J+3, virements) |
+| Excel | `exceljs` (lecture, rapprochement des colonnes par synonymes, export au format de l'entreprise) |
+| OCR cartes | Claude (vision + sortie structurée, `@anthropic-ai/sdk`) ; repli sur la saisie manuelle dans `/admin/cartes` |
+| CRM | HubSpot OAuth (portées `crm.objects.contacts.write` et `.read`), jetons chiffrés AES-256-GCM, invitation de l'admin CRM par lien signé |
+| Back-office | Espace `/admin` dans Next.js (rôle `admin`, table `audit_log`) |
 | Hébergement | **VPS** (Docker Compose : Next.js standalone + Caddy pour HTTPS) + Supabase cloud UE (Paris ou Francfort) ; voir `deploy/` |
 | Observabilité | Sentry, PostHog (hébergement UE), logs Docker, alertes Stripe webhooks |
-| Qualité | Vitest, Playwright, ESLint, axe-core (RGAA), GitHub Actions |
+| Qualité | Vitest (dont un test du parcours complet sur PGlite), ESLint, TypeScript strict, GitHub Actions ; Playwright et axe-core à ajouter |
+
+> Le schéma détaillé est dans `db/schema.ts` (24 tables), la logique métier dans `lib/services/*` (testable sans Next.js), les écrans dans `app/`.
 
 Remarque Retool + Airtable : Retool suffit et lit directement Postgres. Airtable créerait un second référentiel, à éviter.
 
