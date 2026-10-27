@@ -64,10 +64,11 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 
 1. **Supabase** (région UE) : récupérer `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; créer les buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
 2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `account.updated`).
-3. **Resend** (domaine vérifié), **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
-4. **VPS** : Docker, dossier `/opt/standby/staging` avec `deploy/docker-compose.yml`, `deploy/Caddyfile` et un `.env` (modèle : [`.env.example`](.env.example), droits 600).
-5. **GitHub** : environnement `staging` avec la variable `VPS_PATH` et les secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PULL_USER`, `GHCR_PULL_TOKEN`. Chaque push sur `main` validé par la CI construit l'image, la publie sur ghcr.io et la déploie.
-6. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
+3. **SIRENE** (facultatif) : clé `INSEE_API_KEY` de l'API Sirene de l'INSEE ; sans elle, ou en cas de panne de l'INSEE, les SIRET sont vérifiés via l'API publique Recherche d'entreprises.
+4. **Resend** (domaine vérifié), **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
+5. **VPS** : Docker, dossier `/opt/standby/staging` avec `deploy/docker-compose.yml`, `deploy/Caddyfile` et un `.env` (modèle : [`.env.example`](.env.example), droits 600).
+6. **GitHub** : environnement `staging` avec la variable `VPS_PATH` et les secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PULL_USER`, `GHCR_PULL_TOKEN`. Chaque push sur `main` validé par la CI construit l'image, la publie sur ghcr.io et la déploie.
+7. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
 
 ## À compléter avant l'ouverture
 
