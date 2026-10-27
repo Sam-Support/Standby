@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { eurosToCents, fail, file, str, strs, type FormState } from "@/lib/action";
 import { getCurrentCompany, getCurrentFreelancer, getCurrentUser, startSession } from "@/lib/auth/session";
+import { clientIp } from "@/lib/client-ip";
+import { hit, LIMITS } from "@/lib/rate-limit";
 import type { DocumentKey } from "@/lib/domain";
 import {
   AccountError,
@@ -31,6 +33,7 @@ async function ensureAccount(fd: FormData, role: "exposant" | "commercial") {
   if (String(fd.get("password")) !== String(fd.get("confirm"))) throw new AccountError("Les deux mots de passe ne correspondent pas.");
   if (!fd.get("cgu")) throw new AccountError("Merci d’accepter les conditions générales d’utilisation.");
   const db = await getDb();
+  await hit(db, `signup:ip:${await clientIp()}`, LIMITS.signupIp);
   const profile = await registerAccount(db, {
     email: str(fd, "email"),
     password: String(fd.get("password") ?? ""),

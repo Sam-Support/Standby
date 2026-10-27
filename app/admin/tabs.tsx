@@ -12,6 +12,7 @@ const TABS = [
   ["/admin/finances", "Finances"],
   ["/admin/cartes", "Cartes de visite"],
   ["/admin/messages", "Messages"],
+  ["/admin/emails", "E-mails"],
 ];
 
 export function AdminTabs() {

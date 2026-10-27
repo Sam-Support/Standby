@@ -3,6 +3,7 @@ import { Jost, Onest } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
+import { VerifyBanner } from "@/components/verify-banner";
 import "./globals.css";
 
 const onest = Onest({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-onest" });
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div className="wrap">
           <SiteNav />
           <main id="contenu" style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+            <VerifyBanner />
             {children}
           </main>
           <SiteFooter />

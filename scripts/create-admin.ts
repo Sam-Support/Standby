@@ -21,7 +21,7 @@ async function main() {
     process.exit(0);
   }
   const id = await createIdentity(email.toLowerCase(), password);
-  await db.insert(s.profiles).values({ id, email: email.toLowerCase(), role: "admin", firstName, lastName });
+  await db.insert(s.profiles).values({ id, email: email.toLowerCase(), role: "admin", firstName, lastName, emailVerifiedAt: new Date() });
   await storeLocalPassword(id, password);
   console.info(`Administrateur créé : ${email}`);
   process.exit(0);

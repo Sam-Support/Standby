@@ -15,7 +15,11 @@ const g = globalThis as GlobalDb;
  * Développement : PGlite (Postgres embarqué) dans .data/pglite, migré et peuplé automatiquement.
  */
 export function getDb(): Promise<Db> {
-  g.__standbyDb ??= init();
+  g.__standbyDb ??= init().catch((e) => {
+    // un échec d'initialisation n'est pas mis en cache : la requête suivante réessaie
+    g.__standbyDb = undefined;
+    throw e;
+  });
   return g.__standbyDb;
 }
 

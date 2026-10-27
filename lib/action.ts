@@ -1,3 +1,4 @@
+import { RateLimitError } from "@/lib/rate-limit";
 import { AccountError } from "@/lib/services/accounts";
 import { AdminError } from "@/lib/services/admin";
 import { BookingError } from "@/lib/services/booking";
@@ -7,7 +8,7 @@ export type FormState = { error?: string; ok?: string };
 
 /** Erreurs métier → message affiché ; le reste est journalisé et masqué. */
 export function fail(e: unknown): FormState {
-  if (e instanceof BookingError || e instanceof AccountError || e instanceof AdminError || e instanceof UploadError) {
+  if (e instanceof BookingError || e instanceof AccountError || e instanceof AdminError || e instanceof UploadError || e instanceof RateLimitError) {
     return { error: e.message };
   }
   console.error(e);

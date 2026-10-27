@@ -14,8 +14,8 @@ import { logoutAction } from "../connexion/actions";
 
 export const metadata = { title: "Espace entreprise" };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; crm?: string }> }) {
-  const { bienvenue, crm } = await searchParams;
+export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; crm?: string; email?: string }> }) {
+  const { bienvenue, crm, email } = await searchParams;
   const company = await requireCompany("/entreprise");
   const db = await getDb();
   const rows = await companyDashboard(db, company.id);
@@ -39,6 +39,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   return (
     <>
       {bienvenue && <p className="note ok">Compte créé. Vous pouvez réserver votre première équipe.</p>}
+      {email === "confirme" && <p className="note ok">Adresse e-mail confirmée.</p>}
       {crm === "ok" && <p className="note ok">HubSpot est connecté : les prochains leads y seront créés directement.</p>}
       {crm === "erreur" && <p className="note err">La connexion HubSpot a échoué. Réessayez ou contactez-nous.</p>}
       <div className="head">

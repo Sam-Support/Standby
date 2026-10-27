@@ -6,7 +6,7 @@
   --link: #3b45d6;
   --butter: #ffcd4a;
   --mint: #68d1a4;
-  --ok: #1c8755;
+  --ok: #146c43; /* assombri par rapport au design (#1C8755) : contraste 5,4:1 sur les fonds verts clairs */
   --danger: #c9314a;
   --bg: #edebe6;
   --sans: var(--font-onest), system-ui, sans-serif;

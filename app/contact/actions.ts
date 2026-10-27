@@ -4,7 +4,9 @@ import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { fail, str, type FormState } from "@/lib/action";
 import { sendEmail } from "@/lib/integrations/email";
+import { clientIp } from "@/lib/client-ip";
 import { notify } from "@/lib/notify";
+import { hit, LIMITS } from "@/lib/rate-limit";
 
 export async function sendContact(_: FormState, fd: FormData): Promise<FormState> {
   try {
@@ -15,6 +17,7 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     if (message.length < 10) return { error: "Votre message est trop court." };
     if (!fd.get("consent")) return { error: "Merci d’accepter le traitement de vos données pour cette demande." };
     const db = await getDb();
+    await hit(db, `contact:ip:${await clientIp()}`, LIMITS.contactIp);
     await db.insert(s.contactMessages).values({
       audience: str(fd, "audience") || "autre",
       name: name.slice(0, 120),
@@ -26,7 +29,7 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     const admins = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.role, "admin"));
     for (const a of admins) await notify(db, a.id, { title: "Nouveau message de contact", body: `${name} · ${str(fd, "subject")}`, link: "/admin/messages", email: false });
     if (process.env.SUPPORT_EMAIL) {
-      await sendEmail({ to: process.env.SUPPORT_EMAIL, subject: `[Contact] ${str(fd, "subject")}`, text: `${name} <${email}>\n\n${message}` });
+      await sendEmail({ to: process.env.SUPPORT_EMAIL, subject: `[Contact] ${str(fd, "subject")}`, text: `${name} <${email}>\n\n${message}` }, db);
     }
     return { ok: "Message envoyé. Nous vous répondons par e-mail en jours ouvrés." };
   } catch (e) {

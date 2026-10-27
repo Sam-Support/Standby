@@ -36,12 +36,20 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 - **Admin** (`/admin`) : tableau de bord et commissions, salons et foires (logos, import CSV, dates vérifiées), **tarification versionnée** (frais de service, commission, TVA, planchers par poste, majoration tenue), validation des documents, arbitrage des heures, finances, saisie des cartes, messages.
 - **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, validation des heures à J+3, virements dus.
 
+## Sécurité
+
+- **Limites de tentatives** (comptées en base) : connexion (8 échecs par e-mail et 50 tentatives par IP sur 15 min), mot de passe oublié, contact, inscription, renvoi du lien de vérification. Réglages dans [`lib/rate-limit.ts`](lib/rate-limit.ts).
+- **Vérification de l'e-mail** à l'inscription (lien signé, 48 h) : sans elle, pas de réservation confirmée, pas de mission acceptée, pas de place dans le matching.
+- **En-têtes** posés par [`proxy.ts`](proxy.ts) : CSP avec nonce par requête, `nosniff`, `Referrer-Policy`, `Permissions-Policy` ; Caddy ajoute HSTS en production.
+- **E-mails simulés** : sans `RESEND_API_KEY`, les e-mails sont listés dans `/admin/emails` (liens de vérification compris).
+
 ## Commandes
 
 | Commande | Rôle |
 |---|---|
 | `npm run dev` | Serveur de développement |
-| `npm test` | Tests (calcul du devis, matching, colonnes de leads, parcours complet sur PGlite) |
+| `npm test` | Tests (calcul du devis, matching, colonnes de leads, limites de tentatives, parcours complet sur PGlite) |
+| `npx playwright install chromium` puis `npm run build && npm run test:e2e` | Tests de bout en bout sur le build de production : parcours de réservation, sécurité (CSP, limites, vérification d'e-mail) et accessibilité axe WCAG 2.1 AA |
 | `npm run lint` · `npm run typecheck` | Qualité |
 | `npm run build` | Build de production (`output: standalone`) |
 | `npm run db:generate` | Génère une migration après modification de `db/schema.ts` |
