@@ -20,6 +20,7 @@ import {
   toggleFavorite,
   toggleSelection,
 } from "@/lib/services/booking";
+import { requireVerifiedEmail } from "@/lib/services/accounts";
 import { putFile, readUpload } from "@/lib/storage";
 
 async function ctx(id: string) {
@@ -130,6 +131,7 @@ export async function confirm(id: string, _: FormState, fd: FormData): Promise<F
     if (!fd.get("cgv")) return { error: "Merci d’accepter les conditions de prestation pour confirmer." };
     const { db, company, booking } = await ctx(id);
     const user = await getCurrentUser();
+    requireVerifiedEmail(user!);
     await confirmBooking(db, booking, user!.id);
     if (stripeEnabled() && !company.stripePaymentMethodId) {
       let customerId = company.stripeCustomerId;

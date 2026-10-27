@@ -2,7 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { AuthError, createIdentity, storeLocalPassword, updateIdentityPassword, verifyIdentity } from "@/lib/auth/provider";
-import { randomToken, signToken } from "@/lib/crypto";
+import { randomToken, signToken, verifyToken } from "@/lib/crypto";
 import { AVATAR_COLORS, DOCUMENT_TYPES, isRoleKey, LANGUAGES, SPECIALTIES, type DocumentKey, type RoleKey } from "@/lib/domain";
 import { hourly } from "@/lib/format";
 import { sendEmail } from "@/lib/integrations/email";
@@ -38,7 +38,39 @@ export async function registerAccount(
     .values({ id, email, role: input.role, firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone?.trim() || null })
     .returning();
   await storeLocalPassword(id, input.password);
+  await sendVerificationEmail(db, profile);
   return profile;
+}
+
+const VERIFY_TTL = 48 * 3600;
+
+/** Lien de confirmation d'adresse (48 h). Sans adresse confirmée : ni réservation, ni mission. */
+export async function sendVerificationEmail(db: Db, profile: { id: string; email: string; firstName: string }) {
+  const token = signToken({ uid: profile.id, email: profile.email, purpose: "verify" }, VERIFY_TTL);
+  await sendEmail(
+    {
+      to: profile.email,
+      subject: "Confirmez votre adresse e-mail standby",
+      text: `Bonjour ${profile.firstName},\n\nConfirmez votre adresse pour pouvoir réserver une équipe ou accepter des missions. Ce lien est valable 48 heures.`,
+      link: { label: "Confirmer mon adresse", href: `/verifier-email/${token}` },
+    },
+    db,
+  );
+}
+
+export async function confirmEmail(db: Db, token: string) {
+  const data = verifyToken<{ uid: string; email: string; purpose: string }>(token);
+  if (!data || data.purpose !== "verify") throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, data.uid));
+  if (!p || p.email !== data.email) throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
+  if (!p.emailVerifiedAt) await db.update(s.profiles).set({ emailVerifiedAt: new Date() }).where(eq(s.profiles.id, p.id));
+  return p;
+}
+
+export function requireVerifiedEmail(profile: { emailVerifiedAt: Date | null }) {
+  if (!profile.emailVerifiedAt) {
+    throw new AccountError("Confirmez d’abord votre adresse e-mail : le lien vous a été envoyé à l’inscription (vous pouvez le renvoyer depuis le bandeau en haut de page).");
+  }
 }
 
 export async function login(db: Db, email: string, password: string) {
@@ -53,12 +85,15 @@ export async function requestPasswordReset(db: Db, email: string) {
   if (!p) return; // réponse identique, que le compte existe ou non
   const token = randomToken();
   await db.insert(s.passwordResets).values({ token, userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
-  await sendEmail({
-    to: p.email,
-    subject: "Réinitialiser votre mot de passe standby",
-    text: "Vous avez demandé à réinitialiser votre mot de passe. Ce lien est valable une heure.",
-    link: { label: "Choisir un nouveau mot de passe", href: `/reinitialiser/${token}` },
-  });
+  await sendEmail(
+    {
+      to: p.email,
+      subject: "Réinitialiser votre mot de passe standby",
+      text: "Vous avez demandé à réinitialiser votre mot de passe. Ce lien est valable une heure.",
+      link: { label: "Choisir un nouveau mot de passe", href: `/reinitialiser/${token}` },
+    },
+    db,
+  );
 }
 
 export async function resetPassword(db: Db, token: string, password: string) {
@@ -161,12 +196,15 @@ export async function companyLeadFormat(
       .values({ companyId: company.id, provider: "HubSpot", status: "en_attente" })
       .onConflictDoNothing();
     const token = signToken({ companyId: company.id, purpose: "crm" }, 7 * 24 * 3600);
-    await sendEmail({
-      to: adminEmail,
-      subject: `${company.name} vous demande de connecter HubSpot à standby`,
-      text: `${company.name} utilise standby pour staffer ses salons. Les leads collectés sur le stand peuvent être créés directement dans HubSpot.\n\nL’accès demandé est limité à la création et la lecture de contacts. Ce lien est valable 7 jours.`,
-      link: { label: "Connecter HubSpot", href: `/crm/connexion/${token}` },
-    });
+    await sendEmail(
+      {
+        to: adminEmail,
+        subject: `${company.name} vous demande de connecter HubSpot à standby`,
+        text: `${company.name} utilise standby pour staffer ses salons. Les leads collectés sur le stand peuvent être créés directement dans HubSpot.\n\nL’accès demandé est limité à la création et la lecture de contacts. Ce lien est valable 7 jours.`,
+        link: { label: "Connecter HubSpot", href: `/crm/connexion/${token}` },
+      },
+      db,
+    );
   }
   await db
     .update(s.companies)

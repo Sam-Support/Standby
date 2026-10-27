@@ -8,7 +8,7 @@ export async function notify(db: Db, userId: string, n: { title: string; body: s
   await db.insert(notifications).values({ userId, title: n.title, body: n.body, link: n.link });
   if (n.email === false) return;
   const [p] = await db.select({ email: profiles.email }).from(profiles).where(eq(profiles.id, userId));
-  if (p) await sendEmail({ to: p.email, subject: n.title, text: n.body, link: n.link ? { label: "Ouvrir standby", href: n.link } : undefined });
+  if (p) await sendEmail({ to: p.email, subject: n.title, text: n.body, link: n.link ? { label: "Ouvrir standby", href: n.link } : undefined }, db);
 }
 
 export async function audit(db: Db, actorId: string | null, action: string, entity: string, entityId?: string, data?: unknown) {

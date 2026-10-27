@@ -1,10 +1,14 @@
+import type { Db } from "@/db";
+import { emailOutbox } from "@/db/schema";
+
 /**
- * E-mails transactionnels via Resend (RESEND_API_KEY). Sans clé, les messages sont écrits dans les logs.
+ * E-mails transactionnels via Resend (RESEND_API_KEY). Sans clé, les messages sont écrits dans les logs
+ * et, si une base est fournie, dans la boîte d'envoi simulée visible dans /admin/emails.
  */
 
 export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
-export async function sendEmail(msg: { to: string; subject: string; text: string; link?: { label: string; href: string } }) {
+export async function sendEmail(msg: { to: string; subject: string; text: string; link?: { label: string; href: string } }, db?: Db) {
   const href = msg.link ? (msg.link.href.startsWith("http") ? msg.link.href : `${appUrl()}${msg.link.href}`) : null;
   const html = `<div style="font-family:Arial,sans-serif;color:#1B2150;max-width:560px;line-height:1.55">
 <p style="font-size:22px;font-weight:700;margin:0 0 16px">standby</p>
@@ -18,6 +22,7 @@ ${href ? `<p><a href="${href}" style="display:inline-block;background:#4D58EE;co
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.info(`[email] → ${msg.to} · ${msg.subject}${href ? ` · ${href}` : ""}`);
+    if (db) await db.insert(emailOutbox).values({ to: msg.to, subject: msg.subject, text: msg.text, link: href });
     return;
   }
   const res = await fetch("https://api.resend.com/emails", {

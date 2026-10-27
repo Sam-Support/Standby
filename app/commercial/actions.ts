@@ -6,7 +6,14 @@ import { getDb } from "@/db";
 import { eurosToCents, fail, file, files, parseHours, str, strs, type FormState } from "@/lib/action";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
 import type { DocumentKey } from "@/lib/domain";
-import { freelancerIdentity, freelancerProfile, freelancerSizes, stripeOnboarding, uploadFreelancerDocument } from "@/lib/services/accounts";
+import {
+  freelancerIdentity,
+  freelancerProfile,
+  freelancerSizes,
+  requireVerifiedEmail,
+  stripeOnboarding,
+  uploadFreelancerDocument,
+} from "@/lib/services/accounts";
 import { respondToMission } from "@/lib/services/booking";
 import { declareHours } from "@/lib/services/hours";
 import { sendBatches, uploadCards, uploadLeadFile } from "@/lib/services/leads";
@@ -21,6 +28,7 @@ async function me() {
 export async function respond(assignmentId: string, accept: boolean): Promise<FormState> {
   try {
     const { user, db } = await me();
+    if (accept) requireVerifiedEmail(user);
     await respondToMission(db, assignmentId, user.id, accept);
   } catch (e) {
     return fail(e);

@@ -11,8 +11,8 @@ import { respond, stripeSetupAction } from "./actions";
 
 export const metadata = { title: "Espace commercial" };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string }> }) {
-  const { bienvenue } = await searchParams;
+export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; email?: string }> }) {
+  const { bienvenue, email } = await searchParams;
   const f = await requireFreelancer("/commercial");
   const user = (await getCurrentUser())!;
   const db = await getDb();
@@ -28,6 +28,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   return (
     <>
       {bienvenue && <p className="note ok">Profil envoyé. Nous vérifions vos documents : vous recevrez vos premières missions dès la validation.</p>}
+      {email === "confirme" && <p className="note ok">Adresse e-mail confirmée.</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start" }}>
         <aside style={{ flex: "1 1 320px", maxWidth: 380, display: "flex", flexDirection: "column", gap: 22 }}>
           <div className="clay" style={{ borderRadius: 22, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>

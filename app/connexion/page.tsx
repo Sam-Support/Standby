@@ -5,8 +5,8 @@ import { loginAction } from "./actions";
 
 export const metadata = { title: "Connexion" };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string; reinitialise?: string }> }) {
-  const { next, reinitialise } = await searchParams;
+export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string; reinitialise?: string; email?: string }> }) {
+  const { next, reinitialise, email } = await searchParams;
   return (
     <>
       <PageHead label="Comptes" title="Se connecter">
@@ -15,6 +15,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
       <div className="layout">
         <section className="clay main" style={{ maxWidth: 640 }}>
           {reinitialise && <p className="note ok">Mot de passe modifié. Vous pouvez vous connecter.</p>}
+          {email === "confirme" && <p className="note ok">Adresse e-mail confirmée. Connectez-vous pour continuer.</p>}
+          {email === "invalide" && <p className="note err">Lien de confirmation expiré ou invalide. Connectez-vous pour en recevoir un nouveau.</p>}
           <ActionForm action={loginAction} className="stack" style={{ gap: 16 }}>
             <input type="hidden" name="next" value={next ?? ""} />
             <label className="field">

@@ -103,7 +103,7 @@ async function seedDemo(db: Db) {
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const user = async (email: string, role: "exposant" | "commercial" | "admin", firstName: string, lastName: string, phone?: string) => {
     const userId = randomUUID();
-    await db.insert(s.profiles).values({ id: userId, email, role, firstName, lastName, phone });
+    await db.insert(s.profiles).values({ id: userId, email, role, firstName, lastName, phone, emailVerifiedAt: new Date() });
     await db.insert(s.credentials).values({ userId, passwordHash });
     return userId;
   };

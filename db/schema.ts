@@ -59,6 +59,24 @@ export const profiles = pgTable("profiles", {
   firstName: text("first_name").notNull().default(""),
   lastName: text("last_name").notNull().default(""),
   phone: text("phone"),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+// Compteurs de tentatives (connexion, mot de passe oublié, contact, inscription), fenêtre glissante simple
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull(),
+});
+
+// E-mails non envoyés faute de fournisseur (mode local / démo), consultables dans l'admin
+export const emailOutbox = pgTable("email_outbox", {
+  id: id(),
+  to: text("to").notNull(),
+  subject: text("subject").notNull(),
+  text: text("text").notNull(),
+  link: text("link"),
   createdAt: createdAt(),
 });
 

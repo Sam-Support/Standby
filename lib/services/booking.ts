@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { isRoleKey, ROLES, type RoleKey } from "@/lib/domain";
@@ -270,7 +270,13 @@ export async function findCandidates(db: Db, b: Booking, role: RoleKey, excludeF
     })
     .from(s.freelancers)
     .innerJoin(s.profiles, eq(s.profiles.id, s.freelancers.userId))
-    .where(and(eq(s.freelancers.status, "valide"), sql`${s.freelancers.roles} @> array[${role}]::text[]`));
+    .where(
+      and(
+        eq(s.freelancers.status, "valide"),
+        isNotNull(s.profiles.emailVerifiedAt),
+        sql`${s.freelancers.roles} @> array[${role}]::text[]`,
+      ),
+    );
 
   // indisponibles : déjà engagés sur un autre événement aux mêmes dates
   const busy = await db
