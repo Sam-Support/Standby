@@ -14,6 +14,7 @@ import { advanceBookings } from "@/lib/services/booking";
 import { cancelBooking } from "@/lib/services/cancellation";
 import { autoValidateHours, validateAssignmentHours } from "@/lib/services/hours";
 import { transcribeCard } from "@/lib/services/leads";
+import { checkCompliance } from "@/lib/services/compliance";
 import { purgeExpiredData } from "@/lib/services/privacy";
 import { sendReminders } from "@/lib/services/reminders";
 import { deleteReview } from "@/lib/services/reviews";
@@ -98,7 +99,7 @@ export async function reviewDocAction(docId: string, status: "valide" | "refuse"
   try {
     const admin = await requireAdmin();
     if (status === "refuse" && !str(fd, "comment")) return { error: "Indiquez ce qui est à corriger." };
-    await reviewDocument(await getDb(), docId, admin.id, status, str(fd, "comment"));
+    await reviewDocument(await getDb(), docId, admin.id, status, str(fd, "comment"), str(fd, "issuedOn") || null);
   } catch (e) {
     return fail(e);
   }
@@ -166,9 +167,10 @@ export async function runJobsAction(): Promise<FormState> {
     const h = await autoValidateHours(db);
     const p = await runPayouts(db);
     const purged = await purgeExpiredData(db);
+    const c = await checkCompliance(db);
     revalidatePath("/admin", "layout");
     return {
-      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s).`,
+      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s), ${c.reminders} relance(s) URSSAF, ${c.rechecked} SIRET recontrôlé(s).`,
     };
   } catch (e) {
     return fail(e);

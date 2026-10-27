@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "@/db";
+import { checkCompliance } from "@/lib/services/compliance";
 import { purgeExpiredData } from "@/lib/services/privacy";
 import { runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
@@ -23,5 +24,6 @@ export async function POST(req: Request) {
   const validated = await autoValidateHours(db);
   const payouts = await runPayouts(db);
   const purged = await purgeExpiredData(db);
-  return Response.json({ statuses, reminders, validated, payouts, purged });
+  const compliance = await checkCompliance(db);
+  return Response.json({ statuses, reminders, validated, payouts, purged, compliance });
 }

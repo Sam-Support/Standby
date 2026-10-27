@@ -123,7 +123,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
       } else {
         for (const type of ["identite", "urssaf", "rib", "siret"] as DocumentKey[]) {
           const upload = await readUpload(file(fd, `doc_${type}`), ["pdf", "jpg", "jpeg", "png"]);
-          if (upload) await uploadFreelancerDocument(db, f, type, upload);
+          if (upload) await uploadFreelancerDocument(db, f, type, upload, type === "urssaf" ? str(fd, "urssafIssuedOn") : null);
         }
         await freelancerStatusStep(db, f, { siret: str(fd, "siret"), legalStatus: str(fd, "legalStatus") });
         next = "/commercial?bienvenue=1";

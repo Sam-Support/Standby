@@ -11,7 +11,15 @@ import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/int
 import { audit, notify } from "@/lib/notify";
 import { getPricing } from "@/lib/settings";
 import { isValidSiret, normalizeSiret } from "@/lib/siret";
-import { putFile } from "@/lib/storage";
+import { deleteFile, putFile } from "@/lib/storage";
+import {
+  checkFreelancerSiret,
+  maybeValidateFreelancer,
+  refreshBlockedReason,
+  REQUIRED_DOCUMENTS,
+  urssafValidUntil,
+  type SiretLookup,
+} from "./compliance";
 
 export class AccountError extends Error {}
 
@@ -264,29 +272,62 @@ export async function freelancerSizes(db: Db, f: typeof s.freelancers.$inferSele
     .where(eq(s.freelancers.id, f.id));
 }
 
-export async function uploadFreelancerDocument(db: Db, f: typeof s.freelancers.$inferSelect, type: DocumentKey, file: { data: Buffer; name: string }) {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Dépôt d'un document. Pour l'attestation URSSAF, la date de délivrance est obligatoire : l'échéance
+ * (6 mois) n'est enregistrée qu'à la validation, l'ancienne attestation restant valable d'ici là.
+ */
+export async function uploadFreelancerDocument(
+  db: Db,
+  f: typeof s.freelancers.$inferSelect,
+  type: DocumentKey,
+  file: { data: Buffer; name: string },
+  issuedOn?: string | null,
+  today = new Date().toISOString().slice(0, 10),
+) {
+  if (type === "urssaf") {
+    if (!issuedOn || !ISO_DATE.test(issuedOn)) throw new AccountError("Indiquez la date de délivrance de l’attestation URSSAF.");
+    if (issuedOn > today) throw new AccountError("La date de délivrance de l’attestation ne peut pas être dans le futur.");
+    if (urssafValidUntil(issuedOn) < today) {
+      throw new AccountError("Cette attestation a plus de 6 mois : téléchargez une attestation de vigilance à jour sur urssaf.fr.");
+    }
+  }
   const key = `private/freelancers/${f.id}/${type}-${Date.now()}.${file.name.split(".").pop()}`;
   await putFile(key, file.data, file.name);
+  const [previous] = await db
+    .select({ path: s.freelancerDocuments.path })
+    .from(s.freelancerDocuments)
+    .where(and(eq(s.freelancerDocuments.freelancerId, f.id), eq(s.freelancerDocuments.type, type)));
   await db
     .insert(s.freelancerDocuments)
-    .values({ freelancerId: f.id, type, path: key, filename: file.name })
+    .values({ freelancerId: f.id, type, path: key, filename: file.name, issuedOn: issuedOn ?? null })
     .onConflictDoUpdate({
       target: [s.freelancerDocuments.freelancerId, s.freelancerDocuments.type],
-      set: { path: key, filename: file.name, status: "en_attente", comment: null, reviewedAt: null, reviewedBy: null },
+      set: { path: key, filename: file.name, source: "depot", issuedOn: issuedOn ?? null, status: "en_attente", comment: null, reviewedAt: null, reviewedBy: null },
     });
+  if (previous?.path && previous.path !== key) await deleteFile(previous.path);
 }
 
-export async function freelancerStatusStep(db: Db, f: typeof s.freelancers.$inferSelect, input: { siret: string; legalStatus: string }) {
+export async function freelancerStatusStep(
+  db: Db,
+  f: typeof s.freelancers.$inferSelect,
+  input: { siret: string; legalStatus: string },
+  lookup?: SiretLookup,
+) {
   const siret = normalizeSiret(input.siret);
   if (!isValidSiret(siret)) throw new AccountError("SIRET invalide : 14 chiffres, vérifiez la saisie.");
   const docs = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id));
-  const missing = (["identite", "urssaf", "rib"] as DocumentKey[]).filter((t) => !docs.some((d) => d.type === t));
+  const missing = REQUIRED_DOCUMENTS.filter((t) => !docs.some((d) => d.type === t));
   if (missing.length) throw new AccountError(`Documents manquants : ${missing.map((t) => DOCUMENT_TYPES[t]).join(", ")}.`);
+  const sirene = await checkFreelancerSiret(db, f.id, siret, lookup);
+  if (sirene.status === "introuvable") throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE : vérifiez la saisie.");
+  if (sirene.status === "ferme") throw new AccountError("Ce SIRET correspond à un établissement fermé dans le répertoire SIRENE.");
   await db
     .update(s.freelancers)
     .set({ siret, legalStatus: input.legalStatus || "Auto-entrepreneur", status: f.status === "valide" ? "valide" : "en_revue", onboardingStep: 5 })
     .where(eq(s.freelancers.id, f.id));
-  if (f.status !== "valide") {
+  if (f.status !== "valide" && !(await maybeValidateFreelancer(db, f.id))) {
     const admins = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.role, "admin"));
     for (const a of admins) {
       await notify(db, a.id, { title: "Nouveau profil à vérifier", body: "Un commercial a transmis ses documents.", link: "/admin/inscrits", email: false });
@@ -294,31 +335,41 @@ export async function freelancerStatusStep(db: Db, f: typeof s.freelancers.$infe
   }
 }
 
-export async function reviewDocument(db: Db, docId: string, adminId: string, status: "valide" | "refuse", comment?: string) {
+/** Validation ou refus d'un document par l'équipe Standby (date de délivrance corrigeable pour l'URSSAF). */
+export async function reviewDocument(
+  db: Db,
+  docId: string,
+  adminId: string,
+  status: "valide" | "refuse",
+  comment?: string,
+  issuedOn?: string | null,
+  today = new Date().toISOString().slice(0, 10),
+) {
   const [doc] = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.id, docId));
   if (!doc) throw new AccountError("Document introuvable.");
+  let dates = {};
+  if (status === "valide" && doc.type === "urssaf") {
+    const issued = issuedOn || doc.issuedOn;
+    if (!issued || !ISO_DATE.test(issued)) throw new AccountError("Indiquez la date de délivrance de l’attestation pour la valider.");
+    const validUntil = urssafValidUntil(issued);
+    if (validUntil < today) throw new AccountError(`Cette attestation a expiré le ${validUntil} : refusez-la et demandez-en une à jour.`);
+    dates = { issuedOn: issued, validUntil };
+  }
   await db
     .update(s.freelancerDocuments)
-    .set({ status, comment: comment?.trim() || null, reviewedBy: adminId, reviewedAt: new Date() })
+    .set({ status, comment: comment?.trim() || null, reviewedBy: adminId, reviewedAt: new Date(), ...dates })
     .where(eq(s.freelancerDocuments.id, docId));
-  await audit(db, adminId, `document.${status}`, "freelancer_document", docId, { comment });
+  await audit(db, adminId, `document.${status}`, "freelancer_document", docId, { comment, ...dates });
   const [f] = await db.select().from(s.freelancers).where(eq(s.freelancers.id, doc.freelancerId));
-  const docs = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id));
-  const required: DocumentKey[] = ["identite", "urssaf", "rib"];
-  const allValid = required.every((t) => docs.some((d) => d.type === t && d.status === "valide"));
+  await refreshBlockedReason(db, f.id, today);
   if (status === "refuse") {
     await notify(db, f.userId, {
       title: "Un document est à corriger",
       body: `${DOCUMENT_TYPES[doc.type as DocumentKey]} : ${comment?.trim() || "document refusé"}. Déposez une nouvelle version depuis votre profil.`,
       link: "/commercial/profil",
     });
-  } else if (allValid && f.status !== "valide" && f.onboardingStep >= 5) {
-    await db.update(s.freelancers).set({ status: "valide" }).where(eq(s.freelancers.id, f.id));
-    await notify(db, f.userId, {
-      title: "Votre profil est validé",
-      body: "Vos documents sont vérifiés : votre profil est visible des exposants et vous recevrez vos premières missions.",
-      link: "/commercial",
-    });
+  } else {
+    await maybeValidateFreelancer(db, f.id, today);
   }
 }
 

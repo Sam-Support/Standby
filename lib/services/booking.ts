@@ -273,6 +273,7 @@ export async function findCandidates(db: Db, b: Booking, role: RoleKey, excludeF
     .where(
       and(
         eq(s.freelancers.status, "valide"),
+        isNull(s.freelancers.blockedReason), // attestation URSSAF expirée, établissement fermé…
         isNotNull(s.profiles.emailVerifiedAt),
         sql`${s.freelancers.roles} @> array[${role}]::text[]`,
       ),

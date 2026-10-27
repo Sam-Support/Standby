@@ -135,7 +135,7 @@ export async function uploadDocAction(type: DocumentKey, _: FormState, fd: FormD
     const { f, db } = await me();
     const upload = await readUpload(file(fd, "doc"), ["pdf", "jpg", "jpeg", "png"]);
     if (!upload) return { error: "Choisissez un fichier." };
-    await uploadFreelancerDocument(db, f, type, upload);
+    await uploadFreelancerDocument(db, f, type, upload, type === "urssaf" ? str(fd, "issuedOn") : null);
   } catch (e) {
     return fail(e);
   }
