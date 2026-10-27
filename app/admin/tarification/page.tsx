@@ -13,13 +13,17 @@ export default async function Page() {
   const db = await getDb();
   const pricing = await getPricing(db);
   const history = await db.select().from(s.pricingSettings).orderBy(desc(s.pricingSettings.createdAt)).limit(60);
-  const fmt = (key: string, v: number) => (PRICING_DEFAULTS[key]?.unit === "bps" ? percent(v) : eurosPrecise(v));
+  const fmt = (key: string, v: number) => {
+    const unit = PRICING_DEFAULTS[key]?.unit;
+    return unit === "bps" ? percent(v) : unit === "days" ? `${v} jour${v > 1 ? "s" : ""}` : eurosPrecise(v);
+  };
   const now = new Date();
 
   return (
     <>
-      <PageHead label="Administration" title="Tarification et commissions">
-        Chaque modification prend effet à la date choisie. Les réservations déjà confirmées gardent les taux en vigueur à leur confirmation.
+      <PageHead label="Administration" title="Tarification et règles">
+        Commissions, tarifs planchers, barème d’annulation et conservation des données. Chaque modification prend effet à la date choisie ; les
+        réservations déjà confirmées gardent les conditions en vigueur à leur confirmation.
       </PageHead>
       <section className="clay panel">
         <h2>Réglages en vigueur</h2>
@@ -38,10 +42,10 @@ export default async function Page() {
                 name="value"
                 required
                 inputMode="decimal"
-                defaultValue={def.unit === "bps" ? pricing.raw[key] / 100 : pricing.raw[key] / 100}
+                defaultValue={def.unit === "days" ? pricing.raw[key] : pricing.raw[key] / 100}
                 style={{ width: 100, minHeight: 40, padding: "8px 12px" }}
               />
-              <span className="muted small">{def.unit === "bps" ? "%" : "€"}</span>
+              <span className="muted small">{def.unit === "bps" ? "%" : def.unit === "days" ? "jours" : "€"}</span>
               <label className="sr-only" htmlFor={`d-${key}`}>Date d’effet</label>
               <input id={`d-${key}`} className="input" type="date" name="effectiveFrom" defaultValue={todayIso()} style={{ width: 170, minHeight: 40, padding: "8px 12px" }} />
               <Submit className="clay s btn xs" pending="…">Appliquer</Submit>

@@ -235,9 +235,22 @@ export const bookings = pgTable(
     cgvAcceptedAt: timestamp("cgv_accepted_at", { withTimezone: true }),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    // conditions appliquées à l'annulation : taux, frais facturés, indemnités des commerciaux
+    cancellation: jsonb("cancellation"),
     createdAt: createdAt(),
   },
   (t) => [index("bookings_company_idx").on(t.companyId)],
+);
+
+// Rappels déjà envoyés (J-7, J-2) : un seul envoi par réservation et par type
+export const bookingReminders = pgTable(
+  "booking_reminders",
+  {
+    bookingId: uuid("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bookingId, t.kind] })],
 );
 
 export const bookingPositions = pgTable(

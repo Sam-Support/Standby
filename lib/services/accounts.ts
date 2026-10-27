@@ -37,7 +37,7 @@ export async function registerAccount(
     .insert(s.profiles)
     .values({ id, email, role: input.role, firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone?.trim() || null })
     .returning();
-  await storeLocalPassword(id, input.password);
+  await storeLocalPassword(db, id, input.password);
   await sendVerificationEmail(db, profile);
   return profile;
 }
@@ -74,7 +74,7 @@ export function requireVerifiedEmail(profile: { emailVerifiedAt: Date | null }) 
 }
 
 export async function login(db: Db, email: string, password: string) {
-  const id = await verifyIdentity(email.trim().toLowerCase(), password);
+  const id = await verifyIdentity(db, email.trim().toLowerCase(), password);
   if (!id) return null;
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, id));
   return p ?? null;
@@ -103,7 +103,7 @@ export async function resetPassword(db: Db, token: string, password: string) {
     .from(s.passwordResets)
     .where(and(eq(s.passwordResets.token, token), isNull(s.passwordResets.usedAt), gt(s.passwordResets.expiresAt, new Date())));
   if (!r) throw new AccountError("Lien expiré ou déjà utilisé. Faites une nouvelle demande.");
-  await updateIdentityPassword(r.userId, password);
+  await updateIdentityPassword(db, r.userId, password);
   await db.update(s.passwordResets).set({ usedAt: new Date() }).where(eq(s.passwordResets.token, token));
 }
 

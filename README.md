@@ -34,7 +34,11 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 - **Espace entreprise** : réservations et acceptations, heures à valider ou ajuster, leads reçus au format du template (export Excel ou envoi HubSpot), factures, profil.
 - **Espace commercial** : missions à accepter ou refuser, déclaration des heures, dépôt des leads (Excel avec rapprochement automatique des colonnes, photos de cartes lues par Claude), revenus et virements du lundi, documents.
 - **Admin** (`/admin`) : tableau de bord et commissions, salons et foires (logos, import CSV, dates vérifiées), **tarification versionnée** (frais de service, commission, TVA, planchers par poste, majoration tenue), validation des documents, arbitrage des heures, finances, saisie des cartes, messages.
-- **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, validation des heures à J+3, virements dus.
+- **Annulation** : barème réglable dans l'admin (par défaut gratuit à 14 jours ou plus, 30 % de 7 à 13 jours, 50 % de 2 à 6 jours, 100 % ensuite). Le montant exact est affiché avant de confirmer ; les frais sont facturés et les commerciaux déjà engagés reçoivent la même part en indemnité. L'admin peut annuler sans frais.
+- **Avis** : après validation des heures, l'exposant note chaque membre de l'équipe (1 à 5 et commentaire) ; la moyenne alimente le matching, le commercial voit ses avis, l'admin modère (`/admin/avis`).
+- **Rappels** : J-7 (badges à demander pour l'équipe Standby, point d'équipe pour l'exposant et les commerciaux) et J-2 (briefing avec le référent, coordonnées), un seul envoi chacun.
+- **RGPD** (`/compte`) : export JSON de toutes ses données, suppression du compte (refusée tant qu'une réservation, une mission ou un paiement est en cours ; pièces comptables conservées 10 ans sur un profil anonymisé), purge automatique des leads après la durée réglée dans l'admin (365 jours par défaut).
+- **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, rappels J-7 et J-2, validation des heures à J+3, virements dus, purge des données arrivées à échéance.
 
 ## Sécurité
 

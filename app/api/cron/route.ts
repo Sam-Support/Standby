@@ -1,12 +1,15 @@
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "@/db";
+import { purgeExpiredData } from "@/lib/services/privacy";
 import { runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { autoValidateHours } from "@/lib/services/hours";
+import { sendReminders } from "@/lib/services/reminders";
 
 /**
  * Tâches planifiées, appelées par le conteneur cron du VPS :
- * statuts (début/fin d'événement, expiration à 48 h), validation automatique J+3, virements dus.
+ * statuts (début/fin d'événement, expiration à 48 h), rappels J-7 et J-2, validation automatique J+3,
+ * virements dus, purge des données arrivées à échéance.
  */
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -16,7 +19,9 @@ export async function POST(req: Request) {
   }
   const db = await getDb();
   const statuses = await advanceBookings(db);
+  const reminders = await sendReminders(db);
   const validated = await autoValidateHours(db);
   const payouts = await runPayouts(db);
-  return Response.json({ statuses, validated, payouts });
+  const purged = await purgeExpiredData(db);
+  return Response.json({ statuses, reminders, validated, payouts, purged });
 }

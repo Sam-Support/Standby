@@ -475,21 +475,6 @@ export async function proposeReplacement(db: Db, b: Booking, role: RoleKey) {
   return best;
 }
 
-export async function cancelBooking(db: Db, b: Booking, actorId: string) {
-  if (["validee", "payee", "annulee", "heures_a_valider"].includes(b.status)) {
-    throw new BookingError("Cette réservation ne peut plus être annulée en ligne : contactez-nous.");
-  }
-  const asg = await loadAssignments(db, b.id);
-  await db.update(s.bookings).set({ status: "annulee", cancelledAt: new Date() }).where(eq(s.bookings.id, b.id));
-  await db.update(s.assignments).set({ status: "annulee" }).where(eq(s.assignments.bookingId, b.id));
-  if (b.status !== "brouillon") {
-    for (const a of asg.filter((x) => x.status === "proposee" || x.status === "acceptee")) {
-      await notify(db, a.userId, { title: `Mission annulée (${b.ref})`, body: "L’exposant a annulé cette réservation.", link: "/commercial" });
-    }
-  }
-  await audit(db, actorId, "booking.cancel", "booking", b.id);
-}
-
 /** Tâche planifiée : démarrage, fin d'événement, expiration des propositions (48 h). */
 export async function advanceBookings(db: Db, today = todayIso(), now = new Date()) {
   const open = await db.select().from(s.bookings).where(inArray(s.bookings.status, ["envoyee", "partielle", "confirmee", "en_cours"]));

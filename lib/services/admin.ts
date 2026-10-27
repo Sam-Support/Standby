@@ -130,7 +130,9 @@ export async function importEventsCsv(db: Db, adminId: string, text: string) {
 export async function setPricing(db: Db, adminId: string, key: string, value: number, effectiveFrom: Date) {
   const def = PRICING_DEFAULTS[key];
   if (!def) throw new AdminError("Réglage inconnu.");
-  if (!Number.isInteger(value) || value < 0 || (def.unit === "bps" && value > 10000)) throw new AdminError("Valeur invalide.");
+  if (!Number.isInteger(value) || value < 0 || (def.unit === "bps" && value > 10000) || (def.unit === "days" && value > 3650)) {
+    throw new AdminError("Valeur invalide.");
+  }
   await db.insert(s.pricingSettings).values({ key, value, effectiveFrom, createdBy: adminId });
   await audit(db, adminId, "pricing.set", "pricing", key, { value, effectiveFrom });
 }

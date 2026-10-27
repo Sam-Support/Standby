@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = /^\/(entreprise|commercial|admin|notifications)(\/|$)|^\/reserver(\/(?!nouveau)|$)/;
+const PROTECTED = /^\/(entreprise|commercial|admin|notifications|compte)(\/|$)|^\/reserver(\/(?!nouveau)|$)/;
 
 /**
  * 1. En-têtes de sécurité, dont une CSP avec nonce par requête (Next l'applique à ses scripts).

@@ -15,6 +15,13 @@
       "when": 1793120842938,
       "tag": "0001_securite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793134431337,
+      "tag": "0002_manques_produit",
+      "breakpoints": true
     }
   ]
 }

@@ -10,9 +10,13 @@ import { PRICING_DEFAULTS } from "@/lib/domain";
 import { reviewDocument } from "@/lib/services/accounts";
 import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setPricing } from "@/lib/services/admin";
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
-import { advanceBookings, cancelBooking } from "@/lib/services/booking";
+import { advanceBookings } from "@/lib/services/booking";
+import { cancelBooking } from "@/lib/services/cancellation";
 import { autoValidateHours, validateAssignmentHours } from "@/lib/services/hours";
 import { transcribeCard } from "@/lib/services/leads";
+import { purgeExpiredData } from "@/lib/services/privacy";
+import { sendReminders } from "@/lib/services/reminders";
+import { deleteReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 
 export async function saveEventAction(id: string | null, _: FormState, fd: FormData): Promise<FormState> {
@@ -78,7 +82,8 @@ export async function setPricingAction(key: string, _: FormState, fd: FormData):
     const admin = await requireAdmin();
     const def = PRICING_DEFAULTS[key];
     const raw = str(fd, "value");
-    const value = def?.unit === "bps" ? Math.round(Number(raw.replace(",", ".")) * 100) : eurosToCents(raw);
+    const value =
+      def?.unit === "bps" ? Math.round(Number(raw.replace(",", ".")) * 100) : def?.unit === "days" ? Number(raw) : eurosToCents(raw);
     const when = str(fd, "effectiveFrom");
     const effectiveFrom = when ? new Date(`${when}T00:00:00`) : new Date();
     await setPricing(await getDb(), admin.id, key, value, effectiveFrom);
@@ -139,12 +144,12 @@ export async function retryPaymentAction(paymentId: string): Promise<FormState> 
   return { ok: "Paiement relancé." };
 }
 
-export async function adminCancelAction(bookingId: string): Promise<FormState> {
+export async function adminCancelAction(bookingId: string, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
     const db = await getDb();
     const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, bookingId));
-    await cancelBooking(db, b, admin.id);
+    await cancelBooking(db, b, admin.id, { waive: fd.get("waive") === "on" });
   } catch (e) {
     return fail(e);
   }
@@ -157,10 +162,14 @@ export async function runJobsAction(): Promise<FormState> {
     await requireAdmin();
     const db = await getDb();
     const a = await advanceBookings(db);
+    const r = await sendReminders(db);
     const h = await autoValidateHours(db);
     const p = await runPayouts(db);
+    const purged = await purgeExpiredData(db);
     revalidatePath("/admin", "layout");
-    return { ok: `Tâches exécutées : ${a} changement(s) de statut, ${h} validation(s) automatique(s), ${p} virement(s).` };
+    return {
+      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s).`,
+    };
   } catch (e) {
     return fail(e);
   }
@@ -182,6 +191,17 @@ export async function transcribeAction(cardId: string, _: FormState, fd: FormDat
   }
   revalidatePath("/admin/cartes");
   return { ok: "Carte saisie." };
+}
+
+export async function deleteReviewAction(reviewId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await deleteReview(await getDb(), admin.id, reviewId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin/avis");
+  return { ok: "Avis supprimé, note recalculée." };
 }
 
 export async function handleMessageAction(id: string): Promise<FormState> {

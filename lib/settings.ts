@@ -1,6 +1,7 @@
 import { desc, lte } from "drizzle-orm";
 import type { Db } from "@/db";
 import { pricingSettings } from "@/db/schema";
+import type { CancellationPolicy } from "./cancellation";
 import { PRICING_DEFAULTS, type RoleKey } from "./domain";
 
 export type Pricing = {
@@ -9,6 +10,8 @@ export type Pricing = {
   vatBps: number;
   outfitStandbyCents: number;
   floors: Record<RoleKey, number>;
+  cancellation: CancellationPolicy;
+  leadsRetentionDays: number;
   raw: Record<string, number>;
 };
 
@@ -39,6 +42,15 @@ export async function getPricing(db: Db, at = new Date()): Promise<Pricing> {
       animateur: raw["floor:animateur"],
       demonstrateur: raw["floor:demonstrateur"],
     },
+    cancellation: {
+      freeDays: raw.cancel_free_days,
+      tier1Days: raw.cancel_tier1_days,
+      tier1Bps: raw.cancel_tier1_bps,
+      tier2Days: raw.cancel_tier2_days,
+      tier2Bps: raw.cancel_tier2_bps,
+      lastBps: raw.cancel_last_bps,
+    },
+    leadsRetentionDays: raw.leads_retention_days,
     raw,
   };
 }

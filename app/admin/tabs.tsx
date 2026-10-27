@@ -11,6 +11,7 @@ const TABS = [
   ["/admin/reservations", "Réservations"],
   ["/admin/finances", "Finances"],
   ["/admin/cartes", "Cartes de visite"],
+  ["/admin/avis", "Avis"],
   ["/admin/messages", "Messages"],
   ["/admin/emails", "E-mails"],
 ];
