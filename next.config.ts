@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // PGlite (base locale) et exceljs s'exécutent en Node natif, sans bundling
   serverExternalPackages: ["@electric-sql/pglite", "exceljs"],
   outputFileTracingIncludes: { "/**": ["./db/migrations/**/*"] },
+  // la base locale (.data) ne doit jamais partir dans le build autonome
+  outputFileTracingExcludes: { "/**": ["./.data/**/*"] },
   poweredByHeader: false,
   experimental: {
     // dépôts de plaquettes, documents et fichiers de leads (20 Mo + marge multipart)
