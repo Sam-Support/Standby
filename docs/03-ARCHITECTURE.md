@@ -18,7 +18,8 @@
 | Back-office | Espace `/admin` dans Next.js (rôle `admin`, table `audit_log`) |
 | Hébergement | **VPS** (Docker Compose : Next.js standalone + Caddy pour HTTPS) + Supabase cloud UE (Paris ou Francfort) ; voir `deploy/` |
 | Observabilité | Sentry, PostHog (hébergement UE), logs Docker, alertes Stripe webhooks |
-| Qualité | Vitest (dont un test du parcours complet sur PGlite), ESLint, TypeScript strict, GitHub Actions ; Playwright et axe-core à ajouter |
+| Qualité | Vitest (dont un test du parcours complet sur PGlite), Playwright + axe-core (WCAG 2.1 AA) sur le build de production, ESLint, TypeScript strict, GitHub Actions (jobs `check` et `e2e`) |
+| Sécurité applicative | Limites de tentatives en base (`rate_limits`), vérification d'e-mail à l'inscription, CSP avec nonce et en-têtes de sécurité via `proxy.ts` |
 
 > Le schéma détaillé est dans `db/schema.ts` (24 tables), la logique métier dans `lib/services/*` (testable sans Next.js), les écrans dans `app/`.
 

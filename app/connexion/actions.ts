@@ -64,7 +64,7 @@ export async function resetAction(token: string, _: FormState, fd: FormData): Pr
   redirect("/connexion?reinitialise=1");
 }
 
-export async function resendVerificationAction(_: FormState): Promise<FormState> {
+export async function resendVerificationAction(): Promise<FormState> {
   try {
     const user = await getCurrentUser();
     if (!user) return { error: "Session expirée : reconnectez-vous." };

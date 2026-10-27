@@ -44,3 +44,8 @@ next-env.d.ts
 
 # base locale et fichiers deposes en developpement
 /.data/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
