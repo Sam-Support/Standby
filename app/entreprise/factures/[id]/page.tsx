@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";
@@ -5,6 +6,7 @@ import { BackLink } from "@/components/ui";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { dateRange, eurosPrecise, longDate, percent } from "@/lib/format";
 import { assertInvoiceAccess, type InvoiceLine } from "@/lib/services/billing";
+import { creditNotesFor } from "@/lib/services/credit-notes";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "./print";
 
@@ -26,6 +28,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const [client] = await db.select().from(s.companies).where(eq(s.companies.id, booking.companyId));
   const [event] = booking.eventId ? await db.select().from(s.events).where(eq(s.events.id, booking.eventId)) : [];
   const lines = invoice.lines as InvoiceLine[];
+  const credits = await creditNotesFor(db, [invoice.id]);
   const vatBps = invoice.totalHtCents ? Math.round((invoice.vatCents / invoice.totalHtCents) * 10000) : 2000;
 
   return (
@@ -85,6 +88,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="dev"><span>Total HT</span><b>{eurosPrecise(invoice.totalHtCents)}</b></div>
           <div className="dev"><span>TVA {percent(vatBps)}</span><b>{eurosPrecise(invoice.vatCents)}</b></div>
           <div className="ttc"><span>Total TTC</span><span className="disp">{eurosPrecise(invoice.totalTtcCents)}</span></div>
+          {credits.map((n) => (
+            <div key={n.id} className="dev">
+              <Link href={`/entreprise/avoirs/${n.id}`}>Avoir {n.number}</Link>
+              <b>{eurosPrecise(-n.totalTtcCents)}</b>
+            </div>
+          ))}
+          {credits.length > 0 && (
+            <div className="dev"><span>Net après avoirs</span><b>{eurosPrecise(invoice.totalTtcCents - credits.reduce((n, c) => n + c.totalTtcCents, 0))}</b></div>
+          )}
         </div>
         <p className="muted small">
           Règlement par prélèvement sur le moyen de paiement enregistré. Pénalités de retard : <span className="todo">[taux]</span> ; indemnité forfaitaire

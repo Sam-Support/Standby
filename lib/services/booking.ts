@@ -3,9 +3,9 @@ import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { isRoleKey, ROLES, type RoleKey } from "@/lib/domain";
-import { listDays, todayIso } from "@/lib/format";
+import { daysUntil, hourly, listDays, todayIso } from "@/lib/format";
 import { daysOverlap, matchScore } from "@/lib/matching";
-import { audit, notify } from "@/lib/notify";
+import { audit, notify, notifyAdmins } from "@/lib/notify";
 import { billableMinutesPerDay, computeQuote, type Quote } from "@/lib/pricing";
 import { getPricing, type Pricing } from "@/lib/settings";
 
@@ -439,7 +439,7 @@ export async function respondToMission(db: Db, assignmentId: string, freelancerU
       link: `/entreprise/reservations/${row.b.id}`,
     });
   } else {
-    const replacement = await proposeReplacement(db, row.b, row.a.role as RoleKey);
+    const replacement = await proposeReplacement(db, row.b, row.a.role as RoleKey, row.a.hourlyRateCents);
     await notify(db, owner.ownerId, {
       title: `Mission refusée sur ${row.b.ref}`,
       body: replacement
@@ -454,15 +454,18 @@ async function updateAcceptRate(db: Db, freelancerId: string) {
   const rows = await db
     .select({ status: s.assignments.status })
     .from(s.assignments)
-    .where(and(eq(s.assignments.freelancerId, freelancerId), inArray(s.assignments.status, ["acceptee", "refusee", "expiree"])));
+    .where(and(eq(s.assignments.freelancerId, freelancerId), inArray(s.assignments.status, ["acceptee", "refusee", "expiree", "desistee"])));
   if (rows.length === 0) return;
+  // un désistement compte comme un refus : il pèse sur le taux d'acceptation, donc sur le matching
   const ok = rows.filter((r) => r.status === "acceptee").length;
   await db.update(s.freelancers).set({ acceptRateBps: Math.round((ok / rows.length) * 10000) }).where(eq(s.freelancers.id, freelancerId));
 }
 
-export async function proposeReplacement(db: Db, b: Booking, role: RoleKey) {
+/** Meilleur profil libre pour le poste, à tarif égal ou inférieur en priorité : le devis accepté ne doit pas augmenter. */
+export async function proposeReplacement(db: Db, b: Booking, role: RoleKey, maxRateCents?: number) {
   const all = await db.select({ id: s.assignments.freelancerId }).from(s.assignments).where(eq(s.assignments.bookingId, b.id));
-  const [best] = await findCandidates(db, b, role, all.map((a) => a.id));
+  const candidates = await findCandidates(db, b, role, all.map((a) => a.id));
+  const best = (maxRateCents === undefined ? undefined : candidates.find((c) => c.hourlyRateCents <= maxRateCents)) ?? candidates[0];
   if (!best) return null;
   const [a] = await db
     .insert(s.assignments)
@@ -513,8 +516,61 @@ export async function advanceBookings(db: Db, today = todayIso(), now = new Date
   for (const { a, b } of stale) {
     await db.update(s.assignments).set({ status: "expiree" }).where(eq(s.assignments.id, a.id));
     await updateAcceptRate(db, a.freelancerId);
-    if (isRoleKey(a.role)) await proposeReplacement(db, b, a.role);
+    if (isRoleKey(a.role)) await proposeReplacement(db, b, a.role, a.hourlyRateCents);
     changed++;
   }
   return changed;
+}
+
+/** Le désistement reste possible jusqu'à la veille du premier jour ; ensuite, seule l'équipe Standby peut réorganiser. */
+export const WITHDRAWABLE = ["envoyee", "partielle", "confirmee"];
+
+/**
+ * Désistement d'un commercial qui avait accepté : un remplaçant reçoit la mission, l'exposant et l'équipe Standby
+ * sont prévenus. Le motif n'est transmis qu'à l'équipe Standby.
+ */
+export async function withdrawFromMission(db: Db, assignmentId: string, freelancerUserId: string, reason: string, today = todayIso()) {
+  const [row] = await db
+    .select({ a: s.assignments, f: s.freelancers, b: s.bookings })
+    .from(s.assignments)
+    .innerJoin(s.freelancers, eq(s.freelancers.id, s.assignments.freelancerId))
+    .innerJoin(s.bookings, eq(s.bookings.id, s.assignments.bookingId))
+    .where(eq(s.assignments.id, assignmentId));
+  if (!row || row.f.userId !== freelancerUserId) throw new BookingError("Mission introuvable.");
+  if (row.a.status !== "acceptee") throw new BookingError("Seule une mission acceptée peut faire l’objet d’un désistement.");
+  const first = [...row.b.days].sort()[0];
+  if (!WITHDRAWABLE.includes(row.b.status) || !first || first <= today) {
+    throw new BookingError("L’événement a commencé : appelez l’équipe Standby pour signaler votre absence.");
+  }
+  const motive = reason.trim();
+  if (motive.length < 10) throw new BookingError("Expliquez en quelques mots la raison de votre désistement.");
+
+  await db
+    .update(s.assignments)
+    .set({ status: "desistee", withdrawnAt: new Date(), withdrawalReason: motive.slice(0, 1000) })
+    .where(eq(s.assignments.id, assignmentId));
+  await updateAcceptRate(db, row.f.id);
+  await refreshBookingStatus(db, row.b.id);
+  const daysBefore = daysUntil(first, today);
+  const role = row.a.role as RoleKey;
+  const replacement = isRoleKey(role) ? await proposeReplacement(db, row.b, role, row.a.hourlyRateCents) : null;
+
+  const owner = await companyOwner(db, row.b.companyId);
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, freelancerUserId));
+  const rateNote = replacement && replacement.hourlyRateCents !== row.a.hourlyRateCents ? ` (${hourly(replacement.hourlyRateCents)})` : "";
+  await notify(db, owner.ownerId, {
+    title: `${p.firstName} s’est désisté·e (${row.b.ref})`,
+    body: replacement
+      ? `${p.firstName} ${p.lastName} ne pourra pas être présent·e. Un remplaçant compatible à ${replacement.score} %${rateNote} a reçu la mission : une notification vous attend dès son acceptation.`
+      : `${p.firstName} ${p.lastName} ne pourra pas être présent·e et aucun profil n’est libre pour l’instant : l’équipe Standby cherche une solution et vous recontacte.`,
+    link: `/entreprise/reservations/${row.b.id}`,
+  });
+  await notifyAdmins(db, {
+    title: `Désistement${daysBefore <= 2 ? " de dernière minute" : ""} (${row.b.ref})`,
+    body: `${p.firstName} ${p.lastName} · ${ROLES[role]?.short ?? role} · J-${daysBefore}. Motif : ${motive}. ${replacement ? "Remplaçant proposé." : "Aucun remplaçant libre : à traiter."}`,
+    link: `/admin/reservations/${row.b.id}`,
+    email: !replacement || daysBefore <= 2,
+  });
+  await audit(db, freelancerUserId, "assignment.withdraw", "assignment", assignmentId, { daysBefore, replaced: Boolean(replacement) });
+  return { replaced: Boolean(replacement), daysBefore };
 }

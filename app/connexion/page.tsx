@@ -17,6 +17,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           {reinitialise && <p className="note ok">Mot de passe modifié. Vous pouvez vous connecter.</p>}
           {email === "confirme" && <p className="note ok">Adresse e-mail confirmée. Connectez-vous pour continuer.</p>}
           {email === "invalide" && <p className="note err">Lien de confirmation expiré ou invalide. Connectez-vous pour en recevoir un nouveau.</p>}
+          {email === "modifie" && <p className="note ok">Adresse e-mail modifiée. Connectez-vous avec votre nouvelle adresse.</p>}
+          {email === "lien-invalide" && (
+            <p className="note err">Lien de changement d’adresse expiré ou déjà utilisé. Connectez-vous et refaites la demande depuis « Mon compte ».</p>
+          )}
           <ActionForm action={loginAction} className="stack" style={{ gap: 16 }}>
             <input type="hidden" name="next" value={next ?? ""} />
             <label className="field">

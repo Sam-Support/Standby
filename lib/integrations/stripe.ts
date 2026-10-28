@@ -77,6 +77,11 @@ export async function chargeCustomer(p: {
   });
 }
 
+/** Remboursement partiel ou total d'un paiement (avoir). Prélevé sur le solde de la plateforme : les virements déjà faits restent acquis. */
+export async function refundPayment(p: { paymentIntentId: string; amountCents: number; metadata: Record<string, string> }) {
+  return stripe().refunds.create({ payment_intent: p.paymentIntentId, amount: p.amountCents, metadata: p.metadata });
+}
+
 export async function transferToFreelancer(p: { amountCents: number; accountId: string; transferGroup: string; sourceCharge?: string | null }) {
   return stripe().transfers.create({
     amount: p.amountCents,

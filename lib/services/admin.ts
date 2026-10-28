@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, sql, sum } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, inArray, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { PRICING_DEFAULTS } from "@/lib/domain";
@@ -147,6 +147,27 @@ export async function dashboardStats(db: Db) {
     .from(s.invoices)
     .where(gte(s.invoices.issuedAt, monthStart));
   const [allRev] = await db.select({ ht: sum(s.invoices.totalHtCents), fees: sum(s.invoices.serviceFeeCents) }).from(s.invoices);
+  // les avoirs sont à la charge de la plateforme (la paie des commerciaux ne change pas) : déduits du CA et des commissions
+  const [monthCredits] = await db.select({ ht: sum(s.creditNotes.totalHtCents) }).from(s.creditNotes).where(gte(s.creditNotes.issuedAt, monthStart));
+  const [allCredits] = await db.select({ ht: sum(s.creditNotes.totalHtCents) }).from(s.creditNotes);
+  const [disputed] = await db.select({ n: countDistinct(s.timesheets.assignmentId) }).from(s.timesheets).where(eq(s.timesheets.status, "conteste"));
+  const [failedRefunds] = await db.select({ n: count() }).from(s.creditNotes).where(eq(s.creditNotes.refundStatus, "echoue"));
+  // places non pourvues (refus, désistements sans remplaçant) sur les réservations à venir
+  const open = await db
+    .select({ id: s.bookings.id })
+    .from(s.bookings)
+    .where(and(inArray(s.bookings.status, ["envoyee", "partielle", "confirmee"]), sql`(select min(d) from unnest(${s.bookings.days}) as d) > current_date`));
+  let unfilled = 0;
+  if (open.length) {
+    const ids = open.map((o) => o.id);
+    const seats = await db.select({ bookingId: s.bookingPositions.bookingId, qty: sum(s.bookingPositions.qty) }).from(s.bookingPositions).where(inArray(s.bookingPositions.bookingId, ids)).groupBy(s.bookingPositions.bookingId);
+    const taken = await db
+      .select({ bookingId: s.assignments.bookingId, n: count() })
+      .from(s.assignments)
+      .where(and(inArray(s.assignments.bookingId, ids), inArray(s.assignments.status, ["proposee", "acceptee"])))
+      .groupBy(s.assignments.bookingId);
+    unfilled = seats.filter((x) => Number(x.qty) > (taken.find((t) => t.bookingId === x.bookingId)?.n ?? 0)).length;
+  }
   const [pendingDocs] = await db.select({ n: count() }).from(s.freelancerDocuments).where(eq(s.freelancerDocuments.status, "en_attente"));
   const [inReview] = await db.select({ n: count() }).from(s.freelancers).where(eq(s.freelancers.status, "en_revue"));
   const [validFreelancers] = await db.select({ n: count() }).from(s.freelancers).where(eq(s.freelancers.status, "valide"));
@@ -164,11 +185,14 @@ export async function dashboardStats(db: Db) {
     .where(and(eq(s.events.published, true), gte(s.events.endsOn, new Date().toISOString().slice(0, 10))));
   return {
     byStatus: Object.fromEntries(byStatus.map((r) => [r.status, r.n])) as Record<string, number>,
-    monthHt: Number(rev?.ht ?? 0),
-    monthFees: Number(rev?.fees ?? 0),
+    monthHt: Number(rev?.ht ?? 0) - Number(monthCredits?.ht ?? 0),
+    monthFees: Number(rev?.fees ?? 0) - Number(monthCredits?.ht ?? 0),
     monthInvoices: rev?.n ?? 0,
-    totalFees: Number(allRev?.fees ?? 0),
-    totalHt: Number(allRev?.ht ?? 0),
+    totalFees: Number(allRev?.fees ?? 0) - Number(allCredits?.ht ?? 0),
+    totalHt: Number(allRev?.ht ?? 0) - Number(allCredits?.ht ?? 0),
+    disputedHours: disputed.n,
+    failedRefunds: failedRefunds.n,
+    unfilledBookings: unfilled,
     pendingDocs: pendingDocs.n,
     inReview: inReview.n,
     validFreelancers: validFreelancers.n,

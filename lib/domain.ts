@@ -158,6 +158,7 @@ export const ASSIGNMENT_STATUS_LABELS: Record<string, { label: string; tone: "" 
   refusee: { label: "Refusée", tone: "" },
   expiree: { label: "Expirée", tone: "" },
   annulee: { label: "Annulée", tone: "" },
+  desistee: { label: "Désisté·e", tone: "" },
 };
 
 // Réglages versionnés (valeurs entières : points de base pour les %, centimes pour les montants, jours)

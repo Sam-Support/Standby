@@ -7,7 +7,18 @@ import { hoursLabel } from "@/lib/format";
 export function HoursRow({
   a,
 }: {
-  a: { id: string; firstName: string; lastName: string; avatarColor: string; role: string; declared: number; hasDeclared: boolean; validated: boolean };
+  a: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarColor: string;
+    role: string;
+    declared: number;
+    retained: number;
+    hasDeclared: boolean;
+    validated: boolean;
+    pending: "ajuste" | "conteste" | null;
+  };
 }) {
   return (
     <div className="brow">
@@ -20,12 +31,16 @@ export function HoursRow({
           <br />
           <span className="muted small">
             {ROLES[a.role as RoleKey]?.short ?? a.role}
-            {a.hasDeclared ? " · heures déclarées" : " · heures prévues (rien de déclaré)"}
+            {a.hasDeclared ? ` · ${hoursLabel(a.declared)} déclarées` : " · heures prévues (rien de déclaré)"}
           </span>
         </span>
       </div>
       {a.validated ? (
-        <span className="st ok">{hoursLabel(a.declared)} validées</span>
+        <span className="st ok">{hoursLabel(a.retained)} validées</span>
+      ) : a.pending === "ajuste" ? (
+        <span className="st warn">{hoursLabel(a.retained)} retenues · réponse du commercial sous 48 h</span>
+      ) : a.pending === "conteste" ? (
+        <span className="st warn">Contestées · arbitrage de l’équipe Standby</span>
       ) : (
         <ActionForm action={validateHours.bind(null, a.id)} className="inline" style={{ gap: 8 }}>
           <label className="sr-only" htmlFor={`h-${a.id}`}>
@@ -40,6 +55,17 @@ export function HoursRow({
             inputMode="decimal"
           />
           <span className="muted small">h</span>
+          <label className="sr-only" htmlFor={`n-${a.id}`}>
+            Motif si vous retenez moins d’heures pour {a.firstName}
+          </label>
+          <input
+            id={`n-${a.id}`}
+            className="input"
+            name="note"
+            placeholder="Motif si moins d’heures"
+            maxLength={500}
+            style={{ width: 210, minHeight: 40, padding: "8px 12px" }}
+          />
           <Submit className="clay s btn xs ok" pending="…">
             Valider
           </Submit>

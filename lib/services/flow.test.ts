@@ -20,7 +20,7 @@ import {
   saveTeamStep,
   toggleSelection,
 } from "./booking";
-import { declareHours, validateAssignmentHours } from "./hours";
+import { declareHours, respondToAdjustment, validateAssignmentHours } from "./hours";
 import { exportLeadsXlsx, parseLeadWorkbook, sendBatches, uploadLeadFile } from "./leads";
 
 let db: Db;
@@ -85,10 +85,12 @@ describe("parcours de réservation complet", () => {
     for (const a of asg) {
       await declareHours(db, a.id, a.userId, b.days.map((day) => ({ day, minutes: 480 })), "2026-11-06");
     }
-    await validateAssignmentHours(db, asg[0].id, companyId, ownerId, 5 * 480 - 60); // ajusté d'une heure
+    // ajusté d'une heure à la baisse : en attente de l'accord du commercial
+    expect(await validateAssignmentHours(db, asg[0].id, companyId, ownerId, 5 * 480 - 60, { note: "Pause déjeuner prolongée" })).toEqual({ adjusted: true });
     await validateAssignmentHours(db, asg[1].id, companyId, ownerId);
-    expect((await reload()).status).toBe("heures_a_valider");
     await validateAssignmentHours(db, asg[2].id, companyId, ownerId);
+    expect((await reload()).status).toBe("heures_a_valider");
+    await respondToAdjustment(db, asg[0].id, asg[0].userId, true);
 
     b = await reload();
     expect(b.status).toBe("payee"); // paiement simulé sans Stripe

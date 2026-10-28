@@ -6,11 +6,15 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { AssignmentStatus, BackLink, FileLink } from "@/components/ui";
 import { requireFreelancer } from "@/lib/auth/session";
 import { OUTFITS, ROLES, type OutfitKey, type RoleKey } from "@/lib/domain";
-import { dateRange, dayLabel, euros, hourly, hoursLabel, todayIso } from "@/lib/format";
+import { dateRange, dayLabel, daysUntil, euros, hourly, hoursLabel, longDateTime, todayIso } from "@/lib/format";
+import { WITHDRAWABLE } from "@/lib/services/booking";
 import { freelancerMissions } from "@/lib/services/freelancer-views";
+import { ADJUSTMENT_WINDOW_HOURS } from "@/lib/services/hours";
 import { templateColumns } from "@/lib/services/leads";
 import { fileUrl } from "@/lib/storage";
-import { declare, respond } from "../../actions";
+import { answerAdjustment, declare, respond, withdraw } from "../../actions";
+
+const DAY_STATUS = { valide: "validées", ajuste: "retenues par l’exposant", conteste: "contestées" } as const;
 
 export const metadata = { title: "Mission" };
 
@@ -25,6 +29,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const tpl = await templateColumns(db, m.b, m.c);
   const today = todayIso();
   const canDeclare = accepted && ["en_cours", "heures_a_valider"].includes(m.b.status);
+  const canWithdraw = accepted && WITHDRAWABLE.includes(m.b.status) && m.first > today;
+  const daysLeft = daysUntil(m.first, today);
+  const adjusting = m.timesheets.some((t) => t.status === "ajuste");
+  const disputed = m.timesheets.some((t) => t.status === "conteste");
+  const declaredTotal = m.timesheets.reduce((n, t) => n + t.minutesDeclared, 0);
+  const retainedTotal = m.timesheets.reduce((n, t) => n + (t.minutesValidated ?? t.minutesDeclared), 0);
+  const deadline = m.a.hoursAdjustedAt ? new Date(m.a.hoursAdjustedAt.getTime() + ADJUSTMENT_WINDOW_HOURS * 3600_000) : null;
+  const pastDays = m.days.filter((d) => d <= today);
+  const editable = pastDays.some((d) => (m.timesheets.find((x) => x.day === d)?.status ?? "declare") === "declare");
   const brochure = m.b.brochurePath ? { path: m.b.brochurePath, name: m.b.brochureName! } : m.c.brochurePath ? { path: m.c.brochurePath, name: m.c.brochureName! } : null;
 
   return (
@@ -77,37 +90,94 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           {canDeclare && (
             <>
               <h2 className="ptitle">Mes heures</h2>
-              <ActionForm action={declare.bind(null, m.a.id)} className="stack">
-                {m.days
-                  .filter((d) => d <= today)
-                  .map((d) => {
-                    const t = m.timesheets.find((x) => x.day === d);
-                    return (
-                      <div key={d} className="brow">
-                        <input type="hidden" name="day" value={d} />
-                        <label htmlFor={`h_${d}`}>
-                          <b>{dayLabel(d, true)}</b>
-                        </label>
-                        {t?.status === "valide" ? (
-                          <span className="st ok">{hoursLabel(t.minutesValidated ?? t.minutesDeclared)} validées</span>
-                        ) : (
-                          <span className="inline" style={{ gap: 6 }}>
-                            <input
-                              id={`h_${d}`}
-                              className="input"
-                              name={`h_${d}`}
-                              defaultValue={((t?.minutesDeclared ?? m.minutesPerDay) / 60).toLocaleString("fr-FR")}
-                              style={{ width: 90, minHeight: 40, padding: "8px 12px", fontWeight: 800 }}
-                              inputMode="decimal"
-                            />
-                            <span className="muted small">h</span>
-                          </span>
-                        )}
+              {adjusting && (
+                <div className="stack" aria-labelledby="adj-title">
+                  <p className="note" id="adj-title">
+                    L’exposant a retenu <b>{hoursLabel(retainedTotal)}</b> au lieu des {hoursLabel(declaredTotal)} déclarées
+                    {m.a.hoursAdjustmentNote ? ` : « ${m.a.hoursAdjustmentNote} »` : ""}.
+                    {deadline ? ` Répondez avant le ${longDateTime(deadline)} ; sans réponse, l’ajustement est retenu.` : ""}
+                  </p>
+                  <div className="inline" style={{ alignItems: "flex-start", gap: 14 }}>
+                    <ActionForm action={answerAdjustment.bind(null, m.a.id, true)}>
+                      <Submit className="clay s btn sm ok" pending="…">Accepter l’ajustement</Submit>
+                    </ActionForm>
+                    <ActionForm action={answerAdjustment.bind(null, m.a.id, false)} className="stack" style={{ flex: "1 1 320px" }}>
+                      <label className="field">
+                        Ce qui ne va pas (transmis à l’équipe Standby et à l’exposant)
+                        <textarea className="input" name="reason" rows={3} minLength={10} maxLength={1000} required />
+                      </label>
+                      <div>
+                        <Submit className="clay s btn sm ghost" pending="Envoi…">Contester</Submit>
                       </div>
-                    );
-                  })}
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <Submit className="clay s btn sm">Déclarer mes heures</Submit>
+                    </ActionForm>
+                  </div>
+                </div>
+              )}
+              {disputed && (
+                <p className="note info">
+                  Vous contestez l’ajustement ({hoursLabel(declaredTotal)} déclarées, {hoursLabel(retainedTotal)} retenues) : l’équipe Standby arbitre
+                  avec vous et l’exposant. Votre motif : « {m.a.hoursDisputeNote} »
+                </p>
+              )}
+              <ActionForm action={declare.bind(null, m.a.id)} className="stack">
+                {pastDays.map((d) => {
+                  const t = m.timesheets.find((x) => x.day === d);
+                  return (
+                    <div key={d} className="brow">
+                      <input type="hidden" name="day" value={d} />
+                      <label htmlFor={`h_${d}`}>
+                        <b>{dayLabel(d, true)}</b>
+                      </label>
+                      {t && t.status !== "declare" ? (
+                        <span className={`st ${t.status === "valide" ? "ok" : "warn"}`}>
+                          {hoursLabel(t.minutesValidated ?? t.minutesDeclared)} {DAY_STATUS[t.status]}
+                        </span>
+                      ) : (
+                        <span className="inline" style={{ gap: 6 }}>
+                          <input
+                            id={`h_${d}`}
+                            className="input"
+                            name={`h_${d}`}
+                            defaultValue={((t?.minutesDeclared ?? m.minutesPerDay) / 60).toLocaleString("fr-FR")}
+                            style={{ width: 90, minHeight: 40, padding: "8px 12px", fontWeight: 800 }}
+                            inputMode="decimal"
+                          />
+                          <span className="muted small">h</span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {editable && (
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Submit className="clay s btn sm">Déclarer mes heures</Submit>
+                  </div>
+                )}
+              </ActionForm>
+            </>
+          )}
+
+          {canWithdraw && (
+            <>
+              <h2 className="ptitle">Se désister</h2>
+              <p className="muted small">
+                Un empêchement ? Prévenez le plus tôt possible : la mission est aussitôt proposée à un remplaçant et l’exposant est informé. Un
+                désistement compte comme un refus dans votre taux d’acceptation, qui pèse dans le matching.
+              </p>
+              {daysLeft <= 2 && (
+                <p className="note err">L’événement commence dans {daysLeft} jour{daysLeft > 1 ? "s" : ""} : appelez aussi l’équipe Standby pour qu’elle organise votre remplacement.</p>
+              )}
+              <ActionForm action={withdraw.bind(null, m.a.id)} className="stack">
+                <label className="field">
+                  Motif (transmis uniquement à l’équipe Standby)
+                  <textarea className="input" name="reason" rows={3} minLength={10} maxLength={1000} required />
+                </label>
+                <label className="check">
+                  <input type="checkbox" name="confirm" required />
+                  Je confirme me désister de cette mission.
+                </label>
+                <div>
+                  <Submit className="clay s btn sm danger" pending="Envoi…">Me désister</Submit>
                 </div>
               </ActionForm>
             </>

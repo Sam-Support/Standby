@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { cancellationRate } from "@/lib/cancellation";
@@ -55,7 +55,11 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
     : terms;
   const asg = await loadAssignments(db, b.id);
   await db.update(s.bookings).set({ status: "annulee", cancelledAt: new Date(), cancellation: record }).where(eq(s.bookings.id, b.id));
-  await db.update(s.assignments).set({ status: "annulee" }).where(eq(s.assignments.bookingId, b.id));
+  // les refus, expirations et désistements gardent leur statut
+  await db
+    .update(s.assignments)
+    .set({ status: "annulee" })
+    .where(and(eq(s.assignments.bookingId, b.id), inArray(s.assignments.status, ["selectionne", "proposee", "acceptee"])));
 
   if (b.status !== "brouillon") {
     for (const a of asg.filter((x) => x.status === "proposee" || x.status === "acceptee")) {
