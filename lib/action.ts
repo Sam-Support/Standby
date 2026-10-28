@@ -39,6 +39,11 @@ export function parseHours(v: string): number {
   return Number.isFinite(n) ? Math.round(n * 60) : NaN;
 }
 
+/** Champs du bloc « Facturation » (inscription commercial et profil). */
+export function billingFields(fd: FormData) {
+  return { billingAddress: str(fd, "billingAddress"), vatRegime: str(fd, "vatRegime"), vatNumber: str(fd, "vatNumber"), acceptMandate: fd.get("acceptMandate") === "on" };
+}
+
 export function safeNext(v: string | null | undefined, fallback: string) {
   return v && v.startsWith("/") && !v.startsWith("//") ? v : fallback;
 }

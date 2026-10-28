@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { eurosToCents, fail, file, files, parseHours, str, strs, type FormState } from "@/lib/action";
+import { billingFields, eurosToCents, fail, file, files, parseHours, str, strs, type FormState } from "@/lib/action";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
 import type { DocumentKey } from "@/lib/domain";
 import {
+  freelancerBilling,
   freelancerIdentity,
   freelancerProfile,
   freelancerSizes,
@@ -156,6 +157,17 @@ export async function updateProfileAction(_: FormState, fd: FormData): Promise<F
   }
   revalidatePath("/commercial", "layout");
   return { ok: "Postes, langues, tarif et tailles mis à jour." };
+}
+
+export async function updateBillingAction(_: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const { f, db } = await me();
+    await freelancerBilling(db, f, billingFields(fd));
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/commercial", "layout");
+  return { ok: "Informations de facturation enregistrées." };
 }
 
 export async function uploadDocAction(type: DocumentKey, _: FormState, fd: FormData): Promise<FormState> {

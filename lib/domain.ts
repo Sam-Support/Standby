@@ -184,4 +184,12 @@ export const PRICING_DEFAULTS: Record<string, { value: number; label: string; un
   leads_retention_days: { value: 365, label: "Conservation des leads après réception", unit: "days" },
 };
 
+// Autofacturation : version du mandat en vigueur (à changer si le texte de /mandat-facturation change)
+export const BILLING_MANDATE_VERSION = "2026-10";
+export const VAT_REGIMES = {
+  franchise: "Franchise en base de TVA (auto-entrepreneur)",
+  assujetti: "Assujetti·e à la TVA",
+} as const;
+export type VatRegime = keyof typeof VAT_REGIMES;
+
 export const AVATAR_COLORS = ["#82C9FF", "#B39BFF", "#FF8CB6", "#FFCD4A", "#68D1A4", "#4D58EE"];

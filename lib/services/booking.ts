@@ -275,6 +275,7 @@ export async function findCandidates(db: Db, b: Booking, role: RoleKey, excludeF
         eq(s.freelancers.status, "valide"),
         isNull(s.freelancers.blockedReason), // attestation URSSAF expirée, établissement fermé…
         isNotNull(s.profiles.emailVerifiedAt),
+        isNotNull(s.freelancers.billingMandateAcceptedAt), // sans mandat, pas d'autofacture possible
         sql`${s.freelancers.roles} @> array[${role}]::text[]`,
       ),
     );

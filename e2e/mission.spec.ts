@@ -61,4 +61,32 @@ test.describe.serial("missions : désistement, heures contestées, avoir", () =>
     await expect(page.getByText("Remboursé sur le moyen de paiement")).toBeVisible();
     await expectAccessible(page);
   });
+
+  test("le commercial retrouve sa facture, son relevé et son récapitulatif", async ({ page }) => {
+    await dismissCookies(page);
+    await login(page, ACCOUNTS.commercial);
+    await page.getByRole("link", { name: "Factures, relevés et récapitulatif annuel" }).click();
+    await page.waitForURL(/\/commercial\/revenus/);
+    await expectAccessible(page);
+
+    await page.getByRole("link", { name: /^AF-/ }).first().click();
+    await expect(page.getByRole("heading", { name: "Facture" })).toBeVisible();
+    await expect(page.getByText("Autofacturation", { exact: true })).toBeVisible();
+    await expect(page.getByText("TVA non applicable, art. 293 B du CGI")).toBeVisible();
+    await expect(page.getByText("Les Salons Solutions")).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goBack();
+    await page.getByRole("link", { name: "Relevé du mois" }).first().click();
+    await expect(page.getByRole("heading", { name: "Relevé de paie" })).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goBack();
+    await page.getByRole("link", { name: "Récapitulatif annuel" }).click();
+    await expect(page.getByRole("heading", { name: /^Récapitulatif 20\d{2}$/ })).toBeVisible();
+    await expectAccessible(page);
+    const csv = await page.request.get(await page.getByRole("link", { name: "Exporter (.csv)" }).getAttribute("href").then((h) => h!));
+    expect(csv.ok()).toBe(true);
+    expect(await csv.text()).toContain("Les Salons Solutions");
+  });
 });

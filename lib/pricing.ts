@@ -81,6 +81,16 @@ export function computeQuote(input: QuoteInput): Quote {
 }
 
 /** Montant versé à un commercial pour ses minutes validées, commission déduite. */
+/**
+ * Paie d'un commercial à partir du HT de sa prestation : TVA ajoutée s'il y est assujetti (`vatBps` > 0),
+ * commission plateforme retenue sur le HT. Le net est le montant viré.
+ */
+export function payoutBreakdown(grossCents: number, commissionBps: number, vatBps: number) {
+  const commissionCents = Math.round((grossCents * commissionBps) / 10000);
+  const vatCents = Math.round((grossCents * vatBps) / 10000);
+  return { htCents: grossCents, vatCents, ttcCents: grossCents + vatCents, commissionCents, netCents: grossCents + vatCents - commissionCents };
+}
+
 export function payoutCents(hourlyRateCents: number, minutes: number, commissionBps: number): number {
   const gross = (hourlyRateCents * minutes) / 60;
   return Math.round(gross - (gross * commissionBps) / 10000);

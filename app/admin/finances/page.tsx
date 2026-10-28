@@ -26,6 +26,15 @@ export default async function Page() {
     .innerJoin(s.companies, eq(s.companies.id, s.bookings.companyId))
     .orderBy(desc(s.creditNotes.issuedAt))
     .limit(100);
+  const selfBills = await db
+    .select({ inv: s.freelancerInvoices, p: s.payouts, pr: s.profiles })
+    .from(s.freelancerInvoices)
+    .innerJoin(s.payouts, eq(s.payouts.id, s.freelancerInvoices.payoutId))
+    .innerJoin(s.freelancers, eq(s.freelancers.id, s.freelancerInvoices.freelancerId))
+    .innerJoin(s.profiles, eq(s.profiles.id, s.freelancers.userId))
+    .orderBy(desc(s.freelancerInvoices.issuedAt))
+    .limit(100);
+  const years = [...new Set([new Date().getFullYear(), ...selfBills.map((x) => Number(x.p.scheduledFor.slice(0, 4)))])].sort().reverse();
   const payments = await db
     .select({ p: s.payments, b: s.bookings })
     .from(s.payments)
@@ -101,6 +110,38 @@ export default async function Page() {
           </table>
         </div>
         {credits.length === 0 && <p className="muted small">Aucun avoir.</p>}
+      </section>
+      <section className="clay panel">
+        <div className="row-between">
+          <h2>Autofactures des commerciaux</h2>
+          <span className="inline">
+            {years.map((y) => (
+              <a key={y} className="clay s btn xs ghost" href={`/admin/finances/dac7/${y}`}>Sommes versées {y} (DAC7, .csv)</a>
+            ))}
+          </span>
+        </div>
+        <p className="muted small">Émises au nom des commerciaux en vertu de leur mandat de facturation, une par virement.</p>
+        <div className="tblwrap">
+          <table className="tbl">
+            <thead>
+              <tr><th scope="col">N°</th><th scope="col">Commercial</th><th scope="col">Désignation</th><th scope="col">HT</th><th scope="col">TVA</th><th scope="col">Net viré</th><th scope="col">Virement</th></tr>
+            </thead>
+            <tbody>
+              {selfBills.map(({ inv, p, pr }) => (
+                <tr key={inv.id}>
+                  <td><Link href={`/commercial/factures/${inv.id}`}>{inv.number}</Link></td>
+                  <td>{pr.firstName} {pr.lastName}</td>
+                  <td>{inv.label}</td>
+                  <td>{euros(inv.amountHtCents)}</td>
+                  <td>{inv.vatBps ? euros(inv.vatCents) : "franchise"}</td>
+                  <td>{euros(inv.netCents)}</td>
+                  <td>{longDate(p.scheduledFor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {selfBills.length === 0 && <p className="muted small">Aucune autofacture.</p>}
       </section>
       <div className="grid2">
         <section className="clay panel">

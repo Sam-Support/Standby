@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { eurosToCents, fail, file, str, strs, type FormState } from "@/lib/action";
+import { billingFields, eurosToCents, fail, file, str, strs, type FormState } from "@/lib/action";
 import { getCurrentCompany, getCurrentFreelancer, getCurrentUser, startSession } from "@/lib/auth/session";
 import { clientIp } from "@/lib/client-ip";
 import { hit, LIMITS } from "@/lib/rate-limit";
@@ -125,7 +125,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
           const upload = await readUpload(file(fd, `doc_${type}`), ["pdf", "jpg", "jpeg", "png"]);
           if (upload) await uploadFreelancerDocument(db, f, type, upload, type === "urssaf" ? str(fd, "urssafIssuedOn") : null);
         }
-        await freelancerStatusStep(db, f, { siret: str(fd, "siret"), legalStatus: str(fd, "legalStatus") });
+        await freelancerStatusStep(db, f, { siret: str(fd, "siret"), legalStatus: str(fd, "legalStatus"), ...billingFields(fd) });
         next = "/commercial?bienvenue=1";
       }
     }

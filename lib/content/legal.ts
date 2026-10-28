@@ -31,6 +31,49 @@ export const MENTIONS: DocSection[] = [
   { title: "Droit applicable", body: ["Les présentes mentions sont soumises au droit français. À défaut de résolution amiable, les tribunaux compétents sont ceux du ressort du siège de l’éditeur."] },
 ];
 
+// Mandat d'autofacturation (art. 289 I-2 du CGI, BOI-TVA-DECLA-30-20-10-20). Version : BILLING_MANDATE_VERSION.
+export const MANDAT_FACTURATION: DocSection[] = [
+  {
+    title: "Parties et objet",
+    body: [
+      "Le présent mandat est conclu entre le commercial, hôte·sse, animateur·rice ou interprète indépendant inscrit sur standby (le « mandant ») et [raison sociale de l’éditeur], éditeur de standby (le « mandataire »).",
+      "Le mandant charge le mandataire d’établir et d’émettre, en son nom et pour son compte, les factures correspondant aux missions réalisées via la plateforme et aux indemnités d’annulation qui lui sont versées. Le mandataire en est le destinataire et le payeur.",
+    ],
+  },
+  {
+    title: "Émission des factures",
+    body: [
+      [
+        "Une facture est émise pour chaque virement, après validation des heures et encaissement du paiement de l’entreprise exposante (ou, pour une indemnité, des frais d’annulation).",
+        "Elle porte la mention « Autofacturation », une numérotation continue propre au mandant, ses nom, adresse et SIRET tels qu’enregistrés dans son profil à la date d’émission, le détail de la prestation (événement, dates, heures validées, taux horaire), le montant hors taxes et le régime de TVA déclaré.",
+        "Mandant en franchise en base : la facture porte la mention « TVA non applicable, art. 293 B du CGI ». Mandant assujetti : la TVA au taux en vigueur s’ajoute au montant hors taxes et lui est versée.",
+      ],
+    ],
+  },
+  {
+    title: "Mise à disposition et contestation",
+    body: [
+      "Chaque facture est mise à disposition du mandant dans son espace (rubrique « Factures et relevés ») dès son émission, avec un relevé mensuel et un récapitulatif annuel. Le mandant peut la contester dans un délai de [15] jours via la page {Contact|/contact} ; à défaut, elle est réputée acceptée. Une facture contestée à raison est annulée par une facture rectificative.",
+    ],
+  },
+  {
+    title: "Obligations du mandant",
+    body: [
+      [
+        "Tenir à jour son adresse, son SIRET et son régime de TVA : les informations du profil font foi à la date d’émission.",
+        "Déclarer le chiffre d’affaires correspondant et, le cas échéant, reverser la TVA facturée : le mandant reste seul responsable de ses obligations fiscales et sociales.",
+        "Ne pas émettre lui-même de facture pour les prestations couvertes par le présent mandat.",
+      ],
+    ],
+  },
+  {
+    title: "Durée et résiliation",
+    body: [
+      "Le mandat prend effet à son acceptation et vaut pour une durée indéterminée. Le mandant peut le résilier à tout moment par la page {Contact|/contact} : la résiliation prend effet après le règlement des missions en cours, et le mandant ne reçoit plus de nouvelles missions. Toute nouvelle version du mandat est soumise à son acceptation. [Texte à faire valider par l’expert-comptable et l’avocat.]",
+    ],
+  },
+];
+
 export const CGU: DocSection[] = [
   {
     title: "Objet",
@@ -60,7 +103,7 @@ export const CGU: DocSection[] = [
     body: [
       [
         "Respecter les dates, horaires et briefs convenus pour chaque mission ; en cas d’empêchement, se désister depuis la mission au plus tôt, au plus tard la veille du premier jour (un désistement compte comme un refus dans le taux d’acceptation).",
-        "Ne pas contourner la plateforme pour la facturation ou le paiement d’une mission trouvée via standby.",
+        "Ne pas contourner la plateforme pour la facturation ou le paiement d’une mission trouvée via standby. Les factures des commerciaux sont établies par standby en vertu du {mandat de facturation|/mandat-facturation} accepté à l’inscription.",
         "Ne publier aucun contenu illicite, trompeur ou portant atteinte aux droits de tiers.",
       ],
     ],
