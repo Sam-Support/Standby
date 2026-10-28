@@ -173,7 +173,9 @@ label:has(> input:focus-visible), .chip:has(input:focus-visible), .rcard:has(inp
 .leadform:has(input[name="mode"][value="excel"]:checked) .when-excel,
 .leadform:has(input[name="mode"][value="crm"]:checked) .when-crm,
 .leadform:has(input[name="mode"][value="standard"]:checked) .when-standard,
-.leadform:has(input[name="referent"][value="autre"]:checked) .when-other { display: flex; }
+.leadform:has(input[name="referent"][value="autre"]:checked) .when-other,
+.billing:has(input[name="vatRegime"][value="assujetti"]:checked) .when-vat { display: flex; }
+.billing fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* données */
 .kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; font-size: 14px; }

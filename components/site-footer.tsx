@@ -39,6 +39,7 @@ export function SiteFooter() {
             <li><Link href="/mentions-legales">Mentions légales</Link></li>
             <li><Link href="/cgu">Conditions générales d’utilisation</Link></li>
             <li><Link href="/cgv">Conditions générales de vente</Link></li>
+            <li><Link href="/mandat-facturation">Mandat de facturation</Link></li>
             <li><Link href="/confidentialite">Politique de confidentialité</Link></li>
             <li><Link href="/cookies">Gestion des cookies</Link></li>
           </ul>

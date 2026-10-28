@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
+import { BillingFields } from "@/components/billing-fields";
 import { OrderedChips } from "@/components/ordered-chips";
 import { BackLink, Chip, PageHead, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
@@ -10,7 +12,7 @@ import { formatSiret } from "@/lib/siret";
 import { SIRET_LABELS } from "@/lib/services/compliance";
 import { stripeEnabled } from "@/lib/integrations/stripe";
 import { reviewsFor } from "@/lib/services/reviews";
-import { stripeSetupAction, updateIdentityAction, updateProfileAction, uploadDocAction } from "../actions";
+import { stripeSetupAction, updateBillingAction, updateIdentityAction, updateProfileAction, uploadDocAction } from "../actions";
 
 export const metadata = { title: "Mon profil" };
 
@@ -102,6 +104,29 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
             <ActionForm action={stripeSetupAction}>
               <Submit className="clay s btn xs">{f.payoutsEnabled ? "Mettre à jour mon IBAN" : stripeEnabled() ? "Activer via Stripe" : "Activer"}</Submit>
             </ActionForm>
+          </div>
+        </section>
+        <section className="clay panel" id="facturation">
+          <h2>Facturation</h2>
+          {!f.billingMandateAcceptedAt && (
+            <p className="note err">Acceptez le mandat de facturation pour recevoir des missions : sans lui, Standby ne peut pas établir vos factures.</p>
+          )}
+          <ActionForm action={updateBillingAction} className="stack" style={{ gap: 14 }}>
+            <BillingFields f={f} />
+            <p className="muted small">Les changements valent pour les factures suivantes ; les factures déjà émises ne sont pas modifiées.</p>
+            <div>
+              <Submit className="clay s btn sm">Enregistrer</Submit>
+            </div>
+          </ActionForm>
+        </section>
+        <section className="clay panel">
+          <h2>Factures et relevés</h2>
+          <p className="muted">
+            Une facture est émise à votre nom à chaque virement (mission ou indemnité d’annulation). Retrouvez-les avec vos relevés mensuels et le
+            récapitulatif annuel utile à votre déclaration de chiffre d’affaires.
+          </p>
+          <div>
+            <Link className="clay s btn sm" href="/commercial/revenus">Voir mes factures et relevés</Link>
           </div>
         </section>
         <section className="clay panel" style={{ gridColumn: "1 / -1" }}>

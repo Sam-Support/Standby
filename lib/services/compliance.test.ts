@@ -14,6 +14,7 @@ const active: SiretLookup = async () => ({ found: true, active: true, name: "LUC
 const closed: SiretLookup = async () => ({ found: true, active: false, name: "LUCAS MOREAU" });
 const missing: SiretLookup = async () => ({ found: false });
 const file = { data: Buffer.from("%PDF-1.4 test"), name: "doc.pdf" };
+const billing = { billingAddress: "8 rue des Lilas, 75011 Paris", vatRegime: "franchise", vatNumber: "", acceptMandate: true };
 
 let db: Db;
 beforeAll(async () => {
@@ -56,8 +57,8 @@ describe("validation des commerciaux", () => {
     const get = await newFreelancer("siret-ko@e2e.test");
     for (const t of ["identite", "rib"] as const) await uploadFreelancerDocument(db, await get(), t, file);
     await uploadFreelancerDocument(db, await get(), "urssaf", file, "2026-10-01", TODAY);
-    await expect(freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "" }, missing)).rejects.toThrow(/introuvable/);
-    await expect(freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "" }, closed)).rejects.toThrow(/fermé/);
+    await expect(freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "", ...billing }, missing)).rejects.toThrow(/introuvable/);
+    await expect(freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "", ...billing }, closed)).rejects.toThrow(/fermé/);
   });
 
   it("refuse une attestation de plus de 6 mois ou sans date", async () => {
@@ -71,7 +72,7 @@ describe("validation des commerciaux", () => {
     const [admin] = await db.select().from(s.profiles).where(eq(s.profiles.role, "admin"));
     for (const t of ["identite", "rib"] as const) await uploadFreelancerDocument(db, await get(), t, file);
     await uploadFreelancerDocument(db, await get(), "urssaf", file, "2026-10-01", TODAY);
-    await freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "Auto-entrepreneur" }, active);
+    await freelancerStatusStep(db, await get(), { siret: SIRET, legalStatus: "Auto-entrepreneur", ...billing }, active);
     expect((await get()).status).toBe("en_revue");
     expect((await get()).siretStatus).toBe("actif");
 

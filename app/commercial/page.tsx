@@ -34,6 +34,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           Vous ne recevez plus de nouvelles missions : {f.blockedReason}. <Link href="/commercial/profil">Mettre à jour mes documents</Link>
         </p>
       )}
+      {!f.billingMandateAcceptedAt && (
+        <p className="note err">
+          Vous ne recevez pas de missions tant que le mandat de facturation n’est pas accepté. <Link href="/commercial/profil#facturation">Accepter le mandat</Link>
+        </p>
+      )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start" }}>
         <aside style={{ flex: "1 1 320px", maxWidth: 380, display: "flex", flexDirection: "column", gap: 22 }}>
           <div className="clay" style={{ borderRadius: 22, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
@@ -66,6 +71,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
               ))}
             </div>
             <p className="muted" style={{ fontSize: 14 }}>Prochain virement : lundi {longDate(earn.nextPayout)}</p>
+            <Link className="small" href="/commercial/revenus">Factures, relevés et récapitulatif annuel</Link>
             {!f.payoutsEnabled && (
               <ActionForm action={stripeSetupAction}>
                 <Submit className="clay s btn sm butter">Activer mes virements</Submit>

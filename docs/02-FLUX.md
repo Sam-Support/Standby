@@ -133,6 +133,8 @@ Heures par jour : `declare → valide`, ou `declare → ajuste → valide | cont
 
 Avoir : émis par l'admin depuis la fiche réservation (motif, montant TTC ≤ reste à créditer, même taux de TVA que la facture). Facture réglée : remboursement Stripe (`refund.updated` suit l'aboutissement, relance ou « remboursé par virement » en cas d'échec). Non réglée : déduit du prélèvement, réservation soldée à zéro. La paie des commerciaux n'est jamais modifiée par un avoir.
 
+Autofacturation : au virement (paiement de l'exposant encaissé), chaque commercial reçoit une facture émise à son nom par Standby (mandat accepté à l'inscription). Paie = HT (taux × heures validées, ou indemnité) + TVA s'il est assujetti − commission plateforme (missions seulement). Sans mandat au moment du virement, la facture est émise dès son acceptation. Relevés par mois de virement, récapitulatif annuel par trimestre (agrégats DAC7).
+
 ## 7 bis. Compte
 
 - Mot de passe : l'actuel est exigé ; tous les autres appareils sont déconnectés (version de session incrémentée, aussi après une réinitialisation), alerte par e-mail.

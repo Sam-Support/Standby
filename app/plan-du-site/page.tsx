@@ -46,6 +46,7 @@ const SECTIONS: [string, [string, string][]][] = [
       ["Mentions légales", "/mentions-legales"],
       ["Conditions générales d’utilisation", "/cgu"],
       ["Conditions générales de vente", "/cgv"],
+      ["Mandat de facturation (commerciaux)", "/mandat-facturation"],
       ["Politique de confidentialité", "/confidentialite"],
       ["Gestion des cookies", "/cookies"],
     ],

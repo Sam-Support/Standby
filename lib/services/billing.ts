@@ -5,9 +5,10 @@ import { ROLES, isRoleKey, type RoleKey } from "@/lib/domain";
 import { eurosPrecise, longDate, nextMonday, todayIso } from "@/lib/format";
 import { chargeCustomer, stripeEnabled, transferToFreelancer } from "@/lib/integrations/stripe";
 import { audit, notify } from "@/lib/notify";
-import { payoutCents } from "@/lib/pricing";
+import { payoutBreakdown } from "@/lib/pricing";
 import { getPricing } from "@/lib/settings";
 import { BookingError, loadAssignments } from "./booking";
+import { issueSelfBill } from "./self-billing";
 
 export type InvoiceLine = { label: string; detail: string; totalCents: number };
 
@@ -151,29 +152,47 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
   await db.update(s.payments).set({ status: "reussi", stripeChargeId: chargeId, error: null }).where(eq(s.payments.id, p.id));
   const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, p.bookingId));
   const all = await loadAssignments(db, b.id);
-  let due: { a: (typeof all)[number]; amount: number }[];
+  const pricing = await getPricing(db, b.confirmedAt ?? new Date());
+  // HT dû à chaque commercial ; la commission plateforme ne porte que sur les missions effectuées
+  let due: { a: (typeof all)[number]; gross: number; commissionBps: number }[];
   const cancelled = b.status === "annulee" ? (b.cancellation as CancellationRecord | null) : null;
   if (cancelled) {
     // frais d'annulation encaissés : les commerciaux qui avaient accepté reçoivent leur indemnité
     due = cancelled.compensations
-      .map((c) => ({ a: all.find((x) => x.id === c.assignmentId)!, amount: c.amountCents }))
+      .map((c) => ({ a: all.find((x) => x.id === c.assignmentId)!, gross: c.amountCents, commissionBps: 0 }))
       .filter((d) => d.a);
   } else {
     await db.update(s.bookings).set({ status: "payee" }).where(eq(s.bookings.id, b.id));
-    const pricing = await getPricing(db, b.confirmedAt ?? new Date());
     const asg = all.filter((a) => a.status === "acceptee");
     const minutes = await validatedMinutes(db, asg.map((a) => a.id));
-    due = asg.map((a) => ({ a, amount: payoutCents(a.hourlyRateCents, minutes.get(a.id) ?? 0, pricing.freelancerCommissionBps) }));
+    due = asg.map((a) => ({ a, gross: Math.round((a.hourlyRateCents * (minutes.get(a.id) ?? 0)) / 60), commissionBps: pricing.freelancerCommissionBps }));
   }
+  const regimes = new Map(
+    due.length
+      ? (await db.select({ id: s.freelancers.id, vat: s.freelancers.vatRegime }).from(s.freelancers).where(inArray(s.freelancers.id, due.map((d) => d.a.freelancerId)))).map((f) => [f.id, f.vat])
+      : [],
+  );
   const monday = nextMonday(todayIso());
-  for (const { a, amount } of due) {
-    if (amount <= 0) continue;
+  for (const { a, gross, commissionBps } of due) {
+    if (gross <= 0) continue;
+    // commercial assujetti : TVA ajoutée à sa facture (récupérée par la plateforme)
+    const pay = payoutBreakdown(gross, commissionBps, regimes.get(a.freelancerId) === "assujetti" ? pricing.vatBps : 0);
+    const amount = pay.netCents;
     const [payout] = await db
       .insert(s.payouts)
-      .values({ assignmentId: a.id, freelancerId: a.freelancerId, amountCents: amount, scheduledFor: monday })
+      .values({
+        assignmentId: a.id,
+        freelancerId: a.freelancerId,
+        amountCents: amount,
+        grossCents: gross,
+        commissionCents: pay.commissionCents,
+        vatCents: pay.vatCents,
+        scheduledFor: monday,
+      })
       .onConflictDoNothing()
       .returning();
     if (!payout) continue;
+    await issueSelfBill(db, payout.id);
     if (stripeEnabled() && a.stripeAccountId) {
       try {
         const t = await transferToFreelancer({ amountCents: amount, accountId: a.stripeAccountId, transferGroup: b.ref, sourceCharge: chargeId });

@@ -36,6 +36,13 @@
       "when": 1793137639688,
       "tag": "0004_bloquants_produit",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793160519887,
+      "tag": "0005_factures_commerciaux",
+      "breakpoints": true
     }
   ]
 }

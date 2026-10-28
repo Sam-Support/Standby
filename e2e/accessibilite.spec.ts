@@ -12,6 +12,7 @@ const PUBLIC = [
   "/contact",
   "/cgv",
   "/cgu",
+  "/mandat-facturation",
   "/mentions-legales",
   "/confidentialite",
   "/cookies",
@@ -57,7 +58,7 @@ test.describe("accessibilité (axe, WCAG 2.1 AA)", () => {
   test("espace commercial", async ({ page }) => {
     await dismissCookies(page);
     await login(page, ACCOUNTS.commercial);
-    for (const path of ["/commercial", "/commercial/profil"]) {
+    for (const path of ["/commercial", "/commercial/profil", "/commercial/revenus"]) {
       await page.goto(path);
       await expectAccessible(page);
     }

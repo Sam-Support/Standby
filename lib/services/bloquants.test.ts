@@ -188,7 +188,9 @@ describe("avoirs et remboursements", () => {
     const b = await reload();
     const ids = (await loadAssignments(db, b.id)).map((a) => a.id);
     const [invoice] = await db.select().from(s.invoices).where(eq(s.invoices.bookingId, b.id));
-    // prélèvement refusé : rien n'est encore versé
+    // prélèvement refusé : rien n'est encore versé ni facturé par les commerciaux
+    const early = await db.select({ id: s.payouts.id }).from(s.payouts).where(inArray(s.payouts.assignmentId, ids));
+    await db.delete(s.freelancerInvoices).where(inArray(s.freelancerInvoices.payoutId, early.map((p) => p.id)));
     await db.delete(s.payouts).where(inArray(s.payouts.assignmentId, ids));
     await db.update(s.payments).set({ status: "echoue", error: "Mandat révoqué" }).where(eq(s.payments.bookingId, b.id));
 

@@ -94,6 +94,11 @@ export function nextMonday(iso = todayIso()) {
   return addDays(iso, delta);
 }
 
+/** « 2026-10 » → « octobre 2026 » */
+export function monthLabel(ym: string) {
+  return new Date(`${ym}-01T12:00:00Z`).toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
 export function initials(first: string, last: string) {
   return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
 }

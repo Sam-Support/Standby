@@ -168,6 +168,12 @@ export const freelancers = pgTable("freelancers", {
   siretCheckedAt: timestamp("siret_checked_at", { withTimezone: true }),
   // tant qu'il est renseigné, le profil est retiré du matching (attestation expirée, établissement fermé…)
   blockedReason: text("blocked_reason"),
+  // autofacturation : adresse et régime de TVA portés sur les factures, mandat accepté (sans lui, pas de mission)
+  billingAddress: text("billing_address"),
+  vatRegime: text("vat_regime").notNull().default("franchise"), // franchise | assujetti
+  vatNumber: text("vat_number"),
+  billingMandateAcceptedAt: timestamp("billing_mandate_accepted_at", { withTimezone: true }),
+  billingMandateVersion: text("billing_mandate_version"),
   status: freelancerStatus("status").notNull().default("brouillon"),
   stripeAccountId: text("stripe_account_id"),
   payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
@@ -344,7 +350,10 @@ export const payouts = pgTable("payouts", {
   id: id(),
   assignmentId: uuid("assignment_id").notNull().unique().references(() => assignments.id),
   freelancerId: uuid("freelancer_id").notNull().references(() => freelancers.id),
-  amountCents: integer("amount_cents").notNull(),
+  amountCents: integer("amount_cents").notNull(), // net viré : HT + TVA éventuelle - commission
+  grossCents: integer("gross_cents"), // HT de la prestation (ou de l'indemnité)
+  commissionCents: integer("commission_cents").notNull().default(0),
+  vatCents: integer("vat_cents").notNull().default(0),
   scheduledFor: date("scheduled_for").notNull(),
   stripeTransferId: text("stripe_transfer_id"),
   status: payoutStatus("status").notNull().default("planifie"),
@@ -363,6 +372,30 @@ export const invoices = pgTable("invoices", {
   totalTtcCents: integer("total_ttc_cents").notNull(),
   issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Autofactures : émises par Standby au nom et pour le compte du commercial (mandat de facturation), une par virement.
+// Numérotation propre à chaque commercial ; coordonnées figées à l'émission.
+export const freelancerInvoices = pgTable(
+  "freelancer_invoices",
+  {
+    id: id(),
+    payoutId: uuid("payout_id").notNull().unique().references(() => payouts.id),
+    freelancerId: uuid("freelancer_id").notNull().references(() => freelancers.id),
+    number: text("number").notNull().unique(),
+    kind: text("kind").notNull(), // mission | indemnite
+    label: text("label").notNull(),
+    detail: text("detail").notNull(),
+    supplier: jsonb("supplier").notNull(),
+    amountHtCents: integer("amount_ht_cents").notNull(),
+    vatBps: integer("vat_bps").notNull(),
+    vatCents: integer("vat_cents").notNull(),
+    totalTtcCents: integer("total_ttc_cents").notNull(),
+    commissionCents: integer("commission_cents").notNull(),
+    netCents: integer("net_cents").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("freelancer_invoices_freelancer_idx").on(t.freelancerId)],
+);
 
 // Avoirs : annulent tout ou partie d'une facture ; remboursés si elle était réglée, déduits du prélèvement sinon
 export const creditNotes = pgTable(

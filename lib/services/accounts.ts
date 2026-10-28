@@ -3,7 +3,17 @@ import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { AuthError, createIdentity, storeLocalPassword, updateIdentityEmail, updateIdentityPassword, verifyIdentity } from "@/lib/auth/provider";
 import { randomToken, signToken, verifyToken } from "@/lib/crypto";
-import { AVATAR_COLORS, DOCUMENT_TYPES, isRoleKey, LANGUAGES, SPECIALTIES, type DocumentKey, type RoleKey } from "@/lib/domain";
+import {
+  AVATAR_COLORS,
+  BILLING_MANDATE_VERSION,
+  DOCUMENT_TYPES,
+  isRoleKey,
+  LANGUAGES,
+  SPECIALTIES,
+  type DocumentKey,
+  type RoleKey,
+  type VatRegime,
+} from "@/lib/domain";
 import { hourly } from "@/lib/format";
 import { sendEmail } from "@/lib/integrations/email";
 import { lookupSiret } from "@/lib/integrations/sirene";
@@ -20,6 +30,7 @@ import {
   urssafValidUntil,
   type SiretLookup,
 } from "./compliance";
+import { issueMissingSelfBills } from "./self-billing";
 
 export class AccountError extends Error {}
 
@@ -409,10 +420,40 @@ export async function uploadFreelancerDocument(
   if (previous?.path && previous.path !== key) await deleteFile(previous.path);
 }
 
+export type BillingInput = { billingAddress: string; vatRegime: string; vatNumber: string; acceptMandate: boolean };
+
+const VAT_NUMBER = /^FR[0-9A-Z]{2}\d{9}$/;
+
+function checkBilling(f: typeof s.freelancers.$inferSelect, input: BillingInput) {
+  const address = input.billingAddress.trim().replace(/\s+/g, " ");
+  if (address.length < 10 || !/\d/.test(address)) throw new AccountError("Indiquez votre adresse de facturation complète : numéro, rue, code postal et ville.");
+  const vatRegime: VatRegime = input.vatRegime === "assujetti" ? "assujetti" : "franchise";
+  const vatNumber = vatRegime === "assujetti" ? input.vatNumber.replace(/\s/g, "").toUpperCase() : null;
+  if (vatNumber !== null && !VAT_NUMBER.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide : FR suivi de 11 caractères.");
+  if (!f.billingMandateAcceptedAt && !input.acceptMandate) {
+    throw new AccountError("Acceptez le mandat de facturation : Standby émet vos factures à votre place après chaque mission.");
+  }
+  return { billingAddress: address.slice(0, 300), vatRegime, vatNumber, accepting: !f.billingMandateAcceptedAt };
+}
+
+/**
+ * Coordonnées de facturation et mandat d'autofacturation. Les changements valent pour les factures suivantes ;
+ * à l'acceptation du mandat, les virements restés sans facture sont facturés.
+ */
+export async function freelancerBilling(db: Db, f: typeof s.freelancers.$inferSelect, input: BillingInput) {
+  const { accepting, ...values } = checkBilling(f, input);
+  await db
+    .update(s.freelancers)
+    .set({ ...values, ...(accepting ? { billingMandateAcceptedAt: new Date(), billingMandateVersion: BILLING_MANDATE_VERSION } : {}) })
+    .where(eq(s.freelancers.id, f.id));
+  await audit(db, f.userId, accepting ? "billing_mandate.accept" : "billing.update", "freelancer", f.id, { vatRegime: values.vatRegime, version: BILLING_MANDATE_VERSION });
+  if (accepting) await issueMissingSelfBills(db, f.id);
+}
+
 export async function freelancerStatusStep(
   db: Db,
   f: typeof s.freelancers.$inferSelect,
-  input: { siret: string; legalStatus: string },
+  input: { siret: string; legalStatus: string } & BillingInput,
   lookup?: SiretLookup,
 ) {
   const siret = normalizeSiret(input.siret);
@@ -420,9 +461,11 @@ export async function freelancerStatusStep(
   const docs = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id));
   const missing = REQUIRED_DOCUMENTS.filter((t) => !docs.some((d) => d.type === t));
   if (missing.length) throw new AccountError(`Documents manquants : ${missing.map((t) => DOCUMENT_TYPES[t]).join(", ")}.`);
+  checkBilling(f, input);
   const sirene = await checkFreelancerSiret(db, f.id, siret, lookup);
   if (sirene.status === "introuvable") throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE : vérifiez la saisie.");
   if (sirene.status === "ferme") throw new AccountError("Ce SIRET correspond à un établissement fermé dans le répertoire SIRENE.");
+  await freelancerBilling(db, f, input);
   await db
     .update(s.freelancers)
     .set({ siret, legalStatus: input.legalStatus || "Auto-entrepreneur", status: f.status === "valide" ? "valide" : "en_revue", onboardingStep: 5 })

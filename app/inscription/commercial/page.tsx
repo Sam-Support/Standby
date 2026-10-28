@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getDb, schema as s } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
+import { BillingFields } from "@/components/billing-fields";
 import { AccountFields, Progress, Why } from "@/components/onboarding";
 import { OrderedChips } from "@/components/ordered-chips";
 import { Chip, PageHead, Status } from "@/components/ui";
@@ -187,6 +188,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                     </div>
                   );
                 })}
+                <h2 className="ptitle">Facturation</h2>
+                <p className="muted small">
+                  Après chaque mission, Standby établit la facture à votre nom (autofacturation) et vous la met à disposition avec votre relevé de paie.
+                </p>
+                <BillingFields f={f} />
               </>
             )}
             <div className="nav-row">
@@ -208,6 +214,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             ["Tailles", "l’exposant prépare votre tenue avant votre arrivée."],
             ["SIRET et URSSAF", "obligatoires pour facturer en auto-entrepreneur."],
             ["RIB", "virement chaque lundi pour la semaine travaillée."],
+            ["Mandat de facturation", "vos factures sont établies pour vous, avec la bonne mention de TVA."],
           ]}
         />
       </div>

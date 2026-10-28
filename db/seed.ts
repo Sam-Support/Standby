@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { count, isNull } from "drizzle-orm";
 import { hashPassword } from "@/lib/auth/password";
-import { PRICING_DEFAULTS, STANDARD_LEAD_COLUMNS, AVATAR_COLORS, type RoleKey } from "@/lib/domain";
+import { PRICING_DEFAULTS, STANDARD_LEAD_COLUMNS, AVATAR_COLORS, BILLING_MANDATE_VERSION, type RoleKey } from "@/lib/domain";
 import { computeQuote } from "@/lib/pricing";
 import type { Db } from "./index";
 import * as s from "./schema";
@@ -162,6 +162,9 @@ async function seedDemo(db: Db) {
         shoeSize: f.sizes[2],
         siret: "00000000000000",
         legalStatus: "Auto-entrepreneur",
+        billingAddress: `${10 + i} rue des Salons, ${f.city}`,
+        billingMandateAcceptedAt: new Date(),
+        billingMandateVersion: BILLING_MANDATE_VERSION,
         status: "valide",
         payoutsEnabled: true,
         ratingX10: f.rating,

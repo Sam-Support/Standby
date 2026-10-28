@@ -79,6 +79,7 @@ export async function exportUserData(db: Db, userId: string) {
       missions: missions.map(({ a, b }) => ({ référence: b.ref, poste: a.role, tauxHoraireCentimes: a.hourlyRateCents, statut: a.status, jours: b.days })),
       heures: ids.length ? await db.select().from(s.timesheets).where(inArray(s.timesheets.assignmentId, ids)) : [],
       virements: await db.select().from(s.payouts).where(eq(s.payouts.freelancerId, freelancer.id)),
+      autofactures: await db.select().from(s.freelancerInvoices).where(eq(s.freelancerInvoices.freelancerId, freelancer.id)),
       avisReçus: await db.select().from(s.reviews).where(eq(s.reviews.freelancerId, freelancer.id)),
     };
   }
