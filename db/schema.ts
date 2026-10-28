@@ -44,9 +44,13 @@ export const assignmentStatus = pgEnum("assignment_status", [
   "refusee",
   "expiree",
   "annulee",
+  "desistee", // désistement du commercial après acceptation
 ]);
-export const timesheetStatus = pgEnum("timesheet_status", ["declare", "valide", "conteste"]);
+// ajuste : total revu à la baisse par l'exposant, en attente de l'accord du commercial (48 h)
+// conteste : refusé par le commercial, arbitrage par l'équipe Standby
+export const timesheetStatus = pgEnum("timesheet_status", ["declare", "valide", "conteste", "ajuste"]);
 export const paymentStatus = pgEnum("payment_status", ["en_attente", "en_cours", "reussi", "echoue"]);
+export const refundStatus = pgEnum("refund_status", ["aucun", "en_cours", "rembourse", "echoue"]);
 export const payoutStatus = pgEnum("payout_status", ["planifie", "transfere", "echoue"]);
 export const leadSource = pgEnum("lead_source", ["xlsx", "cartes"]);
 export const batchStatus = pgEnum("batch_status", ["brouillon", "envoye", "pousse_crm"]);
@@ -60,6 +64,8 @@ export const profiles = pgTable("profiles", {
   lastName: text("last_name").notNull().default(""),
   phone: text("phone"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  // incrémentée à chaque changement de mot de passe : les sessions ouvertes avant sont refusées
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: createdAt(),
 });
 
@@ -295,6 +301,12 @@ export const assignments = pgTable(
     status: assignmentStatus("status").notNull().default("selectionne"),
     proposedAt: timestamp("proposed_at", { withTimezone: true }),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    withdrawalReason: text("withdrawal_reason"), // transmis à l'équipe Standby uniquement
+    // heures revues à la baisse par l'exposant (motif), puis contestation éventuelle du commercial (motif)
+    hoursAdjustedAt: timestamp("hours_adjusted_at", { withTimezone: true }),
+    hoursAdjustmentNote: text("hours_adjustment_note"),
+    hoursDisputeNote: text("hours_dispute_note"),
     createdAt: createdAt(),
   },
   (t) => [
@@ -351,6 +363,26 @@ export const invoices = pgTable("invoices", {
   totalTtcCents: integer("total_ttc_cents").notNull(),
   issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Avoirs : annulent tout ou partie d'une facture ; remboursés si elle était réglée, déduits du prélèvement sinon
+export const creditNotes = pgTable(
+  "credit_notes",
+  {
+    id: id(),
+    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id),
+    number: text("number").notNull().unique(),
+    reason: text("reason").notNull(),
+    totalHtCents: integer("total_ht_cents").notNull(),
+    vatCents: integer("vat_cents").notNull(),
+    totalTtcCents: integer("total_ttc_cents").notNull(),
+    refundStatus: refundStatus("refund_status").notNull().default("aucun"),
+    stripeRefundId: text("stripe_refund_id"),
+    refundError: text("refund_error"),
+    createdBy: uuid("created_by"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("credit_notes_invoice_idx").on(t.invoiceId)],
+);
 
 export const leadBatches = pgTable("lead_batches", {
   id: id(),

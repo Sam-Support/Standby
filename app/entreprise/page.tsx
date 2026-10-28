@@ -52,6 +52,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           <Link className="clay btn" href="/reserver/nouveau" prefetch={false}>
             Nouvelle réservation
           </Link>
+          <Link className="clay s btn sm ghost" href="/compte">Mon compte</Link>
           <form action={logoutAction}>
             <button className="clay s btn sm ghost">Se déconnecter</button>
           </form>
@@ -138,7 +139,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
                   <HoursRow key={h.id} a={h} />
                 ))}
               </div>
-              <p className="muted small">Ajustez si besoin, puis validez. La paie part le lundi suivant. Sans réponse sous 3 jours, les heures déclarées sont validées.</p>
+              <p className="muted small">
+                Ajustez si besoin, puis validez. Sans réponse sous 3 jours, les heures déclarées sont validées. Si vous retenez moins d’heures que
+                déclaré, le commercial a 48 h pour accepter ou contester ; l’équipe Standby arbitre en cas de désaccord.
+              </p>
             </section>
           ))}
         </div>

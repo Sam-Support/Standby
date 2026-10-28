@@ -30,7 +30,7 @@ export function SiteFooter() {
             <li><Link href="/contact">Nous contacter</Link></li>
             <li><Link href="/plan-du-site">Plan du site</Link></li>
             <li><Link href="/accessibilite">Accessibilité</Link></li>
-            <li><Link href="/compte">Mes données personnelles</Link></li>
+            <li><Link href="/compte">Mon compte et mes données</Link></li>
           </ul>
         </div>
         <div>

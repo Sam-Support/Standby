@@ -11,7 +11,7 @@ export async function freelancerMissions(db: Db, freelancerId: string) {
     .innerJoin(s.bookings, eq(s.bookings.id, s.assignments.bookingId))
     .innerJoin(s.companies, eq(s.companies.id, s.bookings.companyId))
     .leftJoin(s.events, eq(s.events.id, s.bookings.eventId))
-    .where(and(eq(s.assignments.freelancerId, freelancerId), inArray(s.assignments.status, ["proposee", "acceptee", "refusee", "expiree", "annulee"])))
+    .where(and(eq(s.assignments.freelancerId, freelancerId), inArray(s.assignments.status, ["proposee", "acceptee", "refusee", "expiree", "annulee", "desistee"])))
     .orderBy(desc(s.assignments.createdAt));
   const ids = rows.map((r) => r.a.id);
   const sheets = ids.length ? await db.select().from(s.timesheets).where(inArray(s.timesheets.assignmentId, ids)) : [];

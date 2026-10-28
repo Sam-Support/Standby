@@ -59,7 +59,7 @@ export const CGU: DocSection[] = [
     title: "Engagements des utilisateurs",
     body: [
       [
-        "Respecter les dates, horaires et briefs convenus pour chaque mission.",
+        "Respecter les dates, horaires et briefs convenus pour chaque mission ; en cas d’empêchement, se désister depuis la mission au plus tôt, au plus tard la veille du premier jour (un désistement compte comme un refus dans le taux d’acceptation).",
         "Ne pas contourner la plateforme pour la facturation ou le paiement d’une mission trouvée via standby.",
         "Ne publier aucun contenu illicite, trompeur ou portant atteinte aux droits de tiers.",
       ],
@@ -107,12 +107,21 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
     title: "Facturation et paiement",
     body: [
       "Une facture unique par événement est émise après validation des heures et mise à disposition dans l’espace entreprise. Le règlement est prélevé sur le moyen de paiement enregistré à la réservation (mandat SEPA ou carte) et exigible sous [délai] jours. Tout retard donne lieu à des pénalités au taux de [taux] ainsi qu’à l’indemnité forfaitaire de recouvrement de 40 € prévue à l’article D. 441-5 du Code de commerce.",
+      "Toute correction d’une facture émise (erreur, geste commercial, réclamation acceptée) fait l’objet d’un avoir, mis à disposition dans l’espace entreprise : il est remboursé sur le moyen de paiement utilisé si la facture est réglée, ou déduit du prélèvement à venir.",
+    ],
+  },
+  {
+    title: "Désistement d’un commercial",
+    body: [
+      "Si un commercial ayant accepté sa mission se désiste avant l’événement, Standby propose aussitôt la mission à un profil compatible, en priorité au même tarif horaire ou à un tarif inférieur, et en informe l’entreprise. À défaut de remplaçant disponible, l’équipe Standby recherche une solution ; seules les heures effectivement réalisées sont facturées.",
     ],
   },
   {
     title: "Validation des heures",
     body: [
-      "À l’issue de l’événement, l’entreprise valide ou ajuste les heures effectuées par chaque commercial. Sans réponse sous trois jours, les heures déclarées sont réputées validées. Les heures validées servent de base à la facturation et à la paie, versée chaque lundi pour la semaine travaillée.",
+      "À l’issue de l’événement, l’entreprise valide ou ajuste les heures effectuées par chaque commercial. Sans réponse sous trois jours, les heures déclarées sont réputées validées.",
+      "Lorsque l’entreprise retient moins d’heures que déclaré, le commercial dispose de 48 heures pour accepter l’ajustement ou le contester ; sans réponse, l’ajustement est retenu. En cas de contestation, l’équipe Standby arbitre au vu des éléments des deux parties et sa décision fixe les heures facturées.",
+      "Les heures validées servent de base à la facturation et à la paie, versée chaque lundi pour la semaine travaillée.",
     ],
   },
   {

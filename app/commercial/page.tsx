@@ -49,6 +49,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             {f.status !== "valide" && <Status tone="warn">{f.status === "refuse" ? "Profil refusé" : "Documents en cours de vérification"}</Status>}
             <div className="inline" style={{ justifyContent: "center" }}>
               <Link className="clay s btn xs ghost" href="/commercial/profil">Mon profil</Link>
+              <Link className="clay s btn xs ghost" href="/compte">Mon compte</Link>
               <form action={logoutAction}>
                 <button className="clay s btn xs ghost">Se déconnecter</button>
               </form>

@@ -11,18 +11,19 @@ import { submitReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 
 export async function validateHours(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
+  let adjusted = false;
   try {
     const company = await requireCompany();
     const user = await getCurrentUser();
     const raw = str(fd, "hours");
     const minutes = raw ? parseHours(raw) : undefined;
     if (minutes !== undefined && !Number.isFinite(minutes)) return { error: "Heures invalides : indiquez par exemple 16 ou 15:30." };
-    await validateAssignmentHours(await getDb(), assignmentId, company.id, user!.id, minutes);
+    ({ adjusted } = await validateAssignmentHours(await getDb(), assignmentId, company.id, user!.id, minutes, { note: str(fd, "note") }));
   } catch (e) {
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Heures validées." };
+  return { ok: adjusted ? "Ajustement envoyé : le commercial a 48 h pour l’accepter ou le contester." : "Heures validées." };
 }
 
 export async function reviewAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {

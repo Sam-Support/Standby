@@ -6,11 +6,12 @@ import { requireUser } from "@/lib/auth/session";
 import { longDate } from "@/lib/format";
 import { getPricing } from "@/lib/settings";
 import { deletionBlockers } from "@/lib/services/privacy";
-import { deleteAccountAction } from "./actions";
+import { changeEmailAction, changePasswordAction, deleteAccountAction } from "./actions";
 
-export const metadata = { title: "Mes données" };
+export const metadata = { title: "Mon compte" };
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
+  const { email } = await searchParams;
   const user = await requireUser(undefined, "/compte");
   const db = await getDb();
   const blockers = await deletionBlockers(db, user.id);
@@ -18,10 +19,54 @@ export default async function Page() {
 
   return (
     <>
-      <PageHead label="Votre compte" title="Mes données personnelles">
-        Vos droits sur vos données (RGPD) : consultez, téléchargez ou supprimez ce que standby conserve sur vous. Détails dans la{" "}
-        <Link href="/confidentialite">politique de confidentialité</Link>.
+      <PageHead label="Votre compte" title="Mon compte et mes données">
+        Identifiants de connexion et droits sur vos données (RGPD) : consultez, téléchargez ou supprimez ce que standby conserve sur vous. Détails
+        dans la <Link href="/confidentialite">politique de confidentialité</Link>.
       </PageHead>
+      {email === "modifie" && <p className="note ok">Adresse e-mail modifiée : utilisez-la désormais pour vous connecter.</p>}
+      <div className="grid2">
+        <section className="clay panel" aria-labelledby="pw-title">
+          <h2 id="pw-title">Changer de mot de passe</h2>
+          <ActionForm action={changePasswordAction} className="stack" style={{ gap: 14 }}>
+            <label className="field">
+              Mot de passe actuel
+              <input className="input" name="current" type="password" autoComplete="current-password" required />
+            </label>
+            <label className="field">
+              Nouveau mot de passe (10 caractères minimum)
+              <input className="input" name="password" type="password" autoComplete="new-password" minLength={10} required />
+            </label>
+            <label className="field">
+              Confirmation du nouveau mot de passe
+              <input className="input" name="confirm" type="password" autoComplete="new-password" minLength={10} required />
+            </label>
+            <p className="muted small">Vos autres appareils seront déconnectés.</p>
+            <div>
+              <Submit className="clay s btn sm" pending="Enregistrement…">Changer le mot de passe</Submit>
+            </div>
+          </ActionForm>
+        </section>
+        <section className="clay panel" aria-labelledby="email-title">
+          <h2 id="email-title">Changer d’adresse e-mail</h2>
+          <p className="muted small">
+            Adresse actuelle : <b>{user.email}</b>. Un lien de confirmation part vers la nouvelle adresse ; l’actuelle reste valable jusqu’à ce que
+            vous cliquiez dessus.
+          </p>
+          <ActionForm action={changeEmailAction} className="stack" style={{ gap: 14 }}>
+            <label className="field">
+              Nouvelle adresse e-mail
+              <input className="input" name="email" type="email" autoComplete="email" required />
+            </label>
+            <label className="field">
+              Mot de passe (pour confirmer)
+              <input className="input" name="password" type="password" autoComplete="current-password" required />
+            </label>
+            <div>
+              <Submit className="clay s btn sm" pending="Envoi…">Recevoir le lien de confirmation</Submit>
+            </div>
+          </ActionForm>
+        </section>
+      </div>
       <div className="grid2">
         <section className="clay panel">
           <h2>Mon compte</h2>
@@ -32,7 +77,7 @@ export default async function Page() {
             <div className="kv"><dt>E-mail confirmé</dt><dd>{user.emailVerifiedAt ? `oui, le ${longDate(user.emailVerifiedAt)}` : "non"}</dd></div>
           </dl>
           <p className="muted small">
-            Pour corriger vos informations, utilisez votre{" "}
+            Pour corriger vos autres informations, utilisez votre{" "}
             <Link href={user.role === "commercial" ? "/commercial/profil" : user.role === "exposant" ? "/entreprise/profil" : "/admin"}>profil</Link>.
           </p>
         </section>

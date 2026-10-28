@@ -5,8 +5,9 @@ import { stripe, stripeEnabled } from "@/lib/integrations/stripe";
 import { audit } from "@/lib/notify";
 import { markPaymentFailed, markPaymentSucceeded } from "@/lib/services/billing";
 import { applyStripeVerification, stripeVerification } from "@/lib/services/compliance";
+import { applyRefundUpdate } from "@/lib/services/credit-notes";
 
-/** Webhook Stripe : moyen de paiement enregistré, paiement réussi/échoué, compte Connect prêt. */
+/** Webhook Stripe : moyen de paiement enregistré, paiement réussi/échoué, remboursement, compte Connect prêt. */
 export async function POST(req: Request) {
   if (!stripeEnabled() || !process.env.STRIPE_WEBHOOK_SECRET) return new Response("Stripe non configuré", { status: 404 });
   const signature = req.headers.get("stripe-signature");
@@ -38,6 +39,13 @@ export async function POST(req: Request) {
       case "payment_intent.payment_failed": {
         const pi = event.data.object;
         if (pi.metadata?.paymentId) await markPaymentFailed(db, pi.metadata.paymentId, pi.last_payment_error?.message ?? "Paiement refusé");
+        break;
+      }
+      case "refund.updated":
+      case "refund.failed": {
+        // remboursement d'un avoir : SEPA met plusieurs jours à aboutir
+        const refund = event.data.object;
+        if (refund.metadata?.creditNoteId && refund.status) await applyRefundUpdate(db, refund.metadata.creditNoteId, refund.status, refund.failure_reason);
         break;
       }
       case "account.updated": {

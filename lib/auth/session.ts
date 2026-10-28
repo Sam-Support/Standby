@@ -9,11 +9,12 @@ export const SESSION_COOKIE = "standby_session";
 const TTL = 60 * 60 * 24 * 30;
 
 export type Role = "exposant" | "commercial" | "admin";
-type SessionPayload = { uid: string; role: Role };
+// v : version de session du profil au moment de la connexion (voir profiles.sessionVersion)
+type SessionPayload = { uid: string; role: Role; v?: number };
 
-export async function startSession(userId: string, role: Role) {
+export async function startSession(userId: string, role: Role, version = 0) {
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, signToken({ uid: userId, role }, TTL), {
+  jar.set(SESSION_COOKIE, signToken({ uid: userId, role, v: version }, TTL), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production" && process.env.COOKIE_INSECURE !== "1",
@@ -36,7 +37,9 @@ export const getCurrentUser = cache(async () => {
   if (!session) return null;
   const db = await getDb();
   const [profile] = await db.select().from(s.profiles).where(eq(s.profiles.id, session.uid));
-  return profile ?? null;
+  // mot de passe changé depuis l'ouverture de cette session : elle n'est plus valable
+  if (!profile || profile.sessionVersion !== (session.v ?? 0)) return null;
+  return profile;
 });
 
 export const getCurrentCompany = cache(async () => {

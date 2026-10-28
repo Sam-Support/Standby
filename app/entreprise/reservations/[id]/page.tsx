@@ -16,6 +16,7 @@ import { cancel } from "@/app/reserver/actions";
 import { cancellationSchedule } from "@/lib/cancellation";
 import type { CancellationRecord } from "@/lib/services/billing";
 import { CANCELLABLE, cancellationTerms } from "@/lib/services/cancellation";
+import { creditNotesFor, REFUND_LABELS } from "@/lib/services/credit-notes";
 import { getPricing } from "@/lib/settings";
 import { ReviewForm } from "./review-form";
 
@@ -41,6 +42,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const cancelled = booking.status === "annulee" ? (booking.cancellation as CancellationRecord | null) : null;
   const canReview = ["validee", "payee"].includes(booking.status);
   const reviews = canReview ? await db.select().from(s.reviews).where(eq(s.reviews.bookingId, id)) : [];
+  const credits = await creditNotesFor(db, row?.invoice ? [row.invoice.id] : []);
 
   return (
     <>
@@ -108,7 +110,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <HoursRow key={h.id} a={h} />
                 ))}
               </div>
-              <p className="muted small">Ajustez si besoin, puis validez. La paie part le lundi suivant.</p>
+              <p className="muted small">
+                Ajustez si besoin, puis validez. Si vous retenez moins d’heures que déclaré, le commercial a 48 h pour accepter ou contester ;
+                l’équipe Standby arbitre en cas de désaccord.
+              </p>
             </section>
           )}
 
@@ -173,6 +178,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             {row?.invoice && (
               <Link className="clay s btn sm ghost" href={`/entreprise/factures/${row.invoice.id}`}>Voir la facture {row.invoice.number}</Link>
             )}
+            {credits.map((n) => (
+              <div key={n.id} className="dev">
+                <Link href={`/entreprise/avoirs/${n.id}`}>Avoir {n.number}</Link>
+                <span>
+                  <b>−{euros(n.totalTtcCents)} TTC</b> <Status tone={REFUND_LABELS[n.refundStatus].tone}>{REFUND_LABELS[n.refundStatus].label}</Status>
+                </span>
+              </div>
+            ))}
             {payment && (
               <p className="small">
                 Paiement :{" "}

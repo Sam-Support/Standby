@@ -14,8 +14,8 @@ import {
   stripeOnboarding,
   uploadFreelancerDocument,
 } from "@/lib/services/accounts";
-import { respondToMission } from "@/lib/services/booking";
-import { declareHours } from "@/lib/services/hours";
+import { respondToMission, withdrawFromMission } from "@/lib/services/booking";
+import { declareHours, respondToAdjustment } from "@/lib/services/hours";
 import { sendBatches, uploadCards, uploadLeadFile } from "@/lib/services/leads";
 import { readUpload } from "@/lib/storage";
 
@@ -48,6 +48,34 @@ export async function declare(assignmentId: string, _: FormState, fd: FormData):
   }
   revalidatePath("/commercial", "layout");
   return { ok: "Heures déclarées. L’exposant les valide après l’événement." };
+}
+
+export async function withdraw(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
+  let replaced = false;
+  try {
+    const { user, db } = await me();
+    if (fd.get("confirm") !== "on") return { error: "Cochez la case pour confirmer votre désistement." };
+    ({ replaced } = await withdrawFromMission(db, assignmentId, user.id, str(fd, "reason")));
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/commercial", "layout");
+  return {
+    ok: replaced
+      ? "Désistement enregistré : un remplaçant a reçu la mission et l’exposant est prévenu."
+      : "Désistement enregistré. Aucun remplaçant n’est libre pour l’instant : l’équipe Standby prend le relais auprès de l’exposant.",
+  };
+}
+
+export async function answerAdjustment(assignmentId: string, accept: boolean, _: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const { user, db } = await me();
+    await respondToAdjustment(db, assignmentId, user.id, accept, str(fd, "reason"));
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/commercial", "layout");
+  return { ok: accept ? "Ajustement accepté : la paie part après la facturation de l’exposant." : "Contestation envoyée : l’équipe Standby arbitre et vous tient informé·e." };
 }
 
 export async function uploadLeadsAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {

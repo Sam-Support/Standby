@@ -34,6 +34,7 @@ export async function exportUserData(db: Db, userId: string) {
       .leftJoin(s.events, eq(s.events.id, s.bookings.eventId))
       .where(eq(s.bookings.companyId, company.id));
     const ids = bookings.map((x) => x.b.id);
+    const invoices = ids.length ? await db.select().from(s.invoices).where(inArray(s.invoices.bookingId, ids)) : [];
     out.entreprise = {
       ...companyData,
       référents: await db.select().from(s.companyReferents).where(eq(s.companyReferents.companyId, company.id)),
@@ -49,7 +50,10 @@ export async function exportUserData(db: Db, userId: string) {
         totalTtcCentimes: b.totalTtcCents,
         annulation: b.cancellation,
       })),
-      factures: ids.length ? await db.select().from(s.invoices).where(inArray(s.invoices.bookingId, ids)) : [],
+      factures: invoices,
+      avoirs: invoices.length
+        ? (await db.select().from(s.creditNotes).where(inArray(s.creditNotes.invoiceId, invoices.map((i) => i.id)))).map((n) => withoutKeys(n, ["stripeRefundId", "createdBy"]))
+        : [],
       avisDonnés: await db.select().from(s.reviews).where(eq(s.reviews.companyId, company.id)),
     };
   }
@@ -102,6 +106,13 @@ export async function deletionBlockers(db: Db, userId: string): Promise<string[]
       .innerJoin(s.bookings, eq(s.bookings.id, s.payments.bookingId))
       .where(and(eq(s.bookings.companyId, company.id), inArray(s.payments.status, ["en_attente", "en_cours", "echoue"])));
     if (unpaid.length) out.push("Un paiement est en attente : réglez-le avant de supprimer le compte.");
+    const refunds = await db
+      .select({ id: s.creditNotes.id })
+      .from(s.creditNotes)
+      .innerJoin(s.invoices, eq(s.invoices.id, s.creditNotes.invoiceId))
+      .innerJoin(s.bookings, eq(s.bookings.id, s.invoices.bookingId))
+      .where(and(eq(s.bookings.companyId, company.id), inArray(s.creditNotes.refundStatus, ["en_cours", "echoue"])));
+    if (refunds.length) out.push("Un remboursement est en cours : la suppression sera possible une fois le remboursement reçu.");
   }
   const [freelancer] = await db.select().from(s.freelancers).where(eq(s.freelancers.userId, userId));
   if (freelancer) {

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb, schema as s } from "@/db";
-import { eurosToCents, fail, file, str, type FormState } from "@/lib/action";
+import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib/action";
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { reviewDocument } from "@/lib/services/accounts";
@@ -12,6 +12,7 @@ import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setPri
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { cancelBooking } from "@/lib/services/cancellation";
+import { issueCreditNote, markRefundedManually, refundCreditNote } from "@/lib/services/credit-notes";
 import { autoValidateHours, validateAssignmentHours } from "@/lib/services/hours";
 import { transcribeCard } from "@/lib/services/leads";
 import { checkCompliance } from "@/lib/services/compliance";
@@ -123,13 +124,48 @@ export async function adminValidateHours(assignmentId: string, companyId: string
   try {
     const admin = await requireAdmin();
     const raw = str(fd, "hours");
-    const minutes = raw ? Math.round(Number(raw.replace(",", ".")) * 60) : undefined;
-    await validateAssignmentHours(await getDb(), assignmentId, companyId, admin.id, minutes);
+    const minutes = raw ? parseHours(raw) : undefined;
+    if (minutes !== undefined && !Number.isFinite(minutes)) return { error: "Heures invalides : indiquez par exemple 16 ou 15:30." };
+    // arbitrage : décision définitive, sans nouvel aller-retour avec le commercial
+    await validateAssignmentHours(await getDb(), assignmentId, companyId, admin.id, minutes, { final: true });
   } catch (e) {
     return fail(e);
   }
   revalidatePath("/admin", "layout");
-  return { ok: "Heures validées." };
+  return { ok: "Heures arbitrées et validées." };
+}
+
+export async function issueCreditNoteAction(invoiceId: string, _: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    const note = await issueCreditNote(await getDb(), admin.id, invoiceId, { amountTtcCents: eurosToCents(str(fd, "amount")), reason: str(fd, "reason") });
+    revalidatePath("/admin", "layout");
+    return { ok: `Avoir ${note.number} émis${note.refundStatus === "rembourse" ? " et remboursé" : note.refundStatus === "en_cours" ? ", remboursement en cours" : ""}.` };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function retryRefundAction(creditNoteId: string): Promise<FormState> {
+  try {
+    await requireAdmin();
+    await refundCreditNote(await getDb(), creditNoteId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Remboursement relancé." };
+}
+
+export async function markRefundedAction(creditNoteId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await markRefundedManually(await getDb(), admin.id, creditNoteId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Avoir marqué comme remboursé." };
 }
 
 export async function retryPaymentAction(paymentId: string): Promise<FormState> {

@@ -35,10 +35,14 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 - **Espace commercial** : missions à accepter ou refuser, déclaration des heures, dépôt des leads (Excel avec rapprochement automatique des colonnes, photos de cartes lues par Claude), revenus et virements du lundi, documents.
 - **Admin** (`/admin`) : tableau de bord et commissions, salons et foires (logos, import CSV, dates vérifiées), **tarification versionnée** (frais de service, commission, TVA, planchers par poste, majoration tenue), validation des documents, arbitrage des heures, finances, saisie des cartes, messages.
 - **Annulation** : barème réglable dans l'admin (par défaut gratuit à 14 jours ou plus, 30 % de 7 à 13 jours, 50 % de 2 à 6 jours, 100 % ensuite). Le montant exact est affiché avant de confirmer ; les frais sont facturés et les commerciaux déjà engagés reçoivent la même part en indemnité. L'admin peut annuler sans frais.
+- **Désistement** : jusqu'à la veille du premier jour, un commercial peut se désister d'une mission acceptée (motif transmis à l'équipe seulement). Un remplaçant reçoit aussitôt la mission (au même tarif ou moins en priorité), l'exposant et l'admin sont prévenus ; sans remplaçant ou à J-2, l'admin reçoit aussi un e-mail. Le désistement compte comme un refus dans le taux d'acceptation.
+- **Heures contestées** : si l'exposant retient moins d'heures que déclaré (avec un motif), le commercial a 48 h pour accepter ou contester ; sans réponse, l'ajustement est retenu. Une contestation part en arbitrage dans l'admin, dont la décision est définitive. La facture attend que toutes les heures soient validées.
+- **Avoirs et remboursements** (admin, fiche réservation) : avoir numéroté `A-AAAA-NNNNN` sur une facture, plafonné au reste à créditer. Facture réglée : remboursement Stripe (suivi par webhook, relance ou « remboursé par virement » en cas d'échec) ; sinon, déduit du prélèvement. La paie des commerciaux n'est pas modifiée ; le CA et les commissions affichés sont nets des avoirs.
+- **Compte** (`/compte`) : changement de mot de passe (l'actuel est exigé, les autres appareils sont déconnectés) et d'adresse e-mail (lien de confirmation envoyé à la nouvelle adresse, alerte sur l'ancienne).
 - **Avis** : après validation des heures, l'exposant note chaque membre de l'équipe (1 à 5 et commentaire) ; la moyenne alimente le matching, le commercial voit ses avis, l'admin modère (`/admin/avis`).
 - **Rappels** : J-7 (badges à demander pour l'équipe Standby, point d'équipe pour l'exposant et les commerciaux) et J-2 (briefing avec le référent, coordonnées), un seul envoi chacun.
 - **RGPD** (`/compte`) : export JSON de toutes ses données, suppression du compte (refusée tant qu'une réservation, une mission ou un paiement est en cours ; pièces comptables conservées 10 ans sur un profil anonymisé), purge automatique des leads après la durée réglée dans l'admin (365 jours par défaut).
-- **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, rappels J-7 et J-2, validation des heures à J+3, virements dus, purge des données arrivées à échéance.
+- **Automatismes** (`/api/cron`, toutes les 15 min en production) : début et fin d'événement, expiration des propositions à 48 h avec remplaçant automatique, rappels J-7 et J-2, validation des heures à J+3, ajustements d'heures sans réponse retenus à 48 h, virements dus, purge des données arrivées à échéance.
 
 ## Sécurité
 
@@ -53,7 +57,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 |---|---|
 | `npm run dev` | Serveur de développement |
 | `npm test` | Tests (calcul du devis, matching, colonnes de leads, limites de tentatives, parcours complet sur PGlite) |
-| `npx playwright install chromium` puis `npm run build && npm run test:e2e` | Tests de bout en bout sur le build de production : parcours de réservation, sécurité (CSP, limites, vérification d'e-mail) et accessibilité axe WCAG 2.1 AA |
+| `npx playwright install chromium` puis `npm run build && npm run test:e2e` | Tests de bout en bout sur le build de production : parcours de réservation, désistement, heures contestées et avoir, changement de mot de passe et d'e-mail, sécurité (CSP, limites, vérification d'e-mail) et accessibilité axe WCAG 2.1 AA |
 | `npm run lint` · `npm run typecheck` | Qualité |
 | `npm run build` | Build de production (`output: standalone`) |
 | `npm run db:generate` | Génère une migration après modification de `db/schema.ts` |
@@ -63,7 +67,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 ## Production (VPS + Supabase)
 
 1. **Supabase** (région UE) : récupérer `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; créer les buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
-2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `account.updated`).
+2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `refund.updated`, `refund.failed`, `account.updated`).
 3. **SIRENE** (facultatif) : clé `INSEE_API_KEY` de l'API Sirene de l'INSEE ; sans elle, ou en cas de panne de l'INSEE, les SIRET sont vérifiés via l'API publique Recherche d'entreprises.
 4. **Resend** (domaine vérifié), **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
 5. **VPS** : Docker, dossier `/opt/standby/staging` avec `deploy/docker-compose.yml`, `deploy/Caddyfile` et un `.env` (modèle : [`.env.example`](.env.example), droits 600).

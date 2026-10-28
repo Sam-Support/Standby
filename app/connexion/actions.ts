@@ -25,7 +25,7 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
       return { error: "E-mail ou mot de passe incorrect." };
     }
     await reset(db, `login:email:${email}`);
-    await startSession(profile.id, profile.role);
+    await startSession(profile.id, profile.role, profile.sessionVersion);
     target = safeNext(str(fd, "next"), HOME[profile.role]);
   } catch (e) {
     return fail(e);

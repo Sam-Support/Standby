@@ -17,6 +17,8 @@ export const LIMITS = {
   contactIp: { max: 5, windowSeconds: 60 * 60 },
   signupIp: { max: 10, windowSeconds: 60 * 60 },
   verifyEmail: { max: 3, windowSeconds: 60 * 60 },
+  // changement de mot de passe ou d'e-mail (le mot de passe actuel est vérifié à chaque essai)
+  accountChange: { max: 5, windowSeconds: 15 * 60 },
 } satisfies Record<string, Limit>;
 
 export class RateLimitError extends Error {

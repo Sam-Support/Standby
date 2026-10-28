@@ -29,6 +29,13 @@
       "when": 1793135497677,
       "tag": "0003_validation_commerciaux",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793137639688,
+      "tag": "0004_bloquants_produit",
+      "breakpoints": true
     }
   ]
 }

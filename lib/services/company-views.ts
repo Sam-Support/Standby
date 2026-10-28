@@ -49,11 +49,15 @@ export async function companyDashboard(db: Db, companyId: string) {
     const hours = accepted.map((a) => {
       const mine = sheets.filter((t) => t.assignmentId === a.id);
       const declared = mine.reduce((n, t) => n + t.minutesDeclared, 0);
+      const validated = mine.length > 0 && mine.every((t) => t.status === "valide");
       return {
         ...a,
         declared: mine.length ? declared : b.days.length * billableMinutesPerDay(b.startTime, b.endTime),
+        retained: mine.reduce((n, t) => n + (t.minutesValidated ?? t.minutesDeclared), 0),
         hasDeclared: mine.length > 0,
-        validated: mine.length > 0 && mine.every((t) => t.status === "valide"),
+        validated,
+        // ajustement en attente du commercial, ou contesté (arbitrage Standby)
+        pending: mine.some((t) => t.status === "conteste") ? ("conteste" as const) : mine.some((t) => t.status === "ajuste") ? ("ajuste" as const) : null,
       };
     });
     return {

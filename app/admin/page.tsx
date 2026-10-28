@@ -57,9 +57,9 @@ export default async function Page() {
         Activité de la plateforme, commissions perçues et files de traitement.
       </PageHead>
       <div className="inline" style={{ gap: 18 }}>
-        {kpi("CA HT du mois (facturé)", euros(st.monthHt), "/admin/finances")}
-        {kpi("Commissions du mois", euros(st.monthFees), "/admin/finances")}
-        {kpi("Commissions cumulées", euros(st.totalFees), "/admin/finances")}
+        {kpi("CA HT du mois (net des avoirs)", euros(st.monthHt), "/admin/finances")}
+        {kpi("Commissions du mois (nettes)", euros(st.monthFees), "/admin/finances")}
+        {kpi("Commissions cumulées (nettes)", euros(st.totalFees), "/admin/finances")}
         {kpi("Frais de service en vigueur", percent(pricing.serviceFeeBps), "/admin/tarification")}
       </div>
       <div className="inline" style={{ gap: 18 }}>
@@ -67,6 +67,11 @@ export default async function Page() {
         {kpi("Cartes à saisir", st.cardsToTranscribe, "/admin/cartes", st.cardsToTranscribe > 0)}
         {kpi("Paiements en échec", st.failedPayments, "/admin/finances", st.failedPayments > 0)}
         {kpi("Messages non traités", st.unreadMessages, "/admin/messages", st.unreadMessages > 0)}
+      </div>
+      <div className="inline" style={{ gap: 18 }}>
+        {kpi("Heures contestées à arbitrer", st.disputedHours, "/admin/reservations?statut=heures_a_valider", st.disputedHours > 0)}
+        {kpi("Réservations à venir incomplètes", st.unfilledBookings, "/admin/reservations?statut=partielle", st.unfilledBookings > 0)}
+        {kpi("Remboursements en échec", st.failedRefunds, "/admin/finances", st.failedRefunds > 0)}
       </div>
       <div className="grid2">
         <section className="clay panel">

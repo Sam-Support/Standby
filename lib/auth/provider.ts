@@ -61,3 +61,10 @@ export async function updateIdentityPassword(db: Db, userId: string, password: s
   }
   await storeLocalPassword(db, userId, password);
 }
+
+/** Nouvel identifiant, déjà confirmé par le lien envoyé à la nouvelle adresse. En local, l'e-mail du profil suffit. */
+export async function updateIdentityEmail(userId: string, email: string) {
+  if (!supabaseEnabled()) return;
+  const { error } = await supabaseAdmin().auth.admin.updateUserById(userId, { email, email_confirm: true });
+  if (error) throw new AuthError(/already|exists/i.test(error.message) ? "Cette adresse est déjà utilisée par un autre compte." : "Mise à jour de l’adresse impossible.");
+}
