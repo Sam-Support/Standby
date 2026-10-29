@@ -40,12 +40,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 <h2 className="ptitle">Votre société</h2>
                 <div className="fgrid">
                   <label className="field">
-                    Raison sociale <span className="req">*</span>
+                    <span>Raison sociale <span className="req">*</span></span>
                     <input className="input" name="name" required defaultValue={company?.name} autoComplete="organization" />
                   </label>
                   <label className="field">
-                    SIRET <span className="req">*</span>
-                    <input className="input" name="siret" required inputMode="numeric" defaultValue={company ? formatSiret(company.siret) : ""} placeholder="834 521 907 00021" />
+                    <span>SIRET <span className="req">*</span></span>
+                    <input className="input" name="siret" required inputMode="numeric" defaultValue={company ? formatSiret(company.siret) : ""} placeholder="834 521 907 00024" />
                     <span className="hint">Vérifié dans le répertoire SIRENE.</span>
                   </label>
                   <label className="field">
@@ -61,6 +61,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                       ))}
                     </select>
                   </label>
+                  <label className="field" style={{ gridColumn: "1 / -1" }}>
+                    <span>
+                      Adresse de facturation <span className="req">*</span>
+                    </span>
+                    <input className="input" name="billingAddress" required defaultValue={company?.billingAddress ?? ""} autoComplete="street-address" placeholder="12 rue de la Paix, 75002 Paris" />
+                  </label>
+                  <label className="field">
+                    N° de TVA intracommunautaire
+                    <input className="input" name="vatNumber" defaultValue={company?.vatNumber ?? ""} placeholder="FR12 834521907" />
+                    <span className="hint">Facultatif : calculé à partir du SIREN si vous le laissez vide.</span>
+                  </label>
                 </div>
               </>
             )}
@@ -70,11 +81,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 <div className="fgrid">
                   <label className="field">
                     Site web
-                    <input className="input" name="website" type="url" defaultValue={company?.website ?? ""} placeholder="https://www.votre-site.fr" />
+                    <input className="input" name="website" type="text" inputMode="url" autoComplete="url" defaultValue={company?.website ?? ""} placeholder="https://www.votre-site.fr" />
                   </label>
                   <label className="field">
                     Page LinkedIn
-                    <input className="input" name="linkedin" type="url" defaultValue={company?.linkedin ?? ""} placeholder="https://www.linkedin.com/company/…" />
+                    <input className="input" name="linkedin" type="text" inputMode="url" defaultValue={company?.linkedin ?? ""} placeholder="https://www.linkedin.com/company/…" />
                   </label>
                 </div>
                 <div className="sunk drop">
@@ -145,14 +156,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 <div className="when when-crm stack">
                   <div className="fgrid">
                     <label className="field">
-                      Votre CRM <span className="req">*</span>
+                      <span>Votre CRM <span className="req">*</span></span>
                       <select className="input" name="crmProvider" defaultValue="HubSpot">
                         <option>HubSpot</option>
                       </select>
                       <span className="hint">Salesforce et Pipedrive arrivent ensuite.</span>
                     </label>
                     <label className="field">
-                      Email de l’administrateur CRM <span className="req">*</span>
+                      <span>Email de l’administrateur CRM <span className="req">*</span></span>
                       <input className="input" name="crmAdminEmail" type="email" defaultValue={company?.crmAdminEmail ?? ""} />
                       <span className="hint">Nous lui envoyons une demande d’accès limité à la création de contacts.</span>
                     </label>

@@ -43,6 +43,13 @@
       "when": 1793160519887,
       "tag": "0005_factures_commerciaux",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793291922949,
+      "tag": "0006_corrections_recette",
+      "breakpoints": true
     }
   ]
 }

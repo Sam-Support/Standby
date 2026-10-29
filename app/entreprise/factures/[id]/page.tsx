@@ -5,7 +5,7 @@ import { getDb, schema as s } from "@/db";
 import { BackLink } from "@/components/ui";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { dateRange, eurosPrecise, longDate, percent } from "@/lib/format";
-import { assertInvoiceAccess, type InvoiceLine } from "@/lib/services/billing";
+import { assertInvoiceAccess, invoiceClient, type InvoiceClient, type InvoiceLine } from "@/lib/services/billing";
 import { creditNotesFor } from "@/lib/services/credit-notes";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "./print";
@@ -28,6 +28,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const [client] = await db.select().from(s.companies).where(eq(s.companies.id, booking.companyId));
   const [event] = booking.eventId ? await db.select().from(s.events).where(eq(s.events.id, booking.eventId)) : [];
   const lines = invoice.lines as InvoiceLine[];
+  const cl = (invoice.client as InvoiceClient | null) ?? invoiceClient(client); // factures antérieures : coordonnées actuelles
   const credits = await creditNotesFor(db, [invoice.id]);
   const vatBps = invoice.totalHtCents ? Math.round((invoice.vatCents / invoice.totalHtCents) * 10000) : 2000;
 
@@ -56,9 +57,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <div>
           <span className="lab">Client</span>
           <p>
-            <b>{client.name}</b>
+            <b>{cl.name}</b>
             <br />
-            SIRET {formatSiret(client.siret)}
+            {cl.address ?? <span className="todo">[adresse de facturation non renseignée]</span>}
+            <br />
+            SIRET {formatSiret(cl.siret)} · TVA {cl.vatNumber}
           </p>
         </div>
         <p>
@@ -99,7 +102,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           )}
         </div>
         <p className="muted small">
-          Règlement par prélèvement sur le moyen de paiement enregistré. Pénalités de retard : <span className="todo">[taux]</span> ; indemnité forfaitaire
+          Échéance : {longDate(invoice.issuedAt)}, règlement par prélèvement automatique sur le moyen de paiement enregistré. Pénalités de retard : <span className="todo">[taux]</span> ; indemnité forfaitaire
           de recouvrement : 40 € (art. D. 441-5 du Code de commerce).
         </p>
       </article>

@@ -216,12 +216,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 {terms.totalHtCents > 0 ? `${euros(terms.totalHtCents)} HT, soit ${euros(terms.totalTtcCents)} TTC (${terms.bps / 100} %)` : "sans frais"}
               </p>
               <ActionForm action={cancel.bind(null, id)} className="stack">
-                {terms.totalHtCents > 0 && (
-                  <label className="check">
-                    <input type="checkbox" name="accept" required />
-                    J’accepte les frais d’annulation de {euros(terms.totalTtcCents)} TTC.
-                  </label>
-                )}
+                <label className="check">
+                  <input type="checkbox" name="accept" required />
+                  {terms.totalHtCents > 0
+                    ? `J’accepte les frais d’annulation de ${euros(terms.totalTtcCents)} TTC et j’annule définitivement la réservation.`
+                    : "Je confirme vouloir annuler définitivement cette réservation."}
+                </label>
                 <Submit className="clay s btn sm danger" pending="Annulation…">Annuler la réservation</Submit>
               </ActionForm>
             </section>

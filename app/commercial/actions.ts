@@ -106,7 +106,9 @@ export async function uploadCardsAction(assignmentId: string, _: FormState, fd: 
       ok:
         res.read === res.uploaded
           ? `${res.uploaded} carte(s) lue(s) automatiquement.`
-          : `${res.uploaded} photo(s) reçue(s)${res.read ? `, ${res.read} lue(s) automatiquement` : ""}. Les autres sont saisies par l’équipe sous 24 h.`,
+          : res.read
+            ? `${res.uploaded} photo(s) reçue(s), ${res.read} lue(s) automatiquement ; les autres sont saisies par l’équipe sous 24 h.`
+            : `${res.uploaded} photo(s) reçue(s) : elles sont saisies par l’équipe sous 24 h.`,
     };
   } catch (e) {
     return fail(e);
@@ -116,9 +118,11 @@ export async function uploadCardsAction(assignmentId: string, _: FormState, fd: 
 export async function sendLeads(assignmentId: string): Promise<FormState> {
   try {
     const { user, db } = await me();
-    const n = await sendBatches(db, assignmentId, user.id);
+    const { leads, pendingCards } = await sendBatches(db, assignmentId, user.id);
     revalidatePath(`/commercial/leads/${assignmentId}`);
-    return { ok: `${n} lead(s) envoyés à l’entreprise.` };
+    return {
+      ok: `${leads} lead(s) envoyé(s) à l’entreprise${pendingCards ? ` ; ${pendingCards} carte(s) de visite lui parviendront après saisie par l’équipe (sous 24 h)` : ""}.`,
+    };
   } catch (e) {
     return fail(e);
   }

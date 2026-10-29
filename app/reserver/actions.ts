@@ -170,7 +170,10 @@ export async function cancel(id: string, _: FormState, fd: FormData): Promise<Fo
     const { db, booking } = await ctx(id);
     const user = await getCurrentUser();
     const terms = await cancellationTerms(db, booking);
-    if (terms.totalHtCents > 0 && !fd.get("accept")) return { error: "Cochez la case pour accepter les frais d’annulation." };
+    // annulation toujours confirmée explicitement, même sans frais (elle est définitive)
+    if (!fd.get("accept")) {
+      return { error: terms.totalHtCents > 0 ? "Cochez la case pour accepter les frais d’annulation." : "Cochez la case pour confirmer l’annulation." };
+    }
     await cancelBooking(db, booking, user!.id);
   } catch (e) {
     return fail(e);

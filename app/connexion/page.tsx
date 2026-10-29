@@ -1,12 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/action";
+import { getCurrentUser } from "@/lib/auth/session";
 import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead } from "@/components/ui";
 import { loginAction } from "./actions";
 
 export const metadata = { title: "Connexion" };
 
+const HOME = { exposant: "/entreprise", commercial: "/commercial", admin: "/admin" } as const;
+
 export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string; reinitialise?: string; email?: string }> }) {
   const { next, reinitialise, email } = await searchParams;
+  // déjà connecté : direction son espace, sauf s'il y a un message à lire (adresse confirmée, mot de passe réinitialisé…)
+  const user = await getCurrentUser();
+  if (user && !reinitialise && !email) redirect(safeNext(next, HOME[user.role]));
   return (
     <>
       <PageHead label="Comptes" title="Se connecter">

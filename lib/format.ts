@@ -111,6 +111,7 @@ export function longDateTime(date: Date) {
   return date.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" });
 }
 
+/** « 1er décembre 2026 », « 15 octobre 2026 » */
 export function longDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" });
+  return new Date(date).toLocaleDateString("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" }).replace(/^1 /, "1er ");
 }

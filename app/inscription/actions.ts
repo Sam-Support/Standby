@@ -9,6 +9,7 @@ import { hit, LIMITS } from "@/lib/rate-limit";
 import type { DocumentKey } from "@/lib/domain";
 import {
   AccountError,
+  cleanBillingAddress,
   companyIdentity,
   companyLeadFormat,
   companyReferents,
@@ -52,8 +53,16 @@ export async function companyStep(step: number, _: FormState, fd: FormData): Pro
     const db = await getDb();
     if (step === 1) {
       if (!isValidSiret(str(fd, "siret"))) return { error: "SIRET invalide : 14 chiffres, vérifiez la saisie." };
+      cleanBillingAddress(str(fd, "billingAddress")); // contrôlée avant de créer le compte
       const userId = await ensureAccount(fd, "exposant");
-      await companyIdentity(db, userId, { name: str(fd, "name"), siret: str(fd, "siret"), sector: str(fd, "sector"), size: str(fd, "size") });
+      await companyIdentity(db, userId, {
+        name: str(fd, "name"),
+        siret: str(fd, "siret"),
+        sector: str(fd, "sector"),
+        size: str(fd, "size"),
+        billingAddress: str(fd, "billingAddress"),
+        vatNumber: str(fd, "vatNumber"),
+      });
       next = "/inscription/entreprise?etape=2";
     } else {
       const company = await getCurrentCompany();

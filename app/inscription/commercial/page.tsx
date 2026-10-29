@@ -64,7 +64,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 <h2 className="ptitle">Où travaillez-vous ?</h2>
                 <div className="fgrid">
                   <label className="field">
-                    Ville <span className="req">*</span>
+                    <span>Ville <span className="req">*</span></span>
                     <input className="input" name="city" required defaultValue={f?.city} autoComplete="address-level2" placeholder="Paris, Lyon, Cannes…" />
                   </label>
                 </div>
@@ -90,13 +90,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 <h2 className="ptitle">Langues parlées <span className="req">*</span></h2>
                 <div className="chips">
                   {LANGUAGES.map((l) => (
-                    <Chip key={l} name="languages" value={l} checked={f ? f.languages.includes(l) : l === "Français"}>{l}</Chip>
+                    <Chip key={l} name="languages" value={l} checked={f?.languages.length ? f.languages.includes(l) : l === "Français"}>{l}</Chip>
                   ))}
                   <input className="input" name="otherLanguage" aria-label="Autre langue" placeholder="+ Autre" defaultValue={otherLangs[0] ?? ""} style={{ width: 160, minHeight: 40, padding: "8px 12px" }} />
                 </div>
                 <div className="fgrid">
                   <label className="field">
-                    Tarif horaire HT (€) <span className="req">*</span>
+                    <span>Tarif horaire HT (€) <span className="req">*</span></span>
                     <input className="input" name="rate" inputMode="decimal" required defaultValue={f?.hourlyRateCents ? f.hourlyRateCents / 100 : ""} placeholder="30" />
                     <span className="hint">
                       Minimum selon le poste principal : {SIGNUP_ROLE_ORDER.map((r) => `${ROLES[r].short} ${hourly(pricing.floors[r])}`).join(" · ")}. Affiché aux exposants.
@@ -140,7 +140,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
               <>
                 <div className="fgrid">
                   <label className="field">
-                    SIRET <span className="req">*</span>
+                    <span>SIRET <span className="req">*</span></span>
                     <input className="input" name="siret" inputMode="numeric" required defaultValue={f?.siret ? formatSiret(f.siret) : ""} />
                   </label>
                   <label className="field">

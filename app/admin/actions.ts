@@ -7,7 +7,7 @@ import { getDb, schema as s } from "@/db";
 import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib/action";
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
-import { reviewDocument } from "@/lib/services/accounts";
+import { confirmCompanySiret, reviewDocument } from "@/lib/services/accounts";
 import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setPricing } from "@/lib/services/admin";
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
@@ -108,6 +108,17 @@ export async function reviewDocAction(docId: string, status: "valide" | "refuse"
   return {};
 }
 
+export async function confirmCompanyAction(companyId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await confirmCompanySiret(await getDb(), admin.id, companyId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Identité de l’entreprise confirmée." };
+}
+
 export async function freelancerStatusAction(freelancerId: string, status: "valide" | "refuse"): Promise<FormState> {
   try {
     await requireAdmin();
@@ -184,6 +195,7 @@ export async function retryPaymentAction(paymentId: string): Promise<FormState> 
 export async function adminCancelAction(bookingId: string, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
+    if (fd.get("confirm") !== "on") return { error: "Cochez la case pour confirmer l’annulation." };
     const db = await getDb();
     const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, bookingId));
     await cancelBooking(db, b, admin.id, { waive: fd.get("waive") === "on" });

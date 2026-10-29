@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Jost, Onest } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
+import { FlashRegion } from "@/components/flash";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { VerifyBanner } from "@/components/verify-banner";
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </main>
           <SiteFooter />
         </div>
+        <FlashRegion />
         <CookieBanner />
       </body>
     </html>

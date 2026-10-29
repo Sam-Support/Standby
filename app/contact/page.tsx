@@ -61,13 +61,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
               Message
               <textarea className="input" name="message" required minLength={10} placeholder="Décrivez votre demande…" style={{ minHeight: 150 }}></textarea>
             </label>
-            <label className="check">
-              <input type="checkbox" name="consent" required />
-              <span className="muted small">
-                J’accepte que mes données soient utilisées pour traiter ma demande, conformément à la{" "}
-                <Link href="/confidentialite">politique de confidentialité</Link>.
-              </span>
-            </label>
+            <p className="muted small">
+              Vos coordonnées servent uniquement à traiter votre demande et sont conservées le temps de son traitement. Détails et droits dans
+              la <Link href="/confidentialite">politique de confidentialité</Link>.
+            </p>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Submit>Envoyer le message</Submit>
             </div>

@@ -68,7 +68,7 @@ flowchart LR
   T & H & F --> V[Compte créé: vérification email]
 ```
 
-SIRET contrôlé via API SIRENE à l'étape 1.
+SIRET contrôlé via API SIRENE à l'étape 1 : « vérifié » si l'établissement est actif et que le nom concorde avec la raison sociale, sinon confirmation par l'admin. Adresse de facturation obligatoire, n° de TVA calculé à partir du SIREN si vide.
 
 ## 5. Inscription commercial·e
 
@@ -83,7 +83,7 @@ flowchart LR
   R -->|refus| X[Pièce à corriger]
 ```
 
-Le profil n'apparaît dans le matching qu'après validation des documents.
+Le profil n'apparaît dans le matching qu'après validation des documents. Validation automatique seulement si le nom SIRENE correspond au prénom et au nom du compte ; sinon (SIRET d'un tiers, société), l'admin valide le profil manuellement. Au recontrôle mensuel, un établissement fermé retire du matching ; un SIRET devenu introuvable est signalé à l'admin.
 
 ## 6. Dépôt de leads (commercial → exposant)
 

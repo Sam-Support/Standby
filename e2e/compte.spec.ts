@@ -30,7 +30,7 @@ test("un utilisateur change son mot de passe puis son adresse e-mail", async ({ 
   await fillPassword("mauvais-mdp-00");
   await expect(passwordForm.getByRole("alert")).toHaveText("Mot de passe actuel incorrect.");
   await fillPassword("motdepasse-e2e");
-  await expect(passwordForm.getByRole("status")).toContainText("Mot de passe modifié");
+  await expect(page.getByRole("status")).toContainText("Mot de passe modifié");
   // cet appareil reste connecté
   await page.reload();
   await expect(page.getByRole("heading", { name: "Mon compte et mes données" })).toBeVisible();

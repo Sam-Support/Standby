@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { ACCOUNTS, dismissCookies, expectAccessible, login } from "./helpers";
 
 const PUBLIC = [
@@ -62,6 +62,11 @@ test.describe("accessibilité (axe, WCAG 2.1 AA)", () => {
       await page.goto(path);
       await expectAccessible(page);
     }
+    // dépôt des leads : champs fichier nommés par leur libellé
+    await page.goto("/commercial");
+    await page.getByRole("link", { name: "Déposer mes leads" }).first().click();
+    await expect(page.getByLabel("Choisir un fichier .xlsx")).toBeVisible();
+    await expectAccessible(page);
   });
 
   test("administration", async ({ page }) => {

@@ -95,6 +95,7 @@ img { max-width: 100%; }
 /* navigation */
 .nav { display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 22px; border-radius: 14px; }
 nav.clay.nav { position: sticky; top: 14px; z-index: 30; }
+html { scroll-padding-top: 104px; } /* ancres (#avis, #leads…) visibles sous la barre collante */
 .logo { display: flex; align-items: center; gap: 9px; font-size: 26px; color: var(--ink); text-decoration: none; }
 .logo i { width: 20px; height: 20px; border-radius: 50%; display: inline-block; --c: var(--primary); }
 .tabs { margin-left: auto; display: flex; gap: 2px; padding: 5px; border-radius: 14px; }
@@ -185,6 +186,10 @@ dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .note { font-size: 14px; padding: 10px 14px; border-radius: 14px; background: #ffebc2; color: #8a5200; font-weight: 600; }
 .note.info { background: #dcdfff; color: var(--link); }
 .note.ok { background: #d3f2e3; color: var(--ok); }
+/* confirmations des formulaires (components/flash.tsx), sous la barre de navigation */
+.flash { position: fixed; top: 92px; left: 16px; right: 16px; z-index: 40; max-width: 640px; margin: 0 auto; pointer-events: none; }
+.flash .note { display: flex; gap: 12px; align-items: center; justify-content: space-between; box-shadow: 0 10px 28px rgba(27, 33, 80, 0.18); pointer-events: auto; }
+.flash-close { border: 0; background: none; color: inherit; font: 800 20px/1 var(--sans); cursor: pointer; padding: 0 4px; }
 .note.err { background: #fbdde3; color: #9b1c33; }
 .facts { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .est { border-radius: 22px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
@@ -353,3 +358,5 @@ details.more[open] > summary::after { transform: rotate(225deg); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+button.bell { border: 0; cursor: pointer; font: inherit; }
+.navright form { display: flex; }

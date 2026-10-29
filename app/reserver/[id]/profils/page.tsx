@@ -47,7 +47,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     const role = p.role as RoleKey;
     const selected: CardData[] = d.assignments
       .filter((a) => a.role === role)
-      .map((a) => ({ ...a, id: a.freelancerId, score: a.matchScore, selected: true, favorite: favs.has(a.freelancerId) }));
+      .map((a) => ({ ...a, id: a.freelancerId, score: a.matchScore, selected: true, favorite: favs.has(a.freelancerId) }))
+      .sort((x, y) => y.score - x.score || y.ratingX10 - x.ratingX10 || x.id.localeCompare(y.id));
     const candidates = (await findCandidates(d.db, d.booking, role, taken))
       .slice(0, Math.max(3, 6 - selected.length))
       .map((c) => ({ ...c, selected: false, favorite: c.isFavorite }));

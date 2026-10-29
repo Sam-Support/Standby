@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { isRoleKey, ROLES, type RoleKey } from "@/lib/domain";
@@ -49,6 +49,29 @@ export async function createDraft(db: Db, companyId: string, eventSlug?: string 
   return b;
 }
 
+/**
+ * Point d'entrée « Nouvelle réservation » : reprend le dernier brouillon resté vide (aucun poste choisi) au lieu
+ * d'en créer un à chaque visite ; un salon passé en paramètre le remplace.
+ */
+export async function startDraft(db: Db, companyId: string, eventSlug?: string | null): Promise<Booking> {
+  const drafts = await db
+    .select()
+    .from(s.bookings)
+    .where(and(eq(s.bookings.companyId, companyId), eq(s.bookings.status, "brouillon")))
+    .orderBy(desc(s.bookings.createdAt))
+    .limit(5);
+  for (const d of drafts) {
+    const [{ n }] = await db.select({ n: count() }).from(s.bookingPositions).where(eq(s.bookingPositions.bookingId, d.id));
+    if (n > 0) continue;
+    if (!eventSlug) return d;
+    const [e] = await db.select().from(s.events).where(and(eq(s.events.slug, eventSlug), eq(s.events.published, true)));
+    if (!e || e.id === d.eventId) return d;
+    const [updated] = await db.update(s.bookings).set({ eventId: e.id, days: listDays(e.startsOn, e.endsOn) }).where(eq(s.bookings.id, d.id)).returning();
+    return updated;
+  }
+  return createDraft(db, companyId, eventSlug);
+}
+
 export async function getCompanyBooking(db: Db, bookingId: string, companyId: string): Promise<Booking | null> {
   if (!/^[0-9a-f-]{36}$/.test(bookingId)) return null;
   const [b] = await db.select().from(s.bookings).where(and(eq(s.bookings.id, bookingId), eq(s.bookings.companyId, companyId)));
@@ -85,7 +108,7 @@ export async function loadAssignments(db: Db, bookingId: string) {
     .innerJoin(s.freelancers, eq(s.freelancers.id, s.assignments.freelancerId))
     .innerJoin(s.profiles, eq(s.profiles.id, s.freelancers.userId))
     .where(eq(s.assignments.bookingId, bookingId))
-    .orderBy(s.assignments.createdAt);
+    .orderBy(s.assignments.createdAt, s.assignments.id); // ordre stable : les équipes créées d'un coup ont la même date
 }
 
 export async function loadBookingContext(db: Db, booking: Booking) {
@@ -300,7 +323,7 @@ export async function findCandidates(db: Db, b: Booking, role: RoleKey, excludeF
       );
       return { ...r, score, isFavorite: favs.has(r.id) };
     })
-    .sort((a, b2) => b2.score - a.score || b2.ratingX10 - a.ratingX10);
+    .sort((a, b2) => b2.score - a.score || b2.ratingX10 - a.ratingX10 || a.id.localeCompare(b2.id));
 }
 
 /** Complète chaque poste avec les meilleurs profils (« Re-sélection auto »). */
@@ -353,6 +376,8 @@ export async function toggleFavorite(db: Db, companyId: string, freelancerId: st
 /** Problèmes bloquants avant confirmation (liste vide = prêt). */
 export async function confirmationIssues(db: Db, b: Booking): Promise<string[]> {
   const issues: string[] = [];
+  const [company] = await db.select({ address: s.companies.billingAddress }).from(s.companies).where(eq(s.companies.id, b.companyId));
+  if (!company?.address) issues.push("Indiquez l’adresse de facturation de votre société dans votre profil entreprise.");
   if (!b.eventId || b.days.length === 0) issues.push("Choisissez l’événement et les jours.");
   const positions = await db.select().from(s.bookingPositions).where(eq(s.bookingPositions.bookingId, b.id));
   if (positions.length === 0) issues.push("Composez l’équipe.");

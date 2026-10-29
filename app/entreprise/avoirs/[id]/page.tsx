@@ -5,6 +5,7 @@ import { getDb, schema as s } from "@/db";
 import { BackLink } from "@/components/ui";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
 import { eurosPrecise, longDate, percent } from "@/lib/format";
+import { invoiceClient, type InvoiceClient } from "@/lib/services/billing";
 import { assertCreditNoteAccess } from "@/lib/services/credit-notes";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "../../factures/[id]/print";
@@ -32,6 +33,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
   const { note, invoice, booking } = row;
   const [client] = await db.select().from(s.companies).where(eq(s.companies.id, booking.companyId));
+  const cl = (invoice.client as InvoiceClient | null) ?? invoiceClient(client);
   const vatBps = note.totalHtCents ? Math.round((note.vatCents / note.totalHtCents) * 10000) : 2000;
 
   return (
@@ -59,9 +61,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <div>
           <span className="lab">Client</span>
           <p>
-            <b>{client.name}</b>
+            <b>{cl.name}</b>
             <br />
-            SIRET {formatSiret(client.siret)}
+            {cl.address ?? <span className="todo">[adresse de facturation non renseignée]</span>}
+            <br />
+            SIRET {formatSiret(cl.siret)} · TVA {cl.vatNumber}
           </p>
         </div>
         <p>

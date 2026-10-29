@@ -41,15 +41,15 @@ export function AccountFields() {
       <h2 className="ptitle">Vos identifiants</h2>
       <div className="fgrid">
         <label className="field">
-          Prénom <span className="req">*</span>
+          <span>Prénom <span className="req">*</span></span>
           <input className="input" name="firstName" autoComplete="given-name" required />
         </label>
         <label className="field">
-          Nom <span className="req">*</span>
+          <span>Nom <span className="req">*</span></span>
           <input className="input" name="lastName" autoComplete="family-name" required />
         </label>
         <label className="field">
-          Adresse e-mail <span className="req">*</span>
+          <span>Adresse e-mail <span className="req">*</span></span>
           <input className="input" name="email" type="email" autoComplete="email" required />
         </label>
         <label className="field">
@@ -57,11 +57,11 @@ export function AccountFields() {
           <input className="input" name="phone" type="tel" autoComplete="tel" />
         </label>
         <label className="field">
-          Mot de passe (10 caractères minimum) <span className="req">*</span>
+          <span>Mot de passe (10 caractères minimum) <span className="req">*</span></span>
           <input className="input" name="password" type="password" minLength={10} autoComplete="new-password" required />
         </label>
         <label className="field">
-          Confirmation <span className="req">*</span>
+          <span>Confirmation <span className="req">*</span></span>
           <input className="input" name="confirm" type="password" minLength={10} autoComplete="new-password" required />
         </label>
       </div>

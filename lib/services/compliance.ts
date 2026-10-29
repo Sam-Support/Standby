@@ -5,7 +5,7 @@ import * as s from "@/db/schema";
 import type { DocumentKey } from "@/lib/domain";
 import { daysUntil, longDate, todayIso } from "@/lib/format";
 import { lookupSiret } from "@/lib/integrations/sirene";
-import { audit, notify } from "@/lib/notify";
+import { audit, notify, notifyAdmins } from "@/lib/notify";
 
 /** Une attestation de vigilance URSSAF vaut 6 mois à compter de sa délivrance. */
 export const URSSAF_VALIDITY_MONTHS = 6;
@@ -39,6 +39,21 @@ export function siretNameMatches(siretName: string | null | undefined, firstName
   if (!siretName) return false;
   const words = new Set(norm(siretName).split(" "));
   return [firstName, lastName].every((part) => norm(part).split(" ").filter(Boolean).every((w) => words.has(w)));
+}
+
+// formes juridiques et mots vides ignorés pour comparer une raison sociale au nom SIRENE
+const LEGAL_WORDS = new Set(["sa", "sas", "sasu", "sarl", "eurl", "sci", "snc", "scop", "selarl", "scp", "ei", "eirl", "societe", "ste", "et", "de", "des", "du", "la", "le", "les"]);
+
+/** Raison sociale saisie et nom SIRENE désignent-ils la même entreprise ? (l'un contient l'autre, ou la plupart des mots communs) */
+export function companyNameMatches(siretName: string | null | undefined, companyName: string) {
+  if (!siretName) return false;
+  const words = (v: string) => norm(v).split(" ").filter((w) => w.length > 1 && !LEGAL_WORDS.has(w));
+  const a = words(siretName);
+  const b = words(companyName);
+  if (a.length === 0 || b.length === 0) return false;
+  if (a.join(" ").includes(b.join(" ")) || b.join(" ").includes(a.join(" "))) return true;
+  const common = b.filter((w) => a.includes(w)).length;
+  return common > 0 && common >= Math.ceil(Math.min(a.length, b.length) / 2);
 }
 
 export type SiretLookup = typeof lookupSiret;
@@ -81,6 +96,17 @@ export async function maybeValidateFreelancer(db: Db, freelancerId: string, toda
   const ok = REQUIRED_DOCUMENTS.every((t) => docs.some((d) => d.type === t && d.status === "valide"));
   const urssaf = docs.find((d) => d.type === "urssaf");
   if (!ok || !urssaf?.validUntil || urssaf.validUntil < today || f.siretStatus === "ferme" || f.siretStatus === "introuvable") return false;
+  // SIRET au nom d'une autre personne ou d'une société : validation manuelle par l'équipe (« Valider le profil »)
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, f.userId));
+  if (!siretNameMatches(f.siretName, p.firstName, p.lastName)) {
+    await notifyAdmins(db, {
+      title: "Profil à valider manuellement",
+      body: `${p.firstName} ${p.lastName} : documents validés, mais le SIRET est enregistré dans SIRENE sous « ${f.siretName ?? "nom non diffusé"} ».`,
+      link: "/admin/inscrits",
+      email: false,
+    });
+    return false;
+  }
   await db.update(s.freelancers).set({ status: "valide" }).where(eq(s.freelancers.id, f.id));
   await notify(db, f.userId, {
     title: "Votre profil est validé",
@@ -200,6 +226,17 @@ export async function checkCompliance(db: Db, today = todayIso(), lookup: SiretL
         body: "Le répertoire SIRENE indique que votre établissement est fermé : vous ne recevez plus de missions. Contactez-nous si c’est une erreur.",
         link: "/contact",
       });
+    }
+    if (status === "introuvable" && before !== "introuvable") {
+      // possible radiation ou établissement non diffusible : vérification humaine plutôt que retrait automatique
+      for (const a of admins) {
+        await notify(db, a.id, {
+          title: "SIRET introuvable au recontrôle",
+          body: `Le SIRET ${f.siret} n’est plus trouvé dans SIRENE : vérifiez la situation du commercial.`,
+          link: "/admin/inscrits?tous=1",
+          email: false,
+        });
+      }
     }
     await refreshBlockedReason(db, f.id, today);
   }

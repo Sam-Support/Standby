@@ -28,6 +28,15 @@ export default async function Page() {
             <label className="field">SIRET<input className="input" name="siret" defaultValue={formatSiret(company.siret)} required /></label>
             <label className="field">Secteur<input className="input" name="sector" defaultValue={company.sector ?? ""} /></label>
             <label className="field">
+              Adresse de facturation
+              <input className="input" name="billingAddress" defaultValue={company.billingAddress ?? ""} autoComplete="street-address" required />
+            </label>
+            <label className="field">
+              N° de TVA intracommunautaire
+              <input className="input" name="vatNumber" defaultValue={company.vatNumber ?? ""} />
+              <span className="hint">Calculé à partir du SIREN si vous le laissez vide. Les factures déjà émises ne changent pas.</span>
+            </label>
+            <label className="field">
               Effectif
               <select className="input" name="size" defaultValue={company.size ?? ""}>
                 <option value="">Choisir</option>

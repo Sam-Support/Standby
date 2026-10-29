@@ -6,6 +6,7 @@ import { eurosPrecise, longDate, nextMonday, todayIso } from "@/lib/format";
 import { chargeCustomer, stripeEnabled, transferToFreelancer } from "@/lib/integrations/stripe";
 import { audit, notify } from "@/lib/notify";
 import { payoutBreakdown } from "@/lib/pricing";
+import { frVatNumber } from "@/lib/siret";
 import { getPricing } from "@/lib/settings";
 import { BookingError, loadAssignments } from "./booking";
 import { issueSelfBill } from "./self-billing";
@@ -29,6 +30,13 @@ export async function nextInvoiceNumber(db: Db) {
     .from(s.invoices)
     .where(gte(s.invoices.issuedAt, new Date(`${year}-01-01T00:00:00Z`)));
   return `F-${year}-${String(n + 1).padStart(5, "0")}`;
+}
+
+/** Coordonnées du client portées sur la facture, figées à l'émission. */
+export type InvoiceClient = { name: string; siret: string; address: string | null; vatNumber: string };
+
+export function invoiceClient(c: typeof s.companies.$inferSelect): InvoiceClient {
+  return { name: c.name, siret: c.siret, address: c.billingAddress, vatNumber: c.vatNumber ?? frVatNumber(c.siret) };
 }
 
 /** Indemnités d'annulation enregistrées sur la réservation (voir services/cancellation). */
@@ -72,12 +80,14 @@ export async function finalizeBooking(db: Db, bookingId: string) {
   const totalHtCents = subtotalCents + serviceFeeCents;
   const vatCents = Math.round((totalHtCents * pricing.vatBps) / 10000);
   const totalTtcCents = totalHtCents + vatCents;
+  const [company] = await db.select().from(s.companies).where(eq(s.companies.id, b.companyId));
 
   const [invoice] = await db
     .insert(s.invoices)
     .values({
       bookingId: b.id,
       number: await nextInvoiceNumber(db),
+      client: invoiceClient(company),
       lines: [...lines, { label: `Frais de service (${pricing.serviceFeeBps / 100} %)`, detail: "", totalCents: serviceFeeCents }],
       subtotalCents,
       serviceFeeCents,
@@ -88,7 +98,6 @@ export async function finalizeBooking(db: Db, bookingId: string) {
     .returning();
   await db.update(s.bookings).set({ status: "validee", totalHtCents, totalTtcCents }).where(eq(s.bookings.id, b.id));
   const [payment] = await db.insert(s.payments).values({ bookingId: b.id, amountCents: totalTtcCents }).returning();
-  const [company] = await db.select().from(s.companies).where(eq(s.companies.id, b.companyId));
   await notify(db, company.ownerId, {
     title: `Facture ${invoice.number} disponible`,
     body: `Heures validées pour la réservation ${b.ref}. Montant TTC : ${eurosPrecise(totalTtcCents)}.`,

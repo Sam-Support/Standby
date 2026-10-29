@@ -15,7 +15,6 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     const message = str(fd, "message");
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Indiquez votre nom et une adresse e-mail valide." };
     if (message.length < 10) return { error: "Votre message est trop court." };
-    if (!fd.get("consent")) return { error: "Merci d’accepter le traitement de vos données pour cette demande." };
     const db = await getDb();
     await hit(db, `contact:ip:${await clientIp()}`, LIMITS.contactIp);
     await db.insert(s.contactMessages).values({

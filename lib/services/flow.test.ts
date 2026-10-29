@@ -137,7 +137,7 @@ describe("leads", () => {
     const res = await uploadLeadFile(db, a.id, a.userId, { data, name: "leads.xlsx" });
     expect(res.mapping.recognized).toBe(8);
     expect(res.mapping.missing).toEqual(["Date du contact"]);
-    expect(await sendBatches(db, a.id, a.userId)).toBe(2);
+    expect(await sendBatches(db, a.id, a.userId)).toEqual({ leads: 2, pendingCards: 0 });
 
     const out = await exportLeadsXlsx(db, b.id, companyId);
     const parsed = await parseLeadWorkbook(out.data);

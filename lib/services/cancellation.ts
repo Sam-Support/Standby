@@ -6,7 +6,7 @@ import { daysUntil, eurosPrecise, todayIso } from "@/lib/format";
 import { audit, notify } from "@/lib/notify";
 import { billableMinutesPerDay } from "@/lib/pricing";
 import { getPricing } from "@/lib/settings";
-import { chargeBooking, nextInvoiceNumber, type CancellationRecord } from "./billing";
+import { chargeBooking, invoiceClient, nextInvoiceNumber, type CancellationRecord } from "./billing";
 import { BookingError, loadAssignments, type Booking } from "./booking";
 
 export const CANCELLABLE = ["brouillon", "envoyee", "partielle", "confirmee", "en_cours"];
@@ -75,11 +75,13 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
   }
 
   if (record.totalHtCents > 0) {
+    const [company] = await db.select().from(s.companies).where(eq(s.companies.id, b.companyId));
     const [invoice] = await db
       .insert(s.invoices)
       .values({
         bookingId: b.id,
         number: await nextInvoiceNumber(db),
+        client: invoiceClient(company),
         lines: [
           {
             label: `Frais d’annulation (${record.bps / 100} %)`,
@@ -95,7 +97,6 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
         totalTtcCents: record.totalTtcCents,
       })
       .returning();
-    const [company] = await db.select().from(s.companies).where(eq(s.companies.id, b.companyId));
     await notify(db, company.ownerId, {
       title: `Facture d’annulation ${invoice.number}`,
       body: `Réservation ${b.ref} annulée ${record.label} : frais de ${eurosPrecise(record.totalTtcCents)} TTC (${record.bps / 100} %).`,

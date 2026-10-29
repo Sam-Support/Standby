@@ -31,7 +31,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
   const upcoming = rows.filter((r) => ["envoyee", "partielle", "confirmee", "en_cours"].includes(r.booking.status));
   const toValidate = rows.filter((r) => r.booking.status === "heures_a_valider");
-  const pendingMinutes = toValidate.flatMap((r) => r.hours.filter((h) => !h.validated)).reduce((n, h) => n + h.declared, 0);
+  const pendingMinutes = toValidate.flatMap((r) => r.hours.filter((h) => !h.validated && !h.pending)).reduce((n, h) => n + h.declared, 0);
   const leads = rows.reduce((n, r) => n + r.leads, 0);
   const columns = company.leadMode === "crm" ? HUBSPOT_FIELDS.map((f) => f.label) : company.leadMode === "standard" ? STANDARD_LEAD_COLUMNS : (template?.columns ?? []);
   const formatName = company.leadMode === "crm" ? `${company.crmProvider} · champs importés` : company.leadMode === "standard" ? "Fiche standard Standby" : (template?.name ?? "Template Excel");
@@ -155,7 +155,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             </div>
             <dl>
               <div className="kv"><dt>Secteur</dt><dd>{[company.sector, company.size].filter(Boolean).join(" · ") || "—"}</dd></div>
-              <div className="kv"><dt>SIRET</dt><dd>{formatSiret(company.siret)} {company.siretVerified ? <Status tone="ok">Vérifié</Status> : null}</dd></div>
+              <div className="kv"><dt>SIRET</dt><dd>{formatSiret(company.siret)} {company.siretVerified ? <Status tone="ok">Vérifié</Status> : <Status tone="info">vérification par l’équipe</Status>}</dd></div>
               <div className="kv"><dt>Site web</dt><dd>{company.website ?? "—"}</dd></div>
               <div className="kv"><dt>LinkedIn</dt><dd>{company.linkedin ?? "—"}</dd></div>
               <div className="kv"><dt>Plaquette</dt><dd>{company.brochureName ? <FileLink href={fileUrl(company.brochurePath)} name={company.brochureName} /> : "—"}</dd></div>

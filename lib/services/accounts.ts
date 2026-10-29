@@ -18,12 +18,13 @@ import { hourly } from "@/lib/format";
 import { sendEmail } from "@/lib/integrations/email";
 import { lookupSiret } from "@/lib/integrations/sirene";
 import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/integrations/stripe";
-import { audit, notify } from "@/lib/notify";
+import { audit, notify, notifyAdmins } from "@/lib/notify";
 import { getPricing } from "@/lib/settings";
-import { isValidSiret, normalizeSiret } from "@/lib/siret";
+import { frVatNumber, isValidSiret, normalizeSiret } from "@/lib/siret";
 import { deleteFile, putFile } from "@/lib/storage";
 import {
   checkFreelancerSiret,
+  companyNameMatches,
   maybeValidateFreelancer,
   refreshBlockedReason,
   REQUIRED_DOCUMENTS,
@@ -228,30 +229,66 @@ export async function confirmEmailChange(db: Db, token: string) {
 
 // ——— Entreprise ———
 
+/** Adresse postale complète (numéro, rue, code postal, ville) : mention obligatoire des factures. */
+export function cleanBillingAddress(v: string) {
+  const address = v.trim().replace(/\s+/g, " ");
+  if (address.length < 10 || !/\d/.test(address)) throw new AccountError("Indiquez l’adresse de facturation complète : numéro, rue, code postal et ville.");
+  return address.slice(0, 300);
+}
+
+const VAT_NUMBER_EU = /^[A-Z]{2}[0-9A-Z]{2,13}$/;
+
 export async function companyIdentity(
   db: Db,
   ownerId: string,
-  input: { name: string; siret: string; sector: string; size: string },
+  input: { name: string; siret: string; sector: string; size: string; billingAddress: string; vatNumber: string },
+  lookup: SiretLookup = lookupSiret,
 ) {
   const siret = normalizeSiret(input.siret);
-  if (!input.name.trim()) throw new AccountError("Indiquez la raison sociale.");
+  const name = input.name.trim();
+  if (!name) throw new AccountError("Indiquez la raison sociale.");
   if (!isValidSiret(siret)) throw new AccountError("SIRET invalide : 14 chiffres, vérifiez la saisie.");
-  const check = await lookupSiret(siret);
-  if (check && !check.found) throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE.");
+  const billingAddress = cleanBillingAddress(input.billingAddress);
+  // sans saisie : numéro de TVA intracommunautaire français calculé à partir du SIREN
+  const vatNumber = input.vatNumber.replace(/[\s.]/g, "").toUpperCase() || frVatNumber(siret);
+  if (!VAT_NUMBER_EU.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide (ex. FR12 834521907).");
+  const [existing] = await db.select().from(s.companies).where(eq(s.companies.ownerId, ownerId));
+  const check = await lookup(siret);
+  // un SIRET déjà enregistré ne bloque pas la mise à jour des autres informations
+  if (check && !check.found && existing?.siret !== siret) throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE.");
+  // vérifiée : établissement actif et nom SIRENE concordant ; une confirmation de l'équipe reste acquise tant que nom et SIRET ne changent pas
+  const confirmed = Boolean(existing?.siretVerified && existing.siret === siret && existing.name === name);
+  const matches = Boolean(check?.found && check.active && companyNameMatches(check.name, name));
   const values = {
-    name: input.name.trim(),
+    name,
     siret,
-    siretVerified: Boolean(check?.found && check.active),
+    siretVerified: confirmed || matches,
+    siretName: check?.name ?? existing?.siretName ?? null,
+    billingAddress,
+    vatNumber,
     sector: input.sector.trim() || null,
     size: input.size || null,
   };
-  const [existing] = await db.select().from(s.companies).where(eq(s.companies.ownerId, ownerId));
+  if (check?.found && !values.siretVerified) {
+    await notifyAdmins(db, {
+      title: "Entreprise à vérifier",
+      body: `« ${name} » a saisi le SIRET ${siret}, enregistré dans SIRENE sous le nom « ${check.name ?? "non diffusé"} »${check.active ? "" : " (établissement fermé)"}.`,
+      link: "/admin/inscrits",
+      email: false,
+    });
+  }
   if (existing) {
     await db.update(s.companies).set({ ...values, onboardingStep: Math.max(existing.onboardingStep, 2) }).where(eq(s.companies.id, existing.id));
     return existing.id;
   }
   const [c] = await db.insert(s.companies).values({ ownerId, ...values, onboardingStep: 2 }).returning();
   return c.id;
+}
+
+/** Confirmation manuelle de l'identité d'une entreprise (nom SIRENE différent, mais vérifié par l'équipe). */
+export async function confirmCompanySiret(db: Db, adminId: string, companyId: string) {
+  await db.update(s.companies).set({ siretVerified: true }).where(eq(s.companies.id, companyId));
+  await audit(db, adminId, "company.siret_confirm", "company", companyId);
 }
 
 function cleanUrl(v: string) {
@@ -425,15 +462,14 @@ export type BillingInput = { billingAddress: string; vatRegime: string; vatNumbe
 const VAT_NUMBER = /^FR[0-9A-Z]{2}\d{9}$/;
 
 function checkBilling(f: typeof s.freelancers.$inferSelect, input: BillingInput) {
-  const address = input.billingAddress.trim().replace(/\s+/g, " ");
-  if (address.length < 10 || !/\d/.test(address)) throw new AccountError("Indiquez votre adresse de facturation complète : numéro, rue, code postal et ville.");
+  const address = cleanBillingAddress(input.billingAddress);
   const vatRegime: VatRegime = input.vatRegime === "assujetti" ? "assujetti" : "franchise";
   const vatNumber = vatRegime === "assujetti" ? input.vatNumber.replace(/\s/g, "").toUpperCase() : null;
   if (vatNumber !== null && !VAT_NUMBER.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide : FR suivi de 11 caractères.");
   if (!f.billingMandateAcceptedAt && !input.acceptMandate) {
     throw new AccountError("Acceptez le mandat de facturation : Standby émet vos factures à votre place après chaque mission.");
   }
-  return { billingAddress: address.slice(0, 300), vatRegime, vatNumber, accepting: !f.billingMandateAcceptedAt };
+  return { billingAddress: address, vatRegime, vatNumber, accepting: !f.billingMandateAcceptedAt };
 }
 
 /**

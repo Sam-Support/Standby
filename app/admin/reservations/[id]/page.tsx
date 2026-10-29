@@ -147,6 +147,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 <input type="checkbox" name="waive" />
                 Annuler sans frais (geste commercial, aucune indemnité versée)
               </label>
+              <label className="check">
+                <input type="checkbox" name="confirm" required />
+                Je confirme l’annulation définitive de cette réservation.
+              </label>
               <Submit className="clay s btn sm danger">Annuler la réservation</Submit>
             </ActionForm>
           ) : !invoice ? (
@@ -161,7 +165,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </p>
               <label className="field">
                 Montant TTC (€)
-                <input className="input" name="amount" inputMode="decimal" defaultValue={(creditable / 100).toFixed(2).replace(".", ",")} required />
+                {/* jamais pré-rempli : un avoir total doit être saisi volontairement */}
+                <input className="input" name="amount" inputMode="decimal" placeholder={`max. ${(creditable / 100).toFixed(2).replace(".", ",")}`} required />
               </label>
               <label className="field">
                 Motif (figure sur l’avoir)

@@ -30,7 +30,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 ## Ce que fait l'application
 
 - **Accueil** : calendrier des salons, profils disponibles, inscriptions.
-- **Réservation en 5 étapes** : événement (jours, montage, horaires, stand) → équipe (postes, langues, tenue, estimation en direct) → brief (référent, plaquette, format des leads) → profils (matching pondéré, favoris, re-sélection) → récap et devis → confirmation.
+- **Réservation en 5 étapes** (« Nouvelle réservation » reprend le dernier brouillon resté vide plutôt que d'en créer un à chaque visite) : événement (jours, montage, horaires, stand) → équipe (postes, langues, tenue, estimation en direct) → brief (référent, plaquette, format des leads) → profils (matching pondéré, favoris, re-sélection) → récap et devis → confirmation.
 - **Espace entreprise** : réservations et acceptations, heures à valider ou ajuster, leads reçus au format du template (export Excel ou envoi HubSpot), factures, profil.
 - **Espace commercial** : missions à accepter ou refuser, déclaration des heures, dépôt des leads (Excel avec rapprochement automatique des colonnes, photos de cartes lues par Claude), revenus et virements du lundi, documents.
 - **Admin** (`/admin`) : tableau de bord et commissions, salons et foires (logos, import CSV, dates vérifiées), **tarification versionnée** (frais de service, commission, TVA, planchers par poste, majoration tenue), validation des documents, arbitrage des heures, finances, saisie des cartes, messages.
@@ -39,6 +39,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 - **Heures contestées** : si l'exposant retient moins d'heures que déclaré (avec un motif), le commercial a 48 h pour accepter ou contester ; sans réponse, l'ajustement est retenu. Une contestation part en arbitrage dans l'admin, dont la décision est définitive. La facture attend que toutes les heures soient validées.
 - **Avoirs et remboursements** (admin, fiche réservation) : avoir numéroté `A-AAAA-NNNNN` sur une facture, plafonné au reste à créditer. Facture réglée : remboursement Stripe (suivi par webhook, relance ou « remboursé par virement » en cas d'échec) ; sinon, déduit du prélèvement. La paie des commerciaux n'est pas modifiée ; le CA et les commissions affichés sont nets des avoirs.
 - **Factures des commerciaux (autofacturation)** : à l'inscription (étape 4) ou dans le profil, le commercial renseigne son adresse de facturation et son régime de TVA et accepte le mandat de facturation (page `/mandat-facturation`) ; sans mandat, pas de mission. À chaque virement (mission ou indemnité d'annulation), Standby émet une facture à son nom : mention « Autofacturation », numérotation propre `AF-XXXXXXXX-AAAA-NNNN`, coordonnées figées à l'émission, « TVA non applicable, art. 293 B du CGI » en franchise, TVA à 20 % ajoutée et versée s'il est assujetti. `/commercial/revenus` regroupe les factures par mois de virement, avec relevé mensuel, récapitulatif annuel par trimestre et export CSV. L'admin voit les autofactures dans `/admin/finances` et exporte les sommes versées par trimestre (base DAC7).
+- **Identité des entreprises** : adresse de facturation obligatoire (sans elle, pas de réservation) et n° de TVA intracommunautaire (calculé à partir du SIREN si vide). Le SIRET n'est « vérifié » que si l'établissement est actif et que le nom SIRENE concorde avec la raison sociale ; sinon l'équipe est prévenue et confirme l'identité depuis `/admin/inscrits`. Les factures figent les coordonnées du client à l'émission et indiquent l'échéance (prélèvement à l'émission).
 - **Compte** (`/compte`) : changement de mot de passe (l'actuel est exigé, les autres appareils sont déconnectés) et d'adresse e-mail (lien de confirmation envoyé à la nouvelle adresse, alerte sur l'ancienne).
 - **Avis** : après validation des heures, l'exposant note chaque membre de l'équipe (1 à 5 et commentaire) ; la moyenne alimente le matching, le commercial voit ses avis, l'admin modère (`/admin/avis`).
 - **Rappels** : J-7 (badges à demander pour l'équipe Standby, point d'équipe pour l'exposant et les commerciaux) et J-2 (briefing avec le référent, coordonnées), un seul envoi chacun.
@@ -48,6 +49,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 ## Sécurité
 
 - **Limites de tentatives** (comptées en base) : connexion (8 échecs par e-mail et 50 tentatives par IP sur 15 min), mot de passe oublié, contact, inscription, renvoi du lien de vérification. Réglages dans [`lib/rate-limit.ts`](lib/rate-limit.ts).
+- **Formulaires** : une erreur serveur ne vide plus les champs (envoi par `onSubmit`, l'action reste disponible sans JavaScript) et le message d'erreur est ramené à l'écran ; les confirmations s'affichent en haut de page, même quand le formulaire disparaît (`components/flash.tsx`). Toute annulation de réservation demande une case de confirmation.
 - **Vérification de l'e-mail** à l'inscription (lien signé, 48 h) : sans elle, pas de réservation confirmée, pas de mission acceptée, pas de place dans le matching.
 - **En-têtes** posés par [`proxy.ts`](proxy.ts) : CSP avec nonce par requête, `nosniff`, `Referrer-Policy`, `Permissions-Policy` ; Caddy ajoute HSTS en production.
 - **E-mails simulés** : sans `RESEND_API_KEY`, les e-mails sont listés dans `/admin/emails` (liens de vérification compris).
@@ -79,6 +81,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 
 - Textes légaux : les passages surlignés `[…]` (éditeur, hébergeur, délais, barème d'annulation, DPO) avec votre avocat.
 - Statut des commerciaux (risque de requalification).
+- Factures : l'échéance affichée est la date d'émission (prélèvement automatique) ; aligner la clause « exigible sous [délai] jours » des CGV.
 - Autofacturation : faire valider le texte du mandat (`lib/content/legal.ts`, `MANDAT_FACTURATION`), les mentions des autofactures, le traitement de la TVA des indemnités d'annulation et la facturation de la commission plateforme si elle devient non nulle ; compléter l'identité de l'éditeur sur les documents (passages `[…]`).
 - DAC7 : l'export admin donne les montants et commissions par trimestre ; la date de naissance et le numéro fiscal des commerciaux personnes physiques ne sont pas encore collectés.
 - Accord des organisateurs avant d'afficher leurs logos (case dédiée dans l'admin).

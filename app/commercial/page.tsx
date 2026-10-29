@@ -34,6 +34,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           Vous ne recevez plus de nouvelles missions : {f.blockedReason}. <Link href="/commercial/profil">Mettre à jour mes documents</Link>
         </p>
       )}
+      {accepted.some((m) => m.timesheets.some((t) => t.status === "ajuste")) && (
+        <p className="note">
+          Un exposant a revu vos heures à la baisse : acceptez ou contestez l’ajustement depuis la mission concernée, sinon il est retenu au bout de 48 h.
+        </p>
+      )}
       {!f.billingMandateAcceptedAt && (
         <p className="note err">
           Vous ne recevez pas de missions tant que le mandat de facturation n’est pas accepté. <Link href="/commercial/profil#facturation">Accepter le mandat</Link>
@@ -111,6 +116,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             {accepted.length === 0 && <p className="muted">Aucune mission acceptée en cours.</p>}
             {accepted.map((m) => {
               const needHours = m.started && m.declaredDays < m.pastDays && ["en_cours", "heures_a_valider"].includes(m.b.status);
+              const adjusted = m.timesheets.some((t) => t.status === "ajuste");
+              const disputed = m.timesheets.some((t) => t.status === "conteste");
               return (
                 <div key={m.a.id} className="brow">
                   <div>
@@ -124,6 +131,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
                   </div>
                   <div className="inline">
                     {needHours && <Status tone="warn">Heures à déclarer</Status>}
+                    {adjusted && (
+                      <Link className="clay s btn xs butter" href={`/commercial/missions/${m.a.id}`}>Heures ajustées : répondre sous 48 h</Link>
+                    )}
+                    {disputed && <Status tone="info">Heures contestées : arbitrage en cours</Status>}
                     {m.started && (
                       <Link className="clay s btn xs" href={`/commercial/leads/${m.a.id}`}>Déposer mes leads</Link>
                     )}

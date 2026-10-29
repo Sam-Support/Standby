@@ -172,16 +172,26 @@ export async function sendBatches(db: Db, assignmentId: string, freelancerUserId
     .from(s.leadBatches)
     .where(and(eq(s.leadBatches.assignmentId, assignmentId), eq(s.leadBatches.status, "brouillon")));
   if (drafts.length === 0) throw new BookingError("Déposez d’abord un fichier Excel ou des photos de cartes.");
-  await db.update(s.leadBatches).set({ status: "envoye", sentAt: new Date() }).where(inArray(s.leadBatches.id, drafts.map((d) => d.id)));
-  const total = drafts.reduce((n, d) => n + d.rowsCount, 0);
+  const ids = drafts.map((d) => d.id);
+  await db.update(s.leadBatches).set({ status: "envoye", sentAt: new Date() }).where(inArray(s.leadBatches.id, ids));
+  // leads déjà lisibles par l'exposant, et cartes encore à saisir par l'équipe (elles arrivent ensuite)
+  const leads = (await db.select({ id: s.leads.id }).from(s.leads).where(inArray(s.leads.batchId, ids))).length;
+  const pendingCards = (
+    await db
+      .select({ id: s.businessCards.id })
+      .from(s.businessCards)
+      .where(and(inArray(s.businessCards.batchId, ids), eq(s.businessCards.status, "a_saisir")))
+  ).length;
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, freelancerUserId));
   await notify(db, ctx.c.ownerId, {
-    title: `${total} lead(s) reçus de ${p.firstName}`,
-    body: `Réservation ${ctx.b.ref} : les leads sont disponibles dans votre espace, au format de votre template.`,
+    title: leads ? `${leads} lead(s) reçus de ${p.firstName}` : `Cartes de visite reçues de ${p.firstName}`,
+    body: `Réservation ${ctx.b.ref} : ${leads ? "les leads sont disponibles dans votre espace, au format de votre template." : ""}${
+      pendingCards ? ` ${pendingCards} carte(s) de visite en cours de saisie par l’équipe Standby (sous 24 h).` : ""
+    }`.trim(),
     link: `/entreprise/reservations/${ctx.b.id}`,
   });
   for (const d of drafts) await pushBatchToCrm(db, d.id);
-  return total;
+  return { leads, pendingCards };
 }
 
 async function hubspotAccessToken(db: Db, companyId: string): Promise<string | null> {

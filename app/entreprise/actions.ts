@@ -40,7 +40,14 @@ export async function reviewAction(assignmentId: string, _: FormState, fd: FormD
 export async function updateIdentity(_: FormState, fd: FormData): Promise<FormState> {
   try {
     const company = await requireCompany();
-    await companyIdentity(await getDb(), company.ownerId, { name: str(fd, "name"), siret: str(fd, "siret"), sector: str(fd, "sector"), size: str(fd, "size") });
+    await companyIdentity(await getDb(), company.ownerId, {
+      name: str(fd, "name"),
+      siret: str(fd, "siret"),
+      sector: str(fd, "sector"),
+      size: str(fd, "size"),
+      billingAddress: str(fd, "billingAddress"),
+      vatNumber: str(fd, "vatNumber"),
+    });
   } catch (e) {
     return fail(e);
   }

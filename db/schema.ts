@@ -104,7 +104,10 @@ export const companies = pgTable("companies", {
   ownerId: uuid("owner_id").notNull().references(() => profiles.id),
   name: text("name").notNull(),
   siret: text("siret").notNull(),
-  siretVerified: boolean("siret_verified").notNull().default(false),
+  siretVerified: boolean("siret_verified").notNull().default(false), // actif dans SIRENE et nom concordant (ou confirmé par l'admin)
+  siretName: text("siret_name"), // nom enregistré dans SIRENE, comparé à la raison sociale saisie
+  billingAddress: text("billing_address"), // mentions obligatoires des factures
+  vatNumber: text("vat_number"),
   sector: text("sector"),
   size: text("size"),
   website: text("website"),
@@ -370,6 +373,7 @@ export const invoices = pgTable("invoices", {
   totalHtCents: integer("total_ht_cents").notNull(),
   vatCents: integer("vat_cents").notNull(),
   totalTtcCents: integer("total_ttc_cents").notNull(),
+  client: jsonb("client"), // raison sociale, SIRET, adresse et n° de TVA du client, figés à l'émission
   issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

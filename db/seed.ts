@@ -117,7 +117,10 @@ async function seedDemo(db: Db) {
     .values({
       ownerId: claire,
       name: "Maison Lumen",
-      siret: "83452190700021",
+      siret: "83452190700024", // fictif, clé de Luhn valide
+      billingAddress: "18 rue de la Lumière, 69002 Lyon",
+      siretName: "MAISON LUMEN",
+      siretVerified: true,
       sector: "Industrie",
       size: "50–249 salariés",
       website: "https://www.maison-lumen.example",
@@ -161,6 +164,10 @@ async function seedDemo(db: Db) {
         pantsSize: f.sizes[1],
         shoeSize: f.sizes[2],
         siret: "00000000000000",
+        // SIRET fictif : contrôle SIRENE considéré comme fait pour 30 jours, sans appel à l'API
+        siretStatus: "actif",
+        siretName: `${f.first} ${f.last}`.toUpperCase(),
+        siretCheckedAt: new Date(),
         legalStatus: "Auto-entrepreneur",
         billingAddress: `${10 + i} rue des Salons, ${f.city}`,
         billingMandateAcceptedAt: new Date(),

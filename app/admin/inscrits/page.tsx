@@ -7,7 +7,7 @@ import { addDays, hourly, longDate, todayIso } from "@/lib/format";
 import { SIRET_LABELS, siretNameMatches } from "@/lib/services/compliance";
 import { formatSiret } from "@/lib/siret";
 import { fileUrl } from "@/lib/storage";
-import { freelancerStatusAction, reviewDocAction } from "../actions";
+import { confirmCompanyAction, freelancerStatusAction, reviewDocAction } from "../actions";
 
 export const metadata = { title: "Inscrits à vérifier" };
 
@@ -167,11 +167,22 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
       <section className="clay panel">
         <h2>Dernières entreprises inscrites</h2>
         {companies.map((c) => (
-          <div key={c.id} className="dev">
+          <div key={c.id} className="brow">
             <span>
-              <b>{c.name}</b> · SIRET {formatSiret(c.siret)} {c.siretVerified ? <Status tone="ok">SIRENE</Status> : <Status tone="warn">à vérifier</Status>}
+              <b>{c.name}</b> · SIRET {formatSiret(c.siret)} {c.siretVerified ? <Status tone="ok">vérifiée</Status> : <Status tone="warn">à vérifier</Status>}
+              <br />
+              <span className="muted small">
+                {c.siretName ? `SIRENE : ${c.siretName}${c.siretVerified ? "" : " (nom différent de la raison sociale saisie)"}` : "Nom SIRENE non disponible"}
+                {" · "}
+                {longDate(c.createdAt)}
+                {c.onboardingStep <= 4 ? " · inscription inachevée" : ""}
+              </span>
             </span>
-            <span className="muted small">{longDate(c.createdAt)}{c.onboardingStep <= 4 ? " · inscription inachevée" : ""}</span>
+            {!c.siretVerified && (
+              <ActionForm action={confirmCompanyAction.bind(null, c.id)}>
+                <Submit className="clay s btn xs ghost" pending="…">Confirmer l’identité</Submit>
+              </ActionForm>
+            )}
           </div>
         ))}
       </section>

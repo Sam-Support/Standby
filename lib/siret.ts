@@ -25,3 +25,10 @@ export function formatSiret(v: string) {
   const s = normalizeSiret(v);
   return s.length === 14 ? `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 9)} ${s.slice(9)}` : v;
 }
+
+/** N° de TVA intracommunautaire français déduit du SIREN : FR + clé (12 + 3 × (SIREN mod 97)) mod 97 + SIREN. */
+export function frVatNumber(siretOrSiren: string) {
+  const siren = normalizeSiret(siretOrSiren).slice(0, 9);
+  const key = (12 + 3 * (Number(siren) % 97)) % 97;
+  return `FR${String(key).padStart(2, "0")}${siren}`;
+}
