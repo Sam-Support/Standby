@@ -50,6 +50,13 @@
       "when": 1793291922949,
       "tag": "0006_corrections_recette",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793294285813,
+      "tag": "0007_langue_des_comptes",
+      "breakpoints": true
     }
   ]
 }

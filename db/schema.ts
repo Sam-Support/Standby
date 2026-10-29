@@ -64,6 +64,7 @@ export const profiles = pgTable("profiles", {
   lastName: text("last_name").notNull().default(""),
   phone: text("phone"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  locale: text("locale").notNull().default("fr"), // langue des e-mails et notifications (fr, en, es)
   // incrémentée à chaque changement de mot de passe : les sessions ouvertes avant sont refusées
   sessionVersion: integer("session_version").notNull().default(0),
   createdAt: createdAt(),

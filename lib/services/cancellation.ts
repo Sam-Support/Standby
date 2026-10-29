@@ -2,7 +2,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { cancellationRate } from "@/lib/cancellation";
-import { daysUntil, eurosPrecise, todayIso } from "@/lib/format";
+import { daysUntil, todayIso } from "@/lib/format";
+import { translateFeedback } from "@/lib/i18n/messages/feedback";
 import { audit, notify } from "@/lib/notify";
 import { billableMinutesPerDay } from "@/lib/pricing";
 import { getPricing } from "@/lib/settings";
@@ -64,13 +65,7 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
   if (b.status !== "brouillon") {
     for (const a of asg.filter((x) => x.status === "proposee" || x.status === "acceptee")) {
       const comp = record.compensations.find((c) => c.assignmentId === a.id);
-      await notify(db, a.userId, {
-        title: `Mission annulée (${b.ref})`,
-        body: comp
-          ? `L’exposant a annulé cette réservation. Une indemnité de ${eurosPrecise(comp.amountCents)} vous sera versée après encaissement.`
-          : "L’exposant a annulé cette réservation.",
-        link: "/commercial",
-      });
+      await notify(db, a.userId, { t: (n) => n.missionCancelled({ ref: b.ref, compensationCents: comp ? comp.amountCents : null }), link: "/commercial" });
     }
   }
 
@@ -98,8 +93,8 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
       })
       .returning();
     await notify(db, company.ownerId, {
-      title: `Facture d’annulation ${invoice.number}`,
-      body: `Réservation ${b.ref} annulée ${record.label} : frais de ${eurosPrecise(record.totalTtcCents)} TTC (${record.bps / 100} %).`,
+      t: (n, lang) =>
+        n.cancellationInvoice({ number: invoice.number, ref: b.ref, when: translateFeedback(record.label, lang), ttcCents: record.totalTtcCents, pct: record.bps / 100 }),
       link: `/entreprise/factures/${invoice.id}`,
     });
     const [payment] = await db.insert(s.payments).values({ bookingId: b.id, amountCents: record.totalTtcCents }).returning();

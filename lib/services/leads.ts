@@ -184,10 +184,7 @@ export async function sendBatches(db: Db, assignmentId: string, freelancerUserId
   ).length;
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, freelancerUserId));
   await notify(db, ctx.c.ownerId, {
-    title: leads ? `${leads} lead(s) reçus de ${p.firstName}` : `Cartes de visite reçues de ${p.firstName}`,
-    body: `Réservation ${ctx.b.ref} : ${leads ? "les leads sont disponibles dans votre espace, au format de votre template." : ""}${
-      pendingCards ? ` ${pendingCards} carte(s) de visite en cours de saisie par l’équipe Standby (sous 24 h).` : ""
-    }`.trim(),
+    t: (n) => n.leadsReceived({ leads, first: p.firstName, ref: ctx.b.ref, pendingCards }),
     link: `/entreprise/reservations/${ctx.b.id}`,
   });
   for (const d of drafts) await pushBatchToCrm(db, d.id);

@@ -1,18 +1,23 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { HoursRow } from "@/components/hours-row";
 import { Avatar, BookingStatus, FileLink, Status } from "@/components/ui";
 import { requireCompany } from "@/lib/auth/session";
-import { HUBSPOT_FIELDS, ROLES, STANDARD_LEAD_COLUMNS, type RoleKey } from "@/lib/domain";
-import { dateRange, euros, hoursLabel, rating } from "@/lib/format";
+import { HUBSPOT_FIELDS, STANDARD_LEAD_COLUMNS } from "@/lib/domain";
+import { booking as bookingMessages } from "@/lib/i18n/messages/booking";
+import { company as messages } from "@/lib/i18n/messages/company";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { getFmt, getMessages } from "@/lib/i18n/server";
 import { hubspotEnabled } from "@/lib/integrations/hubspot";
 import { companyDashboard } from "@/lib/services/company-views";
 import { formatSiret } from "@/lib/siret";
 import { fileUrl } from "@/lib/storage";
 import { logoutAction } from "../connexion/actions";
 
-export const metadata = { title: "Espace entreprise" };
+export async function generateMetadata() {
+  return { title: (await getMessages(messages)).area };
+}
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; crm?: string; email?: string }> }) {
   const { bienvenue, crm, email } = await searchParams;
@@ -29,77 +34,89 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     .innerJoin(s.profiles, eq(s.profiles.id, s.freelancers.userId))
     .where(eq(s.favorites.companyId, company.id));
 
+  const m = await getMessages(messages);
+  const t = m.dash;
+  const kind = (await getMessages(bookingMessages)).kind;
+  const lf = (await getMessages(bookingMessages)).leadFormats;
+  const f = await getFmt();
+  const dl = domainLabels(f.lang);
+
   const upcoming = rows.filter((r) => ["envoyee", "partielle", "confirmee", "en_cours"].includes(r.booking.status));
   const toValidate = rows.filter((r) => r.booking.status === "heures_a_valider");
   const pendingMinutes = toValidate.flatMap((r) => r.hours.filter((h) => !h.validated && !h.pending)).reduce((n, h) => n + h.declared, 0);
   const leads = rows.reduce((n, r) => n + r.leads, 0);
-  const columns = company.leadMode === "crm" ? HUBSPOT_FIELDS.map((f) => f.label) : company.leadMode === "standard" ? STANDARD_LEAD_COLUMNS : (template?.columns ?? []);
-  const formatName = company.leadMode === "crm" ? `${company.crmProvider} · champs importés` : company.leadMode === "standard" ? "Fiche standard Standby" : (template?.name ?? "Template Excel");
+  const columns =
+    company.leadMode === "crm" ? HUBSPOT_FIELDS.map((x) => x.label) : company.leadMode === "standard" ? STANDARD_LEAD_COLUMNS.map(dl.leadColumn) : (template?.columns ?? []);
+  const formatName =
+    company.leadMode === "crm" ? lf.crm(company.crmProvider ?? "CRM") : company.leadMode === "standard" ? lf.standard : (template?.name ?? t.excelTemplate);
 
   return (
     <>
-      {bienvenue && <p className="note ok">Compte créé. Vous pouvez réserver votre première équipe.</p>}
-      {email === "confirme" && <p className="note ok">Adresse e-mail confirmée.</p>}
-      {crm === "ok" && <p className="note ok">HubSpot est connecté : les prochains leads y seront créés directement.</p>}
-      {crm === "erreur" && <p className="note err">La connexion HubSpot a échoué. Réessayez ou contactez-nous.</p>}
+      {bienvenue && <p className="note ok">{t.welcome}</p>}
+      {email === "confirme" && <p className="note ok">{t.emailConfirmed}</p>}
+      {crm === "ok" && <p className="note ok">{t.crmOk}</p>}
+      {crm === "erreur" && <p className="note err">{t.crmError}</p>}
       <div className="head">
         <div>
-          <span className="lab">Espace entreprise</span>
+          <span className="lab">{m.area}</span>
           <h1>{company.name}</h1>
-          <p>Réservations, acceptations des commerciaux, leads reçus au format de votre CRM et heures à valider.</p>
+          <p>{t.lead}</p>
         </div>
         <div className="inline">
           <Link className="clay btn" href="/reserver/nouveau" prefetch={false}>
-            Nouvelle réservation
+            {t.newBooking}
           </Link>
-          <Link className="clay s btn sm ghost" href="/compte">Mon compte</Link>
+          <Link className="clay s btn sm ghost" href="/compte">
+            {t.myAccount}
+          </Link>
           <form action={logoutAction}>
-            <button className="clay s btn sm ghost">Se déconnecter</button>
+            <button className="clay s btn sm ghost">{t.logout}</button>
           </form>
         </div>
       </div>
 
       <div className="inline" style={{ gap: 18 }}>
-        <div className="clay kpi"><span className="lab">Réservations à venir</span><b>{upcoming.length}</b></div>
-        <div className="clay kpi"><span className="lab">Heures à valider</span><b>{hoursLabel(pendingMinutes)}</b></div>
-        <div className="clay kpi"><span className="lab">Leads reçus</span><b>{leads}</b></div>
+        <div className="clay kpi"><span className="lab">{t.kpiUpcoming}</span><b>{upcoming.length}</b></div>
+        <div className="clay kpi"><span className="lab">{t.kpiHours}</span><b>{f.hoursLabel(pendingMinutes)}</b></div>
+        <div className="clay kpi"><span className="lab">{t.kpiLeads}</span><b>{leads}</b></div>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start" }}>
         <div style={{ flex: "1.25 1 520px", minWidth: 0, display: "flex", flexDirection: "column", gap: 22 }}>
           <section className="clay panel">
-            <h2>Vos réservations</h2>
-            {rows.length === 0 && <p className="muted">Aucune réservation pour l’instant.</p>}
+            <h2>{t.bookings}</h2>
+            {rows.length === 0 && <p className="muted">{t.none}</p>}
             {rows.map((r) => (
               <div key={r.booking.id} className="brow" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
                 <div>
                   <Link className="title" href={`/entreprise/reservations/${r.booking.id}`}>
-                    <b style={{ fontSize: 17 }}>{r.event?.name ?? "Événement"}</b>
+                    <b style={{ fontSize: 17 }}>{r.event?.name ?? t.event}</b>
                   </Link>
                   <div className="muted small">
-                    {r.event?.kind === "foire" ? "Foire" : "Salon pro"} · {r.event?.city} · {r.event ? dateRange(r.event.startsOn, r.event.endsOn) : ""} · {r.people} pers. · réf. {r.booking.ref}
+                    {r.event?.kind === "foire" ? kind.foire : kind.salon} · {r.event?.city} · {r.event ? f.dateRange(r.event.startsOn, r.event.endsOn) : ""} ·{" "}
+                    {t.people(r.people)} · {t.ref(r.booking.ref)}
                   </div>
                   {r.waiting.length > 0 && ["envoyee", "partielle"].includes(r.booking.status) && (
-                    <div className="muted small">En attente de {r.waiting.map((w) => w.firstName).join(", ")}</div>
+                    <div className="muted small">{t.waiting(r.waiting.map((w) => w.firstName).join(", "))}</div>
                   )}
                 </div>
                 <div className="inline" style={{ gap: 8 }}>
                   {["envoyee", "partielle"].includes(r.booking.status) ? (
-                    <Status tone="warn">Acceptations {r.accepted}/{r.people}</Status>
+                    <Status tone="warn">{t.acceptances(r.accepted, r.people)}</Status>
                   ) : (
                     <BookingStatus status={r.booking.status} />
                   )}
                   {r.leads > 0 ? (
-                    <Status tone="ok">{r.leads} leads reçus</Status>
+                    <Status tone="ok">{t.leadsReceived(r.leads)}</Status>
                   ) : r.booking.status === "heures_a_valider" || r.booking.status === "validee" ? (
-                    <Status tone="warn">Leads attendus</Status>
+                    <Status tone="warn">{t.leadsExpected}</Status>
                   ) : r.booking.status !== "annulee" ? (
-                    <Status>Leads pendant l’événement</Status>
+                    <Status>{t.leadsDuring}</Status>
                   ) : null}
-                  {r.booking.totalHtCents ? <b>{euros(r.booking.totalHtCents)}</b> : null}
+                  {r.booking.totalHtCents ? <b>{f.euros(r.booking.totalHtCents)}</b> : null}
                   {r.invoice && (
                     <Link className="small" href={`/entreprise/factures/${r.invoice.id}`}>
-                      Facture {r.invoice.number}
+                      {t.invoice(r.invoice.number)}
                     </Link>
                   )}
                 </div>
@@ -109,20 +126,24 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
           <section className="clay panel">
             <div className="row-between">
-              <h2>Leads reçus</h2>
+              <h2>{t.leadsTitle}</h2>
               <span className="muted small">{formatName}</span>
             </div>
-            <p className="muted">Les commerciaux déposent leurs leads (Excel ou photos de cartes) depuis leur espace. Ils apparaissent ici, remis dans l’ordre de vos colonnes.</p>
+            <p className="muted">{t.leadsLead}</p>
             {rows
               .filter((r) => r.leads > 0)
               .map((r) => (
                 <div key={r.booking.id} className="brow">
                   <span>
-                    <b>{r.event?.name}</b> · {r.leads} lead{r.leads > 1 ? "s" : ""}
+                    <b>{r.event?.name}</b> · {t.leadCount(r.leads)}
                   </span>
                   <span className="inline">
-                    <Link className="clay s btn xs ghost" href={`/entreprise/reservations/${r.booking.id}#leads`}>Voir</Link>
-                    <a className="clay s btn xs" href={`/entreprise/leads/${r.booking.id}/export`}>Exporter (.xlsx)</a>
+                    <Link className="clay s btn xs ghost" href={`/entreprise/reservations/${r.booking.id}#leads`}>
+                      {t.see}
+                    </Link>
+                    <a className="clay s btn xs" href={`/entreprise/leads/${r.booking.id}/export`}>
+                      {t.export}
+                    </a>
                   </span>
                 </div>
               ))}
@@ -130,19 +151,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
           {toValidate.map((r) => (
             <section key={r.booking.id} className="clay panel">
-              <h2>Heures à valider</h2>
+              <h2>{t.hoursTitle}</h2>
               <p className="muted small">
-                {r.event?.name} · {r.event?.city} · {r.event ? dateRange(r.event.startsOn, r.event.endsOn) : ""} · réf. {r.booking.ref}
+                {r.event?.name} · {r.event?.city} · {r.event ? f.dateRange(r.event.startsOn, r.event.endsOn) : ""} · {t.ref(r.booking.ref)}
               </p>
               <div className="stack">
                 {r.hours.map((h) => (
                   <HoursRow key={h.id} a={h} />
                 ))}
               </div>
-              <p className="muted small">
-                Ajustez si besoin, puis validez. Sans réponse sous 3 jours, les heures déclarées sont validées. Si vous retenez moins d’heures que
-                déclaré, le commercial a 48 h pour accepter ou contester ; l’équipe Standby arbitre en cas de désaccord.
-              </p>
+              <p className="muted small">{t.hoursHelp}</p>
             </section>
           ))}
         </div>
@@ -150,16 +168,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         <div style={{ flex: "1 1 400px", minWidth: 0, display: "flex", flexDirection: "column", gap: 22 }}>
           <section className="clay panel">
             <div className="row-between">
-              <h2>Profil entreprise</h2>
-              <Link className="clay s btn xs ghost" href="/entreprise/profil">Modifier</Link>
+              <h2>{t.profile}</h2>
+              <Link className="clay s btn xs ghost" href="/entreprise/profil">
+                {t.edit}
+              </Link>
             </div>
             <dl>
-              <div className="kv"><dt>Secteur</dt><dd>{[company.sector, company.size].filter(Boolean).join(" · ") || "—"}</dd></div>
-              <div className="kv"><dt>SIRET</dt><dd>{formatSiret(company.siret)} {company.siretVerified ? <Status tone="ok">Vérifié</Status> : <Status tone="info">vérification par l’équipe</Status>}</dd></div>
-              <div className="kv"><dt>Site web</dt><dd>{company.website ?? "—"}</dd></div>
+              <div className="kv"><dt>{t.sector}</dt><dd>{[company.sector, company.size ? dl.size(company.size) : null].filter(Boolean).join(" · ") || "—"}</dd></div>
+              <div className="kv"><dt>SIRET</dt><dd>{formatSiret(company.siret)} {company.siretVerified ? <Status tone="ok">{t.verified}</Status> : <Status tone="info">{t.checking}</Status>}</dd></div>
+              <div className="kv"><dt>{t.website}</dt><dd>{company.website ?? "—"}</dd></div>
               <div className="kv"><dt>LinkedIn</dt><dd>{company.linkedin ?? "—"}</dd></div>
-              <div className="kv"><dt>Plaquette</dt><dd>{company.brochureName ? <FileLink href={fileUrl(company.brochurePath)} name={company.brochureName} /> : "—"}</dd></div>
-              <div className="kv"><dt>Leads</dt><dd>{formatName}</dd></div>
+              <div className="kv"><dt>{t.brochure}</dt><dd>{company.brochureName ? <FileLink href={fileUrl(company.brochurePath)} name={company.brochureName} /> : "—"}</dd></div>
+              <div className="kv"><dt>{t.leads}</dt><dd>{formatName}</dd></div>
             </dl>
             <div className="chips" style={{ gap: 6 }}>
               {columns.map((c) => (
@@ -169,14 +189,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             {company.leadMode === "crm" && (
               <div className="brow">
                 <span>
-                  HubSpot : <Status tone={conn?.status === "connecte" ? "ok" : "warn"}>{conn?.status === "connecte" ? "connecté" : "en attente de connexion"}</Status>
+                  HubSpot : <Status tone={conn?.status === "connecte" ? "ok" : "warn"}>{conn?.status === "connecte" ? t.hubspotConnected : t.hubspotPending}</Status>
                 </span>
                 {conn?.status !== "connecte" && hubspotEnabled() && (
-                  <a className="clay s btn xs" href="/entreprise/crm/connecter">Connecter HubSpot</a>
+                  <a className="clay s btn xs" href="/entreprise/crm/connecter">
+                    {t.connectHubspot}
+                  </a>
                 )}
               </div>
             )}
-            <span className="stitle">Référents</span>
+            <span className="stitle">{t.referents}</span>
             <div className="inline" style={{ gap: 12 }}>
               {referents.map((r) => {
                 const [first, ...rest] = r.name.split(" ");
@@ -194,16 +216,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             </div>
           </section>
           <section className="clay panel">
-            <h2>Vos commerciaux favoris</h2>
-            {favorites.length === 0 && <p className="muted small">Ajoutez des favoris avec le cœur pendant la sélection des profils : ils remontent en priorité.</p>}
+            <h2>{t.favorites}</h2>
+            {favorites.length === 0 && <p className="muted small">{t.noFavorites}</p>}
             <div className="inline" style={{ gap: 12 }}>
-              {favorites.map(({ f, p }) => (
-                <span key={f.id} className="clay s" style={{ borderRadius: 14, padding: "8px 14px 8px 8px", display: "flex", gap: 10, alignItems: "center" }}>
-                  <Avatar first={p.firstName} last={p.lastName} color={f.avatarColor} />
+              {favorites.map(({ f: fr, p }) => (
+                <span key={fr.id} className="clay s" style={{ borderRadius: 14, padding: "8px 14px 8px 8px", display: "flex", gap: 10, alignItems: "center" }}>
+                  <Avatar first={p.firstName} last={p.lastName} color={fr.avatarColor} />
                   <span style={{ fontSize: 14 }}>
                     <b>{p.firstName} {p.lastName}</b>
                     <br />
-                    <span className="muted small">{ROLES[f.roles[0] as RoleKey]?.short ?? ""}{f.ratingX10 ? ` · ★ ${rating(f.ratingX10)}` : ""}</span>
+                    <span className="muted small">
+                      {fr.roles[0] ? dl.role(fr.roles[0]).short : ""}
+                      {fr.ratingX10 ? ` · ★ ${f.rating(fr.ratingX10)}` : ""}
+                    </span>
                   </span>
                 </span>
               ))}

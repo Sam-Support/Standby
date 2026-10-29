@@ -1,12 +1,15 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema as s } from "@/db";
 import { PageHead } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
-import { longDateTime } from "@/lib/format";
+import { account } from "@/lib/i18n/messages/account";
+import { getFmt, getMessages } from "@/lib/i18n/server";
 
-export const metadata = { title: "Notifications" };
+export async function generateMetadata() {
+  return { title: (await getMessages(account)).notifications.title };
+}
 
 async function markAllRead() {
   "use server";
@@ -22,22 +25,24 @@ async function markAllRead() {
 export default async function Page() {
   const user = await requireUser(undefined, "/notifications");
   const db = await getDb();
+  const t = (await getMessages(account)).notifications;
+  const f = await getFmt();
   const rows = await db.select().from(s.notifications).where(eq(s.notifications.userId, user.id)).orderBy(desc(s.notifications.createdAt)).limit(100);
   return (
     <>
       <PageHead
-        label="Votre compte"
-        title="Notifications"
+        label={t.label}
+        title={t.title}
         actions={
           rows.some((r) => !r.readAt) ? (
             <form action={markAllRead}>
-              <button className="clay s btn sm ghost">Tout marquer comme lu</button>
+              <button className="clay s btn sm ghost">{t.markAll}</button>
             </form>
           ) : null
         }
       />
       <section className="clay panel">
-        {rows.length === 0 && <p className="muted">Aucune notification pour l’instant.</p>}
+        {rows.length === 0 && <p className="muted">{t.empty}</p>}
         {rows.map((n) => {
           const inner = (
             <>
@@ -45,7 +50,7 @@ export default async function Page() {
                 <b>{n.title}</b>
                 {n.body && <p className="muted small" style={{ marginTop: 4 }}>{n.body}</p>}
               </div>
-              <span className="muted small" style={{ whiteSpace: "nowrap" }}>{longDateTime(n.createdAt)}</span>
+              <span className="muted small" style={{ whiteSpace: "nowrap" }}>{f.longDateTime(n.createdAt)}</span>
             </>
           );
           return n.link ? (

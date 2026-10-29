@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLang } from "@/lib/i18n/server";
+import { localizePath } from "@/lib/i18n/config";
 import { getDb } from "@/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { confirmEmailChange } from "@/lib/services/accounts";
@@ -9,8 +11,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   try {
     const viewer = await getCurrentUser();
     const profile = await confirmEmailChange(await getDb(), token);
-    return NextResponse.redirect(new URL(viewer?.id === profile.id ? "/compte?email=modifie" : "/connexion?email=modifie", req.url));
+    return NextResponse.redirect(new URL(localizePath(viewer?.id === profile.id ? "/compte?email=modifie" : "/connexion?email=modifie", await getLang()), req.url));
   } catch {
-    return NextResponse.redirect(new URL("/connexion?email=lien-invalide", req.url));
+    return NextResponse.redirect(new URL(localizePath("/connexion?email=lien-invalide", await getLang()), req.url));
   }
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { common } from "@/lib/i18n/messages/common";
+import { useMessages } from "./i18n";
 
 const EVENT = "standby:flash";
 
@@ -11,6 +13,7 @@ export function flash(message: string) {
 
 export function FlashRegion() {
   const [message, setMessage] = useState<string | null>(null);
+  const close = useMessages(common).flashClose;
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const show = (e: Event) => {
@@ -30,7 +33,7 @@ export function FlashRegion() {
       {message && (
         <p className="note ok">
           <span>{message}</span>
-          <button type="button" className="flash-close" aria-label="Fermer le message" onClick={() => setMessage(null)}>
+          <button type="button" className="flash-close" aria-label={close} onClick={() => setMessage(null)}>
             ×
           </button>
         </p>

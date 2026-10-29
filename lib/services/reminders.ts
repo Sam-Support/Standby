@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
-import { dateRange, daysUntil, timeLabel, todayIso } from "@/lib/format";
+import { dateRange, daysUntil, todayIso } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { loadAssignments } from "./booking";
 
@@ -65,34 +65,24 @@ async function remindJ7(db: Db, b: B, e: E, c: C, left: number) {
       email: false,
     });
   }
+  const sched = { event: e.name, city: e.city, startsOn: e.startsOn, endsOn: e.endsOn, stand: b.stand };
   await notify(db, c.ownerId, {
-    title: `Votre équipe dans ${left} jours`,
-    body: `${when}. ${accepted.length} personne(s) confirmée(s)${waiting.length ? `, ${waiting.length} en attente de réponse : nous relançons et proposons un remplaçant si besoin` : ""}. Les badges exposants sont demandés à l’organisateur. Pensez à préparer le briefing de J-2.`,
+    t: (n) => n.teamIn({ ...sched, left, accepted: accepted.length, waiting: waiting.length }),
     link: `/entreprise/reservations/${b.id}`,
   });
   for (const a of accepted) {
-    await notify(db, a.userId, {
-      title: `Mission dans ${left} jours : ${e.name}`,
-      body: `${when}, ${timeLabel(b.startTime)} – ${timeLabel(b.endTime)}. Relisez le brief et la plaquette avant le briefing de J-2.`,
-      link: `/commercial/missions/${a.id}`,
-    });
+    await notify(db, a.userId, { t: (n) => n.missionIn({ ...sched, left, startTime: b.startTime, endTime: b.endTime }), link: `/commercial/missions/${a.id}` });
   }
 }
 
 async function remindJ2(db: Db, b: B, e: E, c: C, left: number) {
   const { accepted } = await team(db, b.id);
   const ref = await referentOf(db, b);
-  const when = left === 0 ? "aujourd’hui" : left === 1 ? "demain" : `dans ${left} jours`;
   const contacts = accepted.map((a) => `${a.firstName} ${a.lastName}${a.phone ? ` (${a.phone})` : ""}`).join(", ");
-  await notify(db, c.ownerId, {
-    title: `Briefing de votre équipe (${e.name}, ${when})`,
-    body: `Organisez le briefing visio avec ${ref.name} et l’équipe : ${contacts || "aucun commercial confirmé pour l’instant"}.`,
-    link: `/entreprise/reservations/${b.id}`,
-  });
+  await notify(db, c.ownerId, { t: (n) => n.briefingCompany({ event: e.name, left, referent: ref.name, contacts }), link: `/entreprise/reservations/${b.id}` });
   for (const a of accepted) {
     await notify(db, a.userId, {
-      title: `Briefing J-2 : ${e.name} (${when})`,
-      body: `Votre référent sur place : ${ref.name}${ref.phone ? `, ${ref.phone}` : ""}. Horaires : ${timeLabel(b.startTime)} – ${timeLabel(b.endTime)}${b.stand ? `, stand ${b.stand}` : ""}. Il vous contacte pour le briefing visio.`,
+      t: (n) => n.briefingFreelancer({ event: e.name, left, referent: ref.name, phone: ref.phone ?? null, startTime: b.startTime, endTime: b.endTime, stand: b.stand }),
       link: `/commercial/missions/${a.id}`,
     });
   }

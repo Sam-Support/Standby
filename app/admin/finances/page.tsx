@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { desc, eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";

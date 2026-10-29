@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { Fragment } from "react";
 
 /**
@@ -71,7 +71,22 @@ export function Toc({ titles, label = "Sommaire" }: { titles: string[]; label?: 
   );
 }
 
-export function DocPage({ label = "Informations légales", title, intro, sections }: { label?: string; title: string; intro: string; sections: DocSection[] }) {
+/** Page de texte légal ; « notice » signale une traduction (seule la version française fait foi). */
+export function DocPage({
+  label,
+  tocLabel,
+  notice,
+  title,
+  intro,
+  sections,
+}: {
+  label: string;
+  tocLabel: string;
+  notice?: string;
+  title: string;
+  intro: string;
+  sections: DocSection[];
+}) {
   return (
     <>
       <div className="head">
@@ -83,8 +98,9 @@ export function DocPage({ label = "Informations légales", title, intro, section
           </p>
         </div>
       </div>
+      {notice && <p className="note">{notice}</p>}
       <div className="doc">
-        <Toc titles={sections.map((s) => s.title)} />
+        <Toc titles={sections.map((s) => s.title)} label={tocLabel} />
         <article className="clay prose">
           <DocBody sections={sections} />
         </article>

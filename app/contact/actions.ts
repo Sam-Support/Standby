@@ -2,7 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
-import { fail, str, type FormState } from "@/lib/action";
+import { done, fail, oops, str, type FormState } from "@/lib/action";
 import { sendEmail } from "@/lib/integrations/email";
 import { clientIp } from "@/lib/client-ip";
 import { notify } from "@/lib/notify";
@@ -13,8 +13,8 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     const name = str(fd, "name");
     const email = str(fd, "email");
     const message = str(fd, "message");
-    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Indiquez votre nom et une adresse e-mail valide." };
-    if (message.length < 10) return { error: "Votre message est trop court." };
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return oops("Indiquez votre nom et une adresse e-mail valide.");
+    if (message.length < 10) return oops("Votre message est trop court.");
     const db = await getDb();
     await hit(db, `contact:ip:${await clientIp()}`, LIMITS.contactIp);
     await db.insert(s.contactMessages).values({
@@ -30,7 +30,7 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     if (process.env.SUPPORT_EMAIL) {
       await sendEmail({ to: process.env.SUPPORT_EMAIL, subject: `[Contact] ${str(fd, "subject")}`, text: `${name} <${email}>\n\n${message}` }, db);
     }
-    return { ok: "Message envoyé. Nous vous répondons par e-mail en jours ouvrés." };
+    return done("Message envoyé. Nous vous répondons par e-mail en jours ouvrés.");
   } catch (e) {
     return fail(e);
   }

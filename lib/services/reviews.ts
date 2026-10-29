@@ -38,11 +38,7 @@ export async function submitReview(db: Db, companyId: string, assignmentId: stri
     comment: comment.trim().slice(0, 1000) || null,
   });
   await db.update(s.freelancers).set(addRating(row.f.ratingX10, row.f.ratingsCount, rating)).where(eq(s.freelancers.id, row.f.id));
-  await notify(db, row.f.userId, {
-    title: "Nouvel avis reçu",
-    body: `Un exposant vous a attribué ${rating}/5 pour la mission ${row.b.ref}.`,
-    link: "/commercial/profil#avis",
-  });
+  await notify(db, row.f.userId, { t: (n) => n.newReview({ rating, ref: row.b.ref }), link: "/commercial/profil#avis" });
 }
 
 /** Modération : suppression d'un avis par l'équipe Standby. */

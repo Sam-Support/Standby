@@ -1,3 +1,5 @@
+import type { Lang } from "@/lib/i18n/config";
+
 /** Barème d'annulation, en fonction du nombre de jours avant le premier jour réservé. */
 
 export type CancellationPolicy = {
@@ -16,12 +18,34 @@ export function cancellationRate(daysBefore: number, p: CancellationPolicy): { b
   return { bps: p.lastBps, label: `moins de ${p.tier2Days} jours avant l’événement ou événement commencé` };
 }
 
+const SCHEDULE: Record<Lang, (p: CancellationPolicy) => [string, string, string, string]> = {
+  fr: (p) => [
+    `${p.freeDays} jours ou plus avant le premier jour`,
+    `De ${p.tier1Days} à ${p.freeDays - 1} jours avant`,
+    `De ${p.tier2Days} à ${p.tier1Days - 1} jours avant`,
+    `Moins de ${p.tier2Days} jours avant, ou événement commencé`,
+  ],
+  en: (p) => [
+    `${p.freeDays} days or more before the first day`,
+    `${p.tier1Days} to ${p.freeDays - 1} days before`,
+    `${p.tier2Days} to ${p.tier1Days - 1} days before`,
+    `Less than ${p.tier2Days} days before, or event started`,
+  ],
+  es: (p) => [
+    `${p.freeDays} días o más antes del primer día`,
+    `De ${p.tier1Days} a ${p.freeDays - 1} días antes`,
+    `De ${p.tier2Days} a ${p.tier1Days - 1} días antes`,
+    `Menos de ${p.tier2Days} días antes, o evento ya iniciado`,
+  ],
+};
+
 /** Lignes du barème, pour les CGV et l'écran d'annulation. */
-export function cancellationSchedule(p: CancellationPolicy): { when: string; bps: number }[] {
+export function cancellationSchedule(p: CancellationPolicy, lang: Lang = "fr"): { when: string; bps: number }[] {
+  const [free, tier1, tier2, last] = SCHEDULE[lang](p);
   return [
-    { when: `${p.freeDays} jours ou plus avant le premier jour`, bps: 0 },
-    { when: `De ${p.tier1Days} à ${p.freeDays - 1} jours avant`, bps: p.tier1Bps },
-    { when: `De ${p.tier2Days} à ${p.tier1Days - 1} jours avant`, bps: p.tier2Bps },
-    { when: `Moins de ${p.tier2Days} jours avant, ou événement commencé`, bps: p.lastBps },
+    { when: free, bps: 0 },
+    { when: tier1, bps: p.tier1Bps },
+    { when: tier2, bps: p.tier2Bps },
+    { when: last, bps: p.lastBps },
   ];
 }

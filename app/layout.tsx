@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Jost, Onest } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
 import { FlashRegion } from "@/components/flash";
+import { LangProvider } from "@/components/i18n";
+import { common } from "@/lib/i18n/messages/common";
+import { home } from "@/lib/i18n/messages/home";
+import { getLang, getMessages } from "@/lib/i18n/server";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { VerifyBanner } from "@/components/verify-banner";
@@ -10,18 +14,19 @@ import "./globals.css";
 const onest = Onest({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-onest" });
 const jost = Jost({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-jost" });
 
-export const metadata: Metadata = {
-  title: { default: "Standby · Staffez vos stands de salons et foires", template: "%s · Standby" },
-  description:
-    "Commerciaux, hôtes·ses, animateurs et interprètes vérifiés pour vos salons professionnels et vos foires. Brief, leads au format de votre CRM, validation des heures et paie gérées pour vous.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getMessages(home);
+  return { title: { default: t.title, template: "%s · Standby" }, description: t.description };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const lang = await getLang();
   return (
-    <html lang="fr" className={`${onest.variable} ${jost.variable}`}>
+    <html lang={lang} className={`${onest.variable} ${jost.variable}`}>
       <body>
+        <LangProvider lang={lang}>
         <a className="skip" href="#contenu">
-          Aller au contenu
+          {(await getMessages(common)).skip}
         </a>
         <div className="wrap">
           <SiteNav />
@@ -33,6 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </div>
         <FlashRegion />
         <CookieBanner />
+        </LangProvider>
       </body>
     </html>
   );

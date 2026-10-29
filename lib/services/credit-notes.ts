@@ -87,10 +87,7 @@ export async function issueCreditNote(db: Db, adminId: string, invoiceId: string
 
   const [company] = await db.select({ ownerId: s.companies.ownerId }).from(s.companies).where(eq(s.companies.id, row.booking.companyId));
   await notify(db, company.ownerId, {
-    title: `Avoir ${note.number}`,
-    body: `Avoir de ${eurosPrecise(ttc)} TTC sur la facture ${invoice.number} : ${note.reason}. ${
-      paid ? "Le remboursement part sur votre moyen de paiement (comptez 5 à 10 jours ouvrés pour un prélèvement SEPA)." : "Ce montant est déduit du prélèvement à venir."
-    }`,
+    t: (n) => n.creditNote({ number: note.number, ttcCents: ttc, invoice: invoice.number, reason: note.reason, paid }),
     link: `/entreprise/avoirs/${note.id}`,
   });
   const [after] = await db.select().from(s.creditNotes).where(eq(s.creditNotes.id, note.id));

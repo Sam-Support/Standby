@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";

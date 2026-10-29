@@ -1,15 +1,19 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { ActionForm, Submit } from "@/components/action-form";
 import { AssignmentStatus, Avatar, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
-import { ROLES, type RoleKey } from "@/lib/domain";
-import { dateRange, euros, hourly, longDate, rating, todayIso } from "@/lib/format";
+import { todayIso } from "@/lib/format";
 import { getDb } from "@/db";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { freelancer as messages } from "@/lib/i18n/messages/freelancer";
+import { getFmt, getMessages, sayParts } from "@/lib/i18n/server";
 import { freelancerEarnings, freelancerMissions } from "@/lib/services/freelancer-views";
 import { logoutAction } from "../connexion/actions";
 import { respond, stripeSetupAction } from "./actions";
 
-export const metadata = { title: "Espace commercial" };
+export async function generateMetadata() {
+  return { title: (await getMessages(messages)).area };
+}
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; email?: string }> }) {
   const { bienvenue, email } = await searchParams;
@@ -23,25 +27,25 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   const accepted = missions.filter((m) => m.a.status === "acceptee" && !["payee", "annulee"].includes(m.b.status));
   const past = missions.filter((m) => m.a.status !== "proposee" && !accepted.includes(m)).slice(0, 10);
   const max = Math.max(...earn.byWeek, 1);
-  const role = ROLES[f.roles[0] as RoleKey];
+  const t = (await getMessages(messages)).dash;
+  const fm = await getFmt();
+  const dl = domainLabels(fm.lang);
 
   return (
     <>
-      {bienvenue && <p className="note ok">Profil envoyé. Nous vérifions vos documents : vous recevrez vos premières missions dès la validation.</p>}
-      {email === "confirme" && <p className="note ok">Adresse e-mail confirmée.</p>}
+      {bienvenue && <p className="note ok">{t.welcome}</p>}
+      {email === "confirme" && <p className="note ok">{t.emailConfirmed}</p>}
       {f.blockedReason && (
         <p className="note err">
-          Vous ne recevez plus de nouvelles missions : {f.blockedReason}. <Link href="/commercial/profil">Mettre à jour mes documents</Link>
+          {t.blocked(await sayParts(f.blockedReason))}
+          <Link href="/commercial/profil">{t.updateDocs}</Link>
         </p>
       )}
-      {accepted.some((m) => m.timesheets.some((t) => t.status === "ajuste")) && (
-        <p className="note">
-          Un exposant a revu vos heures à la baisse : acceptez ou contestez l’ajustement depuis la mission concernée, sinon il est retenu au bout de 48 h.
-        </p>
-      )}
+      {accepted.some((m) => m.timesheets.some((x) => x.status === "ajuste")) && <p className="note">{t.adjusted}</p>}
       {!f.billingMandateAcceptedAt && (
         <p className="note err">
-          Vous ne recevez pas de missions tant que le mandat de facturation n’est pas accepté. <Link href="/commercial/profil#facturation">Accepter le mandat</Link>
+          {t.noMandate}
+          <Link href="/commercial/profil#facturation">{t.acceptMandate}</Link>
         </p>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start" }}>
@@ -52,34 +56,40 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
               {user.firstName} {user.lastName}
             </h1>
             <p className="muted" style={{ fontSize: 14 }}>
-              {role?.label ?? "Commercial·e"}
-              {f.ratingX10 ? ` · ★ ${rating(f.ratingX10)}` : ""}
-              {f.topSize ? ` · tenue ${f.topSize} / ${f.pantsSize} / P. ${f.shoeSize}` : ""}
+              {f.roles[0] ? dl.role(f.roles[0]).label : t.defaultRole}
+              {f.ratingX10 ? ` · ★ ${fm.rating(f.ratingX10)}` : ""}
+              {f.topSize ? t.outfit(f.topSize, f.pantsSize, f.shoeSize) : ""}
             </p>
-            {f.status !== "valide" && <Status tone="warn">{f.status === "refuse" ? "Profil refusé" : "Documents en cours de vérification"}</Status>}
+            {f.status !== "valide" && <Status tone="warn">{f.status === "refuse" ? t.refused : t.checking}</Status>}
             <div className="inline" style={{ justifyContent: "center" }}>
-              <Link className="clay s btn xs ghost" href="/commercial/profil">Mon profil</Link>
-              <Link className="clay s btn xs ghost" href="/compte">Mon compte</Link>
+              <Link className="clay s btn xs ghost" href="/commercial/profil">
+                {t.myProfile}
+              </Link>
+              <Link className="clay s btn xs ghost" href="/compte">
+                {t.myAccount}
+              </Link>
               <form action={logoutAction}>
-                <button className="clay s btn xs ghost">Se déconnecter</button>
+                <button className="clay s btn xs ghost">{t.logout}</button>
               </form>
             </div>
           </div>
           <div className="clay" style={{ borderRadius: 22, padding: 24, display: "flex", flexDirection: "column", gap: 10 }}>
-            <span className="lab">Revenus</span>
+            <span className="lab">{t.earnings}</span>
             <div className="disp" style={{ fontSize: 40, lineHeight: 1 }}>
-              {euros(earn.upcoming)} <span className="muted" style={{ font: "500 14px var(--sans)" }}>à recevoir</span>
+              {fm.euros(earn.upcoming)} <span className="muted" style={{ font: "500 14px var(--sans)" }}>{t.toReceive}</span>
             </div>
-            <div className="sunk bars" role="img" aria-label={`Paie des 6 dernières semaines : ${earn.byWeek.map((c) => euros(c)).join(", ")}`}>
+            <div className="sunk bars" role="img" aria-label={t.chart(earn.byWeek.map((c) => fm.euros(c)).join(", "))}>
               {earn.byWeek.map((c, i) => (
                 <span key={earn.weeks[i]} className={`clay s${i === 5 ? " now" : ""}`} style={{ height: `${Math.max(6, (c / max) * 100)}%` }}></span>
               ))}
             </div>
-            <p className="muted" style={{ fontSize: 14 }}>Prochain virement : lundi {longDate(earn.nextPayout)}</p>
-            <Link className="small" href="/commercial/revenus">Factures, relevés et récapitulatif annuel</Link>
+            <p className="muted" style={{ fontSize: 14 }}>{t.nextPayout(fm.longDate(earn.nextPayout))}</p>
+            <Link className="small" href="/commercial/revenus">
+              {t.invoicesLink}
+            </Link>
             {!f.payoutsEnabled && (
               <ActionForm action={stripeSetupAction}>
-                <Submit className="clay s btn sm butter">Activer mes virements</Submit>
+                <Submit className="clay s btn sm butter">{t.enablePayouts}</Submit>
               </ActionForm>
             )}
           </div>
@@ -87,8 +97,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
         <div style={{ flex: "999 1 640px", minWidth: 0, display: "flex", flexDirection: "column", gap: 22 }}>
           <section className="clay panel">
-            <h2>Missions proposées</h2>
-            {proposed.length === 0 && <p className="muted">Aucune mission en attente de réponse.</p>}
+            <h2>{t.proposed}</h2>
+            {proposed.length === 0 && <p className="muted">{t.noProposed}</p>}
             {proposed.map((m) => (
               <div key={m.a.id} className="brow">
                 <div>
@@ -96,15 +106,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
                     <b>{m.e?.name}</b>
                   </Link>
                   <div className="muted small">
-                    {ROLES[m.a.role as RoleKey]?.short} · {m.e?.city} · {dateRange(m.first, m.last)} · {hourly(m.a.hourlyRateCents)} · ≈ {euros(m.estimatedCents)}
+                    {dl.role(m.a.role).short} · {m.e?.city} · {fm.dateRange(m.first, m.last)} · {fm.hourly(m.a.hourlyRateCents)} · ≈ {fm.euros(m.estimatedCents)}
                   </div>
                 </div>
                 <div className="inline">
                   <ActionForm action={respond.bind(null, m.a.id, false)}>
-                    <Submit className="clay s btn xs ghost" pending="…">Refuser</Submit>
+                    <Submit className="clay s btn xs ghost" pending="…">
+                      {t.decline}
+                    </Submit>
                   </ActionForm>
                   <ActionForm action={respond.bind(null, m.a.id, true)}>
-                    <Submit className="clay s btn xs ok" pending="…">Accepter</Submit>
+                    <Submit className="clay s btn xs ok" pending="…">
+                      {t.accept}
+                    </Submit>
                   </ActionForm>
                 </div>
               </div>
@@ -112,12 +126,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           </section>
 
           <section className="clay panel">
-            <h2>Mes missions</h2>
-            {accepted.length === 0 && <p className="muted">Aucune mission acceptée en cours.</p>}
+            <h2>{t.mine}</h2>
+            {accepted.length === 0 && <p className="muted">{t.noMine}</p>}
             {accepted.map((m) => {
               const needHours = m.started && m.declaredDays < m.pastDays && ["en_cours", "heures_a_valider"].includes(m.b.status);
-              const adjusted = m.timesheets.some((t) => t.status === "ajuste");
-              const disputed = m.timesheets.some((t) => t.status === "conteste");
+              const adjusted = m.timesheets.some((x) => x.status === "ajuste");
+              const disputed = m.timesheets.some((x) => x.status === "conteste");
               return (
                 <div key={m.a.id} className="brow">
                   <div>
@@ -125,20 +139,24 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
                       <b>{m.e?.name}</b>
                     </Link>
                     <div className="muted small">
-                      {m.c.name} · {m.e?.city} · {dateRange(m.first, m.last)}
-                      {m.leadsSent ? ` · ${m.leadsSent} leads envoyés` : ""}
+                      {m.c.name} · {m.e?.city} · {fm.dateRange(m.first, m.last)}
+                      {m.leadsSent ? t.leadsSent(m.leadsSent) : ""}
                     </div>
                   </div>
                   <div className="inline">
-                    {needHours && <Status tone="warn">Heures à déclarer</Status>}
+                    {needHours && <Status tone="warn">{t.hoursToDeclare}</Status>}
                     {adjusted && (
-                      <Link className="clay s btn xs butter" href={`/commercial/missions/${m.a.id}`}>Heures ajustées : répondre sous 48 h</Link>
+                      <Link className="clay s btn xs butter" href={`/commercial/missions/${m.a.id}`}>
+                        {t.hoursAdjusted}
+                      </Link>
                     )}
-                    {disputed && <Status tone="info">Heures contestées : arbitrage en cours</Status>}
+                    {disputed && <Status tone="info">{t.hoursDisputed}</Status>}
                     {m.started && (
-                      <Link className="clay s btn xs" href={`/commercial/leads/${m.a.id}`}>Déposer mes leads</Link>
+                      <Link className="clay s btn xs" href={`/commercial/leads/${m.a.id}`}>
+                        {t.uploadLeads}
+                      </Link>
                     )}
-                    {!m.started && <Status tone="info">{m.first > today ? `Débute le ${longDate(m.first)}` : "En cours"}</Status>}
+                    {!m.started && <Status tone="info">{m.first > today ? t.starts(fm.longDate(m.first)) : t.ongoing}</Status>}
                   </div>
                 </div>
               );
@@ -147,11 +165,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
           {past.length > 0 && (
             <section className="clay panel">
-              <h2>Historique</h2>
+              <h2>{t.history}</h2>
               {past.map((m) => (
                 <div key={m.a.id} className="brow">
                   <span>
-                    <b>{m.e?.name}</b> <span className="muted small">· {dateRange(m.first, m.last, true)}</span>
+                    <b>{m.e?.name}</b> <span className="muted small">· {fm.dateRange(m.first, m.last, true)}</span>
                   </span>
                   <AssignmentStatus status={m.b.status === "payee" && m.a.status === "acceptee" ? "acceptee" : m.a.status} />
                 </div>

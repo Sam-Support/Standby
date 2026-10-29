@@ -3,7 +3,9 @@
 import { createContext, useActionState, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import type { FormState } from "@/lib/action";
+import { common } from "@/lib/i18n/messages/common";
 import { flash } from "./flash";
+import { useMessages } from "./i18n";
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -66,7 +68,7 @@ export function ActionForm({
 export function Submit({
   children,
   className = "clay btn",
-  pending = "Envoi…",
+  pending,
   name,
   value,
   style,
@@ -84,9 +86,10 @@ export function Submit({
 }) {
   const status = useFormStatus();
   const busy = useContext(Pending) || status.pending;
+  const sending = useMessages(common).pending;
   return (
     <button type="submit" className={className} name={name} value={value} style={style} disabled={disabled || busy} title={title}>
-      {busy ? pending : children}
+      {busy ? (pending ?? sending) : children}
     </button>
   );
 }

@@ -3,7 +3,7 @@ import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "d
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { isRoleKey, ROLES, type RoleKey } from "@/lib/domain";
-import { daysUntil, hourly, listDays, todayIso } from "@/lib/format";
+import { daysUntil, listDays, todayIso } from "@/lib/format";
 import { daysOverlap, matchScore } from "@/lib/matching";
 import { audit, notify, notifyAdmins } from "@/lib/notify";
 import { billableMinutesPerDay, computeQuote, type Quote } from "@/lib/pricing";
@@ -413,8 +413,7 @@ export async function confirmBooking(db: Db, b: Booking, actorId: string) {
     .where(and(eq(s.assignments.bookingId, b.id), eq(s.assignments.status, "selectionne")));
   for (const a of ctx.assignments) {
     await notify(db, a.userId, {
-      title: `Nouvelle mission : ${ctx.event?.name ?? "salon"}`,
-      body: `${ROLES[a.role as RoleKey]?.label ?? a.role} · ${b.days.length} jour(s) · ${a.hourlyRateCents / 100} €/h. Acceptez ou refusez la mission depuis votre espace.`,
+      t: (n) => n.newMission({ event: ctx.event?.name ?? null, role: a.role, days: b.days.length, rateCents: a.hourlyRateCents }),
       link: `/commercial/missions/${a.id}`,
     });
   }
@@ -457,20 +456,13 @@ export async function respondToMission(db: Db, assignmentId: string, freelancerU
   const updated = await refreshBookingStatus(db, row.b.id);
   if (accept) {
     await notify(db, owner.ownerId, {
-      title: updated?.status === "confirmee" ? `Réservation ${row.b.ref} confirmée` : `${p.firstName} a accepté la mission`,
-      body:
-        updated?.status === "confirmee"
-          ? "Toute l’équipe a accepté. Rendez-vous au briefing J-2."
-          : `${p.firstName} ${p.lastName} rejoint votre équipe (réf. ${row.b.ref}).`,
+      t: (n) => (updated?.status === "confirmee" ? n.bookingConfirmed({ ref: row.b.ref }) : n.missionAccepted({ first: p.firstName, last: p.lastName, ref: row.b.ref })),
       link: `/entreprise/reservations/${row.b.id}`,
     });
   } else {
     const replacement = await proposeReplacement(db, row.b, row.a.role as RoleKey, row.a.hourlyRateCents);
     await notify(db, owner.ownerId, {
-      title: `Mission refusée sur ${row.b.ref}`,
-      body: replacement
-        ? `${p.firstName} n’est pas disponible. Un remplaçant noté ${replacement.score} % compatible a reçu la mission.`
-        : `${p.firstName} n’est pas disponible et aucun remplaçant n’est libre pour l’instant : l’équipe Standby vous recontacte.`,
+      t: (n) => n.missionDeclined({ ref: row.b.ref, first: p.firstName, score: replacement ? replacement.score : null }),
       link: `/entreprise/reservations/${row.b.id}`,
     });
   }
@@ -497,11 +489,7 @@ export async function proposeReplacement(db: Db, b: Booking, role: RoleKey, maxR
     .insert(s.assignments)
     .values({ bookingId: b.id, freelancerId: best.id, role, hourlyRateCents: best.hourlyRateCents, matchScore: best.score, status: "proposee", proposedAt: new Date() })
     .returning();
-  await notify(db, best.userId, {
-    title: "Nouvelle mission proposée",
-    body: `${ROLES[role].label} · ${b.days.length} jour(s). Répondez sous 48 h depuis votre espace.`,
-    link: `/commercial/missions/${a.id}`,
-  });
+  await notify(db, best.userId, { t: (n) => n.missionOffered({ role, days: b.days.length }), link: `/commercial/missions/${a.id}` });
   return best;
 }
 
@@ -522,13 +510,9 @@ export async function advanceBookings(db: Db, today = todayIso(), now = new Date
     if (last < today && (b.status === "en_cours" || first <= today)) {
       await db.update(s.bookings).set({ status: "heures_a_valider" }).where(eq(s.bookings.id, b.id));
       const owner = await companyOwner(db, b.companyId);
-      await notify(db, owner.ownerId, {
-        title: `Heures à valider (${b.ref})`,
-        body: "L’événement est terminé. Vérifiez et validez les heures de votre équipe : la paie part le lundi suivant.",
-        link: `/entreprise/reservations/${b.id}`,
-      });
+      await notify(db, owner.ownerId, { t: (n) => n.hoursToValidate({ ref: b.ref }), link: `/entreprise/reservations/${b.id}` });
       for (const a of (await loadAssignments(db, b.id)).filter((x) => x.status === "acceptee")) {
-        await notify(db, a.userId, { title: "Déclarez vos heures", body: `Mission ${b.ref} terminée : déclarez vos heures.`, link: `/commercial/missions/${a.id}` });
+        await notify(db, a.userId, { t: (n) => n.declareHours({ ref: b.ref }), link: `/commercial/missions/${a.id}` });
       }
       changed++;
     }
@@ -583,12 +567,9 @@ export async function withdrawFromMission(db: Db, assignmentId: string, freelanc
 
   const owner = await companyOwner(db, row.b.companyId);
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, freelancerUserId));
-  const rateNote = replacement && replacement.hourlyRateCents !== row.a.hourlyRateCents ? ` (${hourly(replacement.hourlyRateCents)})` : "";
+  const newRate = replacement && replacement.hourlyRateCents !== row.a.hourlyRateCents ? replacement.hourlyRateCents : null;
   await notify(db, owner.ownerId, {
-    title: `${p.firstName} s’est désisté·e (${row.b.ref})`,
-    body: replacement
-      ? `${p.firstName} ${p.lastName} ne pourra pas être présent·e. Un remplaçant compatible à ${replacement.score} %${rateNote} a reçu la mission : une notification vous attend dès son acceptation.`
-      : `${p.firstName} ${p.lastName} ne pourra pas être présent·e et aucun profil n’est libre pour l’instant : l’équipe Standby cherche une solution et vous recontacte.`,
+    t: (n) => n.withdrew({ ref: row.b.ref, first: p.firstName, last: p.lastName, score: replacement ? replacement.score : null, rateCents: newRate }),
     link: `/entreprise/reservations/${row.b.id}`,
   });
   await notifyAdmins(db, {

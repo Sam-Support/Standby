@@ -1,11 +1,14 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { PageHead } from "@/components/ui";
 import { requireCompany } from "@/lib/auth/session";
-import { dateRange, longDate } from "@/lib/format";
+import { booking } from "@/lib/i18n/messages/booking";
+import { getFmt, getMessages } from "@/lib/i18n/server";
 
-export const metadata = { title: "Réserver une équipe" };
+export async function generateMetadata() {
+  return { title: (await getMessages(booking)).meta.list };
+}
 
 export default async function Page() {
   const company = await requireCompany("/reserver");
@@ -17,32 +20,36 @@ export default async function Page() {
     .where(and(eq(s.bookings.companyId, company.id), eq(s.bookings.status, "brouillon")))
     .orderBy(desc(s.bookings.createdAt))
     .limit(10);
+  const m = await getMessages(booking);
+  const t = m.list;
+  const f = await getFmt();
   return (
     <>
       <PageHead
-        label="Réservation exposant"
-        title="Réserver une équipe de stand"
+        label={m.head.label}
+        title={m.head.title}
         actions={
           <Link className="clay btn" href="/reserver/nouveau" prefetch={false}>
-            Nouvelle réservation
+            {t.new}
           </Link>
         }
       >
-        Cinq étapes. L’estimation se met à jour à chaque choix, le total définitif apparaît au récapitulatif.
+        {m.head.lead}
       </PageHead>
       <section className="clay panel">
-        <h2>Réservations en cours de saisie</h2>
-        {drafts.length === 0 && <p className="muted">Aucun brouillon. Lancez une nouvelle réservation pour choisir votre salon.</p>}
+        <h2>{t.drafts}</h2>
+        {drafts.length === 0 && <p className="muted">{t.none}</p>}
         {drafts.map(({ b, e }) => (
           <div key={b.id} className="brow">
             <div>
-              <b>{e?.name ?? "Événement à choisir"}</b>
+              <b>{e?.name ?? t.toChoose}</b>
               <div className="muted small">
-                {e ? `${e.city} · ${dateRange(e.startsOn, e.endsOn)} · ` : ""}commencée le {longDate(b.createdAt)} · réf. {b.ref}
+                {e ? `${e.city} · ${f.dateRange(e.startsOn, e.endsOn)} · ` : ""}
+                {t.started(f.longDate(b.createdAt), b.ref)}
               </div>
             </div>
             <Link className="clay s btn sm" href={`/reserver/${b.id}/evenement`}>
-              Reprendre
+              {t.resume}
             </Link>
           </div>
         ))}

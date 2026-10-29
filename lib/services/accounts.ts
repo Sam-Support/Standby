@@ -15,10 +15,12 @@ import {
   type VatRegime,
 } from "@/lib/domain";
 import { hourly } from "@/lib/format";
+import { DEFAULT_LANG, isLang, localizePath, type Lang } from "@/lib/i18n/config";
+import { notices } from "@/lib/i18n/messages/notices";
 import { sendEmail } from "@/lib/integrations/email";
 import { lookupSiret } from "@/lib/integrations/sirene";
 import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/integrations/stripe";
-import { audit, notify, notifyAdmins } from "@/lib/notify";
+import { audit, localeOf, notify, notifyAdmins } from "@/lib/notify";
 import { getPricing } from "@/lib/settings";
 import { frVatNumber, isValidSiret, normalizeSiret } from "@/lib/siret";
 import { deleteFile, putFile } from "@/lib/storage";
@@ -39,7 +41,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function registerAccount(
   db: Db,
-  input: { email: string; password: string; role: "exposant" | "commercial"; firstName: string; lastName: string; phone?: string },
+  input: { email: string; password: string; role: "exposant" | "commercial"; firstName: string; lastName: string; phone?: string; locale?: Lang },
 ) {
   const email = input.email.trim().toLowerCase();
   if (!EMAIL.test(email)) throw new AccountError("Adresse e-mail invalide.");
@@ -55,7 +57,15 @@ export async function registerAccount(
   }
   const [profile] = await db
     .insert(s.profiles)
-    .values({ id, email, role: input.role, firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone?.trim() || null })
+    .values({
+      id,
+      email,
+      role: input.role,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      phone: input.phone?.trim() || null,
+      locale: input.locale ?? DEFAULT_LANG,
+    })
     .returning();
   await storeLocalPassword(db, id, input.password);
   await sendVerificationEmail(db, profile);
@@ -65,17 +75,16 @@ export async function registerAccount(
 const VERIFY_TTL = 48 * 3600;
 
 /** Lien de confirmation d'adresse (48 h). Sans adresse confirmée : ni réservation, ni mission. */
-export async function sendVerificationEmail(db: Db, profile: { id: string; email: string; firstName: string }) {
+export async function sendVerificationEmail(db: Db, profile: { id: string; email: string; firstName: string; locale?: string }) {
   const token = signToken({ uid: profile.id, email: profile.email, purpose: "verify" }, VERIFY_TTL);
-  await sendEmail(
-    {
-      to: profile.email,
-      subject: "Confirmez votre adresse e-mail standby",
-      text: `Bonjour ${profile.firstName},\n\nConfirmez votre adresse pour pouvoir réserver une équipe ou accepter des missions. Ce lien est valable 48 heures.`,
-      link: { label: "Confirmer mon adresse", href: `/verifier-email/${token}` },
-    },
-    db,
-  );
+  const lang = langOf(profile);
+  const m = notices(lang).verifyEmail({ first: profile.firstName });
+  await sendEmail({ to: profile.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/verifier-email/${token}`, lang) }, lang }, db);
+}
+
+/** Langue d'un compte pour ses e-mails. */
+function langOf(p: { locale?: string | null }): Lang {
+  return isLang(p.locale) ? p.locale : DEFAULT_LANG;
 }
 
 export async function confirmEmail(db: Db, token: string) {
@@ -105,15 +114,9 @@ export async function requestPasswordReset(db: Db, email: string) {
   if (!p) return; // réponse identique, que le compte existe ou non
   const token = randomToken();
   await db.insert(s.passwordResets).values({ token, userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
-  await sendEmail(
-    {
-      to: p.email,
-      subject: "Réinitialiser votre mot de passe standby",
-      text: "Vous avez demandé à réinitialiser votre mot de passe. Ce lien est valable une heure.",
-      link: { label: "Choisir un nouveau mot de passe", href: `/reinitialiser/${token}` },
-    },
-    db,
-  );
+  const lang = langOf(p);
+  const m = notices(lang).resetPassword();
+  await sendEmail({ to: p.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/reinitialiser/${token}`, lang) }, lang }, db);
 }
 
 export async function resetPassword(db: Db, token: string, password: string) {
@@ -138,7 +141,7 @@ async function bumpSessionVersion(db: Db, userId: string) {
   return p.v;
 }
 
-type AccountUser = { id: string; email: string; firstName: string };
+type AccountUser = { id: string; email: string; firstName: string; locale?: string | null };
 
 async function assertPassword(db: Db, user: AccountUser, password: string, message: string) {
   if ((await verifyIdentity(db, user.email, password)) !== user.id) throw new AccountError(message);
@@ -151,15 +154,9 @@ export async function changePassword(db: Db, user: AccountUser, current: string,
   await assertPassword(db, user, current, "Mot de passe actuel incorrect.");
   await updateIdentityPassword(db, user.id, next);
   const version = await bumpSessionVersion(db, user.id);
-  await sendEmail(
-    {
-      to: user.email,
-      subject: "Votre mot de passe standby a été modifié",
-      text: `Bonjour ${user.firstName},\n\nLe mot de passe de votre compte vient d’être modifié et vos autres appareils ont été déconnectés. Si vous n’êtes pas à l’origine de ce changement, réinitialisez-le immédiatement et contactez-nous.`,
-      link: { label: "Réinitialiser mon mot de passe", href: "/mot-de-passe-oublie" },
-    },
-    db,
-  );
+  const lang = langOf(user);
+  const m = notices(lang).passwordChanged({ first: user.firstName });
+  await sendEmail({ to: user.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath("/mot-de-passe-oublie", lang) }, lang }, db);
   await audit(db, user.id, "account.password_change", "profile", user.id);
   return version;
 }
@@ -178,23 +175,12 @@ export async function requestEmailChange(db: Db, user: AccountUser, newEmail: st
   const [taken] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
   if (taken) throw new AccountError("Cette adresse est déjà utilisée par un autre compte.");
   const token = signToken({ uid: user.id, from: user.email, to: email, purpose: "email-change" }, EMAIL_CHANGE_TTL);
-  await sendEmail(
-    {
-      to: email,
-      subject: "Confirmez votre nouvelle adresse standby",
-      text: `Bonjour ${user.firstName},\n\nConfirmez cette adresse pour vous connecter à standby avec elle, à la place de ${user.email}. Ce lien est valable 24 heures.`,
-      link: { label: "Confirmer ma nouvelle adresse", href: `/nouvelle-adresse/${token}` },
-    },
-    db,
-  );
-  await sendEmail(
-    {
-      to: user.email,
-      subject: "Changement d’adresse e-mail demandé",
-      text: `Bonjour ${user.firstName},\n\nUn changement d’adresse vers ${email} a été demandé depuis votre compte standby. Votre adresse actuelle reste valable tant que la nouvelle n’est pas confirmée. Si vous n’êtes pas à l’origine de cette demande, changez votre mot de passe et contactez-nous.`,
-    },
-    db,
-  );
+  const lang = langOf(user);
+  const n = notices(lang);
+  const confirm = n.confirmNewEmail({ first: user.firstName, old: user.email });
+  await sendEmail({ to: email, subject: confirm.subject, text: confirm.text, link: { label: confirm.link, href: localizePath(`/nouvelle-adresse/${token}`, lang) }, lang }, db);
+  const alert = n.emailChangeRequested({ first: user.firstName, to: email });
+  await sendEmail({ to: user.email, subject: alert.subject, text: alert.text, lang }, db);
   await audit(db, user.id, "account.email_change_request", "profile", user.id, { to: email });
 }
 
@@ -215,14 +201,9 @@ export async function confirmEmailChange(db: Db, token: string) {
     .set({ email: data.to, emailVerifiedAt: new Date() })
     .where(eq(s.profiles.id, p.id))
     .returning();
-  await sendEmail(
-    {
-      to: data.from,
-      subject: "Adresse e-mail modifiée",
-      text: `Bonjour ${p.firstName},\n\nVotre compte standby utilise désormais l’adresse ${data.to}. Si vous n’êtes pas à l’origine de ce changement, contactez-nous immédiatement.`,
-    },
-    db,
-  );
+  const lang = langOf(p);
+  const changed = notices(lang).emailChanged({ first: p.firstName, to: data.to });
+  await sendEmail({ to: data.from, subject: changed.subject, text: changed.text, lang }, db);
   await audit(db, p.id, "account.email_change", "profile", p.id, { from: data.from, to: data.to });
   return updated;
 }
@@ -352,15 +333,10 @@ export async function companyLeadFormat(
       .values({ companyId: company.id, provider: "HubSpot", status: "en_attente" })
       .onConflictDoNothing();
     const token = signToken({ companyId: company.id, purpose: "crm" }, 7 * 24 * 3600);
-    await sendEmail(
-      {
-        to: adminEmail,
-        subject: `${company.name} vous demande de connecter HubSpot à standby`,
-        text: `${company.name} utilise standby pour staffer ses salons. Les leads collectés sur le stand peuvent être créés directement dans HubSpot.\n\nL’accès demandé est limité à la création et la lecture de contacts. Ce lien est valable 7 jours.`,
-        link: { label: "Connecter HubSpot", href: `/crm/connexion/${token}` },
-      },
-      db,
-    );
+    // l'administrateur CRM travaille chez l'exposant : même langue que le compte entreprise
+    const lang = await localeOf(db, company.ownerId);
+    const m = notices(lang).hubspotRequest({ company: company.name });
+    await sendEmail({ to: adminEmail, subject: m.subject, text: m.text, link: { label: m.link, href: `/crm/connexion/${token}` }, lang }, db);
   }
   await db
     .update(s.companies)
@@ -542,11 +518,7 @@ export async function reviewDocument(
   const [f] = await db.select().from(s.freelancers).where(eq(s.freelancers.id, doc.freelancerId));
   await refreshBlockedReason(db, f.id, today);
   if (status === "refuse") {
-    await notify(db, f.userId, {
-      title: "Un document est à corriger",
-      body: `${DOCUMENT_TYPES[doc.type as DocumentKey]} : ${comment?.trim() || "document refusé"}. Déposez une nouvelle version depuis votre profil.`,
-      link: "/commercial/profil",
-    });
+    await notify(db, f.userId, { t: (n) => n.documentToFix({ doc: doc.type, comment: comment?.trim() || null }), link: "/commercial/profil" });
   } else {
     await maybeValidateFreelancer(db, f.id, today);
   }

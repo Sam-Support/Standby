@@ -1,10 +1,11 @@
 import { validateHours } from "@/app/entreprise/actions";
 import { ActionForm, Submit } from "./action-form";
 import { Avatar } from "./ui";
-import { ROLES, type RoleKey } from "@/lib/domain";
-import { hoursLabel } from "@/lib/format";
+import { company } from "@/lib/i18n/messages/company";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { getFmt, getMessages } from "@/lib/i18n/server";
 
-export function HoursRow({
+export async function HoursRow({
   a,
 }: {
   a: {
@@ -20,6 +21,8 @@ export function HoursRow({
     pending: "ajuste" | "conteste" | null;
   };
 }) {
+  const t = (await getMessages(company)).hours;
+  const f = await getFmt();
   return (
     <div className="brow">
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -30,44 +33,44 @@ export function HoursRow({
           </b>
           <br />
           <span className="muted small">
-            {ROLES[a.role as RoleKey]?.short ?? a.role}
-            {a.hasDeclared ? ` · ${hoursLabel(a.declared)} déclarées` : " · heures prévues (rien de déclaré)"}
+            {domainLabels(f.lang).role(a.role).short}
+            {a.hasDeclared ? t.declared(f.hoursLabel(a.declared)) : t.planned}
           </span>
         </span>
       </div>
       {a.validated ? (
-        <span className="st ok">{hoursLabel(a.retained)} validées</span>
+        <span className="st ok">{t.validated(f.hoursLabel(a.retained))}</span>
       ) : a.pending === "ajuste" ? (
-        <span className="st warn">{hoursLabel(a.retained)} retenues · réponse du commercial sous 48 h</span>
+        <span className="st warn">{t.adjusted(f.hoursLabel(a.retained))}</span>
       ) : a.pending === "conteste" ? (
-        <span className="st warn">Contestées · arbitrage de l’équipe Standby</span>
+        <span className="st warn">{t.disputed}</span>
       ) : (
         <ActionForm action={validateHours.bind(null, a.id)} className="inline" style={{ gap: 8 }}>
           <label className="sr-only" htmlFor={`h-${a.id}`}>
-            Heures de {a.firstName}
+            {t.hoursOf(a.firstName)}
           </label>
           <input
             id={`h-${a.id}`}
             className="input"
             name="hours"
-            defaultValue={(a.declared / 60).toLocaleString("fr-FR")}
+            defaultValue={(a.declared / 60).toLocaleString(f.locale)}
             style={{ width: 90, minHeight: 40, padding: "8px 12px", fontWeight: 800 }}
             inputMode="decimal"
           />
           <span className="muted small">h</span>
           <label className="sr-only" htmlFor={`n-${a.id}`}>
-            Motif si vous retenez moins d’heures pour {a.firstName}
+            {t.reasonFor(a.firstName)}
           </label>
           <input
             id={`n-${a.id}`}
             className="input"
             name="note"
-            placeholder="Motif si moins d’heures"
+            placeholder={t.reason}
             maxLength={500}
             style={{ width: 210, minHeight: 40, padding: "8px 12px" }}
           />
           <Submit className="clay s btn xs ok" pending="…">
-            Valider
+            {t.validate}
           </Submit>
         </ActionForm>
       )}

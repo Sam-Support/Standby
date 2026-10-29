@@ -1,104 +1,109 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { getDb } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
-import { longDate } from "@/lib/format";
+import { account } from "@/lib/i18n/messages/account";
+import { getFmt, getMessages, say } from "@/lib/i18n/server";
 import { getPricing } from "@/lib/settings";
 import { deletionBlockers } from "@/lib/services/privacy";
 import { changeEmailAction, changePasswordAction, deleteAccountAction } from "./actions";
 
-export const metadata = { title: "Mon compte" };
+export async function generateMetadata() {
+  return { title: (await getMessages(account)).me.title };
+}
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
   const { email } = await searchParams;
   const user = await requireUser(undefined, "/compte");
   const db = await getDb();
-  const blockers = await deletionBlockers(db, user.id);
+  const blockers = await Promise.all((await deletionBlockers(db, user.id)).map(say));
   const { leadsRetentionDays } = await getPricing(db);
+  const t = (await getMessages(account)).me;
+  const f = await getFmt();
+  const current = t.email.current(user.email);
 
   return (
     <>
-      <PageHead label="Votre compte" title="Mon compte et mes données">
-        Identifiants de connexion et droits sur vos données (RGPD) : consultez, téléchargez ou supprimez ce que standby conserve sur vous. Détails
-        dans la <Link href="/confidentialite">politique de confidentialité</Link>.
+      <PageHead label={t.label} title={t.h1}>
+        {t.leadBefore}
+        <Link href="/confidentialite">{t.privacy}</Link>.
       </PageHead>
-      {email === "modifie" && <p className="note ok">Adresse e-mail modifiée : utilisez-la désormais pour vous connecter.</p>}
+      {email === "modifie" && <p className="note ok">{t.emailChanged}</p>}
       <div className="grid2">
         <section className="clay panel" aria-labelledby="pw-title">
-          <h2 id="pw-title">Changer de mot de passe</h2>
+          <h2 id="pw-title">{t.password.title}</h2>
           <ActionForm action={changePasswordAction} className="stack" style={{ gap: 14 }}>
             <label className="field">
-              Mot de passe actuel
+              {t.password.current}
               <input className="input" name="current" type="password" autoComplete="current-password" required />
             </label>
             <label className="field">
-              Nouveau mot de passe (10 caractères minimum)
+              {t.password.next}
               <input className="input" name="password" type="password" autoComplete="new-password" minLength={10} required />
             </label>
             <label className="field">
-              Confirmation du nouveau mot de passe
+              {t.password.confirm}
               <input className="input" name="confirm" type="password" autoComplete="new-password" minLength={10} required />
             </label>
-            <p className="muted small">Vos autres appareils seront déconnectés.</p>
+            <p className="muted small">{t.password.others}</p>
             <div>
-              <Submit className="clay s btn sm" pending="Enregistrement…">Changer le mot de passe</Submit>
+              <Submit className="clay s btn sm" pending={t.password.pending}>
+                {t.password.submit}
+              </Submit>
             </div>
           </ActionForm>
         </section>
         <section className="clay panel" aria-labelledby="email-title">
-          <h2 id="email-title">Changer d’adresse e-mail</h2>
+          <h2 id="email-title">{t.email.title}</h2>
           <p className="muted small">
-            Adresse actuelle : <b>{user.email}</b>. Un lien de confirmation part vers la nouvelle adresse ; l’actuelle reste valable jusqu’à ce que
-            vous cliquiez dessus.
+            {current.before}
+            <b>{current.email}</b>
+            {current.after}
           </p>
           <ActionForm action={changeEmailAction} className="stack" style={{ gap: 14 }}>
             <label className="field">
-              Nouvelle adresse e-mail
+              {t.email.next}
               <input className="input" name="email" type="email" autoComplete="email" required />
             </label>
             <label className="field">
-              Mot de passe (pour confirmer)
+              {t.email.password}
               <input className="input" name="password" type="password" autoComplete="current-password" required />
             </label>
             <div>
-              <Submit className="clay s btn sm" pending="Envoi…">Recevoir le lien de confirmation</Submit>
+              <Submit className="clay s btn sm" pending={t.email.pending}>
+                {t.email.submit}
+              </Submit>
             </div>
           </ActionForm>
         </section>
       </div>
       <div className="grid2">
         <section className="clay panel">
-          <h2>Mon compte</h2>
+          <h2>{t.info.title}</h2>
           <dl>
-            <div className="kv"><dt>E-mail</dt><dd>{user.email}</dd></div>
-            <div className="kv"><dt>Nom</dt><dd>{user.firstName} {user.lastName}</dd></div>
-            <div className="kv"><dt>Créé le</dt><dd>{longDate(user.createdAt)}</dd></div>
-            <div className="kv"><dt>E-mail confirmé</dt><dd>{user.emailVerifiedAt ? `oui, le ${longDate(user.emailVerifiedAt)}` : "non"}</dd></div>
+            <div className="kv"><dt>{t.info.email}</dt><dd>{user.email}</dd></div>
+            <div className="kv"><dt>{t.info.name}</dt><dd>{user.firstName} {user.lastName}</dd></div>
+            <div className="kv"><dt>{t.info.created}</dt><dd>{f.longDate(user.createdAt)}</dd></div>
+            <div className="kv"><dt>{t.info.verified}</dt><dd>{user.emailVerifiedAt ? t.info.yes(f.longDate(user.emailVerifiedAt)) : t.info.no}</dd></div>
           </dl>
           <p className="muted small">
-            Pour corriger vos autres informations, utilisez votre{" "}
-            <Link href={user.role === "commercial" ? "/commercial/profil" : user.role === "exposant" ? "/entreprise/profil" : "/admin"}>profil</Link>.
+            {t.info.profileBefore}
+            <Link href={user.role === "commercial" ? "/commercial/profil" : user.role === "exposant" ? "/entreprise/profil" : "/admin"}>{t.info.profile}</Link>.
           </p>
         </section>
         <section className="clay panel">
-          <h2>Télécharger mes données</h2>
-          <p className="muted">
-            Un fichier JSON avec votre profil, vos réservations ou missions, heures, factures, virements, avis, documents déposés (liste) et
-            notifications. Les leads appartiennent aux entreprises exposantes : elles les exportent depuis chaque réservation.
-          </p>
+          <h2>{t.download.title}</h2>
+          <p className="muted">{t.download.text}</p>
           <a className="clay s btn sm" href="/compte/export" download>
-            Télécharger (.json)
+            {t.download.cta}
           </a>
         </section>
       </div>
       <section className="clay panel">
-        <h2>Supprimer mon compte</h2>
-        <p className="muted">
-          Vos coordonnées, documents, plaquettes, favoris, avis reçus, notifications et leads sont supprimés, et vous ne pouvez plus vous connecter.
-          Les factures, réservations, heures et virements sont conservés 10 ans (obligation comptable), rattachés à un compte anonymisé.
-        </p>
-        <p className="muted small">Indépendamment de toute suppression, les leads sont effacés automatiquement {leadsRetentionDays} jours après leur réception.</p>
+        <h2>{t.delete.title}</h2>
+        <p className="muted">{t.delete.text}</p>
+        <p className="muted small">{t.delete.retention(leadsRetentionDays)}</p>
         {blockers.length > 0 ? (
           <div className="note">
             {blockers.map((b) => (
@@ -108,12 +113,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         ) : (
           <ActionForm action={deleteAccountAction} className="stack" style={{ maxWidth: 520 }}>
             <label className="field">
-              Pour confirmer, recopiez votre adresse e-mail
+              {t.delete.confirm}
               <input className="input" name="confirm" type="email" autoComplete="off" required />
             </label>
             <div>
-              <Submit className="clay s btn sm danger" pending="Suppression…">
-                Supprimer définitivement mon compte
+              <Submit className="clay s btn sm danger" pending={t.delete.pending}>
+                {t.delete.submit}
               </Submit>
             </div>
           </ActionForm>

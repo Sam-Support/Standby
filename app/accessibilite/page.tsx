@@ -1,14 +1,24 @@
 import { DocPage } from "@/components/doc-page";
-import { ACCESSIBILITE } from "@/lib/content/legal";
+import { legalContent } from "@/lib/content";
+import { pages } from "@/lib/i18n/messages/pages";
+import { getLang, getMessages } from "@/lib/i18n/server";
 
-export const metadata = { title: "Déclaration d’accessibilité" };
+export async function generateMetadata() {
+  return { title: (await getMessages(pages)).docs.accessibility.title };
+}
 
-export default function Page() {
+export default async function Page() {
+  const lang = await getLang();
+  const all = await getMessages(pages);
+  const t = all.docs;
   return (
     <DocPage
-      title="Déclaration d’accessibilité"
-      intro="Établie le [date]. Standby s’engage à rendre son site accessible conformément à l’article 47 de la loi n° 2005-102 du 11 février 2005."
-      sections={ACCESSIBILITE}
+      label={all.legal}
+      tocLabel={all.toc}
+      notice={all.frenchPrevails}
+      title={t.accessibility.title}
+      intro={t.accessibility.intro}
+      sections={legalContent(lang).ACCESSIBILITE}
     />
   );
 }

@@ -1,8 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { billingFields, eurosToCents, fail, file, str, strs, type FormState } from "@/lib/action";
+import { billingFields, eurosToCents, fail, oops, file, str, strs, type FormState } from "@/lib/action";
+import { getLang, localRedirect } from "@/lib/i18n/server";
 import { getCurrentCompany, getCurrentFreelancer, getCurrentUser, startSession } from "@/lib/auth/session";
 import { clientIp } from "@/lib/client-ip";
 import { hit, LIMITS } from "@/lib/rate-limit";
@@ -42,6 +42,7 @@ async function ensureAccount(fd: FormData, role: "exposant" | "commercial") {
     firstName: str(fd, "firstName"),
     lastName: str(fd, "lastName"),
     phone: str(fd, "phone"),
+    locale: await getLang(),
   });
   await startSession(profile.id, role);
   return profile.id;
@@ -52,7 +53,7 @@ export async function companyStep(step: number, _: FormState, fd: FormData): Pro
   try {
     const db = await getDb();
     if (step === 1) {
-      if (!isValidSiret(str(fd, "siret"))) return { error: "SIRET invalide : 14 chiffres, vérifiez la saisie." };
+      if (!isValidSiret(str(fd, "siret"))) return oops("SIRET invalide : 14 chiffres, vérifiez la saisie.");
       cleanBillingAddress(str(fd, "billingAddress")); // contrôlée avant de créer le compte
       const userId = await ensureAccount(fd, "exposant");
       await companyIdentity(db, userId, {
@@ -66,7 +67,7 @@ export async function companyStep(step: number, _: FormState, fd: FormData): Pro
       next = "/inscription/entreprise?etape=2";
     } else {
       const company = await getCurrentCompany();
-      if (!company) return { error: "Session expirée : reconnectez-vous." };
+      if (!company) return oops("Session expirée : reconnectez-vous.");
       if (step === 2) {
         const brochure = await readUpload(file(fd, "brochure"), ["pdf", "ppt", "pptx"]);
         await companyWeb(db, company, { website: str(fd, "website"), linkedin: str(fd, "linkedin"), brochure });
@@ -96,7 +97,7 @@ export async function companyStep(step: number, _: FormState, fd: FormData): Pro
   } catch (e) {
     return fail(e);
   }
-  redirect(next);
+  return localRedirect(next);
 }
 
 export async function freelancerStep(step: number, _: FormState, fd: FormData): Promise<FormState> {
@@ -104,7 +105,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
   try {
     const db = await getDb();
     if (step === 1) {
-      if (!str(fd, "city")) return { error: "Indiquez votre ville." };
+      if (!str(fd, "city")) return oops("Indiquez votre ville.");
       const userId = await ensureAccount(fd, "commercial");
       await freelancerIdentity(db, userId, {
         firstName: str(fd, "firstName"),
@@ -116,7 +117,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
       next = "/inscription/commercial?etape=2";
     } else {
       const f = await getCurrentFreelancer();
-      if (!f) return { error: "Session expirée : reconnectez-vous." };
+      if (!f) return oops("Session expirée : reconnectez-vous.");
       if (step === 2) {
         await freelancerProfile(db, f, {
           roles: strs(fd, "roles"),
@@ -141,5 +142,5 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
   } catch (e) {
     return fail(e);
   }
-  redirect(next);
+  return localRedirect(next);
 }

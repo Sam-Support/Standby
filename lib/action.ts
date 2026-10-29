@@ -3,17 +3,22 @@ import { AccountError } from "@/lib/services/accounts";
 import { AdminError } from "@/lib/services/admin";
 import { BookingError } from "@/lib/services/booking";
 import { UploadError } from "@/lib/storage";
+import { say } from "@/lib/i18n/server";
 
 export type FormState = { error?: string; ok?: string };
 
-/** Erreurs métier → message affiché ; le reste est journalisé et masqué. */
-export function fail(e: unknown): FormState {
+/** Erreurs métier → message affiché dans la langue de la requête ; le reste est journalisé et masqué. */
+export async function fail(e: unknown): Promise<FormState> {
   if (e instanceof BookingError || e instanceof AccountError || e instanceof AdminError || e instanceof UploadError || e instanceof RateLimitError) {
-    return { error: e.message };
+    return { error: await say(e.message) };
   }
   console.error(e);
-  return { error: "Une erreur est survenue. Réessayez dans un instant ou contactez-nous." };
+  return { error: await say("Une erreur est survenue. Réessayez dans un instant ou contactez-nous.") };
 }
+
+/** Message de formulaire écrit en français, traduit pour la réponse. */
+export const done = async (fr: string): Promise<FormState> => ({ ok: await say(fr) });
+export const oops = async (fr: string): Promise<FormState> => ({ error: await say(fr) });
 
 export const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 export const strs = (fd: FormData, key: string) => fd.getAll(key).map((v) => String(v).trim()).filter(Boolean);

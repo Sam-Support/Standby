@@ -108,11 +108,7 @@ export async function maybeValidateFreelancer(db: Db, freelancerId: string, toda
     return false;
   }
   await db.update(s.freelancers).set({ status: "valide" }).where(eq(s.freelancers.id, f.id));
-  await notify(db, f.userId, {
-    title: "Votre profil est validé",
-    body: "Vos documents sont vérifiés : votre profil est visible des exposants et vous recevrez vos premières missions.",
-    link: "/commercial",
-  });
+  await notify(db, f.userId, { t: (n) => n.profileValidated(), link: "/commercial" });
   return true;
 }
 
@@ -181,11 +177,7 @@ export async function checkCompliance(db: Db, today = todayIso(), lookup: SiretL
       if (claimed) {
         reminders++;
         await notify(db, f.userId, {
-          title: kind === "expiree" ? "Attestation URSSAF expirée : profil suspendu" : `Votre attestation URSSAF expire dans ${left} jour${left > 1 ? "s" : ""}`,
-          body:
-            kind === "expiree"
-              ? `Votre attestation a expiré le ${longDate(d.validUntil!)}. Vous ne recevez plus de missions tant qu’une attestation à jour n’est pas validée. Téléchargez-la sur urssaf.fr puis déposez-la dans votre profil.`
-              : `Elle expire le ${longDate(d.validUntil!)}. Téléchargez une attestation de vigilance à jour sur urssaf.fr et déposez-la dans votre profil pour continuer à recevoir des missions.`,
+          t: (n) => (kind === "expiree" ? n.urssafExpired({ validUntil: d.validUntil! }) : n.urssafExpiring({ left, validUntil: d.validUntil! })),
           link: "/commercial/profil",
         });
         if (kind === "expiree") {
@@ -221,11 +213,7 @@ export async function checkCompliance(db: Db, today = todayIso(), lookup: SiretL
       for (const a of admins) {
         await notify(db, a.id, { title: "Établissement fermé (SIRENE)", body: "Un commercial est retiré du matching.", link: "/admin/inscrits?tous=1", email: false });
       }
-      await notify(db, f.userId, {
-        title: "Votre SIRET apparaît comme fermé",
-        body: "Le répertoire SIRENE indique que votre établissement est fermé : vous ne recevez plus de missions. Contactez-nous si c’est une erreur.",
-        link: "/contact",
-      });
+      await notify(db, f.userId, { t: (n) => n.siretClosed(), link: "/contact" });
     }
     if (status === "introuvable" && before !== "introuvable") {
       // possible radiation ou établissement non diffusible : vérification humaine plutôt que retrait automatique

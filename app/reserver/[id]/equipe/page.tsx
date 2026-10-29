@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
+import { getLang } from "@/lib/i18n/server";
+import { localizePath } from "@/lib/i18n/config";
 import { Stepper } from "@/components/booking";
+import { booking } from "@/lib/i18n/messages/booking";
+import { getMessages } from "@/lib/i18n/server";
 import { PageHead } from "@/components/ui";
 import { isRoleKey, type OutfitKey, type RoleKey } from "@/lib/domain";
 import { billableMinutesPerDay } from "@/lib/pricing";
@@ -7,21 +11,24 @@ import { saveTeam } from "../../actions";
 import { loadDraft, reachedStep } from "../data";
 import { TeamForm } from "./team-form";
 
-export const metadata = { title: "Réserver · Équipe" };
+export async function generateMetadata() {
+  return { title: (await getMessages(booking)).meta.team };
+}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const d = await loadDraft(id, "equipe");
-  if (!d.event) redirect(`/reserver/${id}/evenement`);
+  if (!d.event) redirect(localizePath(`/reserver/${id}/evenement`, await getLang()));
   const initialQty: Partial<Record<RoleKey, number>> = {};
   for (const p of d.positions) if (isRoleKey(p.role)) initialQty[p.role] = p.qty;
   const selectedRates: Partial<Record<RoleKey, number[]>> = {};
   for (const a of d.assignments) if (isRoleKey(a.role)) (selectedRates[a.role] ??= []).push(a.hourlyRateCents);
 
+  const m = await getMessages(booking);
   return (
     <>
-      <PageHead label="Réservation exposant" title="Réserver une équipe de stand">
-        Cinq étapes. L’estimation se met à jour à chaque choix, le total définitif apparaît au récapitulatif.
+      <PageHead label={m.head.label} title={m.head.title}>
+        {m.head.lead}
       </PageHead>
       <Stepper id={id} current={2} reached={reachedStep(d)} />
       <TeamForm

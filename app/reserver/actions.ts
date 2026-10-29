@@ -2,9 +2,9 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { getDb, schema as s } from "@/db";
-import { fail, file, str, strs, type FormState } from "@/lib/action";
+import { fail, oops, file, str, strs, type FormState } from "@/lib/action";
+import { localRedirect } from "@/lib/i18n/server";
 import { getCurrentUser, requireCompany } from "@/lib/auth/session";
 import { isRoleKey, ROLE_KEYS, type RoleKey } from "@/lib/domain";
 import { createCustomer, paymentMethodSession, stripeEnabled } from "@/lib/integrations/stripe";
@@ -44,7 +44,7 @@ export async function saveEvent(id: string, _: FormState, fd: FormData): Promise
   } catch (e) {
     return fail(e);
   }
-  redirect(`/reserver/${id}/equipe`);
+  return localRedirect(`/reserver/${id}/equipe`);
 }
 
 export async function saveTeam(id: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -58,7 +58,7 @@ export async function saveTeam(id: string, _: FormState, fd: FormData): Promise<
   } catch (e) {
     return fail(e);
   }
-  redirect(`/reserver/${id}/brief`);
+  return localRedirect(`/reserver/${id}/brief`);
 }
 
 export async function saveBrief(id: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -87,7 +87,7 @@ export async function saveBrief(id: string, _: FormState, fd: FormData): Promise
   } catch (e) {
     return fail(e);
   }
-  redirect(`/reserver/${id}/profils`);
+  return localRedirect(`/reserver/${id}/profils`);
 }
 
 export async function reselect(id: string): Promise<FormState> {
@@ -128,7 +128,7 @@ export async function toggleFav(id: string, freelancerId: string): Promise<FormS
 export async function confirm(id: string, _: FormState, fd: FormData): Promise<FormState> {
   let target = `/reserver/${id}/confirmation`;
   try {
-    if (!fd.get("cgv")) return { error: "Merci d’accepter les conditions de prestation pour confirmer." };
+    if (!fd.get("cgv")) return oops("Merci d’accepter les conditions de prestation pour confirmer.");
     const { db, company, booking } = await ctx(id);
     const user = await getCurrentUser();
     requireVerifiedEmail(user!);
@@ -144,14 +144,14 @@ export async function confirm(id: string, _: FormState, fd: FormData): Promise<F
   } catch (e) {
     return fail(e);
   }
-  redirect(target);
+  return localRedirect(target);
 }
 
 export async function paymentSetup(id: string): Promise<FormState> {
   let target = "";
   try {
     const { db, company, booking } = await ctx(id);
-    if (!stripeEnabled()) return { error: "Paiement en ligne non configuré." };
+    if (!stripeEnabled()) return oops("Paiement en ligne non configuré.");
     const user = await getCurrentUser();
     let customerId = company.stripeCustomerId;
     if (!customerId) {
@@ -162,7 +162,7 @@ export async function paymentSetup(id: string): Promise<FormState> {
   } catch (e) {
     return fail(e);
   }
-  redirect(target);
+  return localRedirect(target);
 }
 
 export async function cancel(id: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -172,11 +172,11 @@ export async function cancel(id: string, _: FormState, fd: FormData): Promise<Fo
     const terms = await cancellationTerms(db, booking);
     // annulation toujours confirmée explicitement, même sans frais (elle est définitive)
     if (!fd.get("accept")) {
-      return { error: terms.totalHtCents > 0 ? "Cochez la case pour accepter les frais d’annulation." : "Cochez la case pour confirmer l’annulation." };
+      return oops(terms.totalHtCents > 0 ? "Cochez la case pour accepter les frais d’annulation." : "Cochez la case pour confirmer l’annulation.");
     }
     await cancelBooking(db, booking, user!.id);
   } catch (e) {
     return fail(e);
   }
-  redirect(`/entreprise/reservations/${id}?annulee=1`);
+  return localRedirect(`/entreprise/reservations/${id}?annulee=1`);
 }

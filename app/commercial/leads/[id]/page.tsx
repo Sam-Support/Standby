@@ -4,7 +4,10 @@ import { getDb, schema as s } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
 import { BackLink, Status } from "@/components/ui";
 import { requireFreelancer } from "@/lib/auth/session";
-import { dateRange } from "@/lib/format";
+import { booking as bookingMessages } from "@/lib/i18n/messages/booking";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { freelancer as messages } from "@/lib/i18n/messages/freelancer";
+import { getFmt, getMessages } from "@/lib/i18n/server";
 import type { ColumnMapping } from "@/lib/leads/mapping";
 import { freelancerMissions } from "@/lib/services/freelancer-views";
 import { templateColumns } from "@/lib/services/leads";
@@ -12,7 +15,9 @@ import { fileUrl } from "@/lib/storage";
 import { sendLeads, uploadCardsAction, uploadLeadsAction } from "../../actions";
 import { MissionSelect } from "./mission-select";
 
-export const metadata = { title: "Déposer mes leads" };
+export async function generateMetadata() {
+  return { title: (await getMessages(messages)).leads.title };
+}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,61 +41,69 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const mapping = xlsx?.mapping as (ColumnMapping & { headers: string[] }) | undefined;
   const sent = (await db.select().from(s.leadBatches).where(eq(s.leadBatches.assignmentId, id))).filter((b) => b.status !== "brouillon");
   const sentCount = sent.reduce((n, b) => n + b.rowsCount, 0);
+  const all = await getMessages(messages);
+  const t = all.leads;
+  const lf = (await getMessages(bookingMessages)).leadFormats;
+  const fm = await getFmt();
+  const dl = domainLabels(fm.lang);
+  const standard = tpl.name === "Fiche standard Standby";
+  const tplName = m.c.leadMode === "crm" ? lf.crm(m.c.crmProvider ?? "CRM") : standard ? lf.standard : tpl.name;
+  const col = (c: string) => (standard ? dl.leadColumn(c) : c);
 
   return (
     <>
-      <BackLink href="/commercial">Espace commercial</BackLink>
+      <BackLink href="/commercial">{all.area}</BackLink>
       <section className="clay main">
         <div className="row-between">
-          <h1 className="disp" style={{ fontSize: 32, lineHeight: 1.1 }}>Déposer mes leads</h1>
+          <h1 className="disp" style={{ fontSize: 32, lineHeight: 1.1 }}>{t.title}</h1>
           <span className="lab">
-            {m.e?.name} · {dateRange(m.first, m.last)}
+            {m.e?.name} · {fm.dateRange(m.first, m.last)}
           </span>
         </div>
-        <MissionSelect current={id} options={missions.map((x) => ({ id: x.a.id, label: `${x.e?.name} · ${dateRange(x.first, x.last)} · ${x.c.name}` }))} />
-        {sentCount > 0 && <p className="note ok">{sentCount} lead(s) déjà envoyés à {m.c.name} pour cette mission.</p>}
+        <MissionSelect current={id} label={t.mission} options={missions.map((x) => ({ id: x.a.id, label: `${x.e?.name} · ${fm.dateRange(x.first, x.last)} · ${x.c.name}` }))} />
+        {sentCount > 0 && <p className="note ok">{t.alreadySent(sentCount, m.c.name)}</p>}
 
-        <h2 style={{ font: "800 16px var(--sans)" }}>Format attendu par {m.c.name} : {tpl.name}</h2>
+        <h2 style={{ font: "800 16px var(--sans)" }}>{t.format(m.c.name, tplName)}</h2>
         <div className="chips" style={{ gap: 6 }}>
           {tpl.columns.map((c) => {
             const src = mapping?.mapping[c];
-            if (!mapping) return <span key={c} className="colc">{c}</span>;
+            if (!mapping) return <span key={c} className="colc">{col(c)}</span>;
             return (
               <span key={c} className={`colc ${src ? "ok" : "miss"}`}>
-                {c}
+                {col(c)}
                 {src && src !== c ? ` ← ${src}` : ""}
               </span>
             );
           })}
         </div>
 
-        <h2 style={{ font: "800 16px var(--sans)" }}>Fichier Excel de leads</h2>
+        <h2 style={{ font: "800 16px var(--sans)" }}>{t.excel}</h2>
         <ActionForm action={uploadLeadsAction.bind(null, id)} className="sunk drop">
           <span className="clay s ic" aria-hidden="true"></span>
           <div>
             <label htmlFor="file">
-              <b>{xlsx ? "Remplacer le fichier" : "Choisir un fichier .xlsx"}</b>
+              <b>{xlsx ? t.replace : t.choose}</b>
             </label>
-            <p className="muted small">La première ligne doit contenir les en-têtes de colonnes. Elles sont rapprochées automatiquement du format de l’entreprise.</p>
+            <p className="muted small">{t.excelHint}</p>
           </div>
           <input id="file" className="input" type="file" name="file" accept=".xlsx" required style={{ maxWidth: 260 }} />
-          <Submit className="clay s btn sm ghost" pending="Lecture…">Déposer</Submit>
+          <Submit className="clay s btn sm ghost" pending={t.reading}>{t.upload}</Submit>
         </ActionForm>
         {xlsx && mapping && (
           <>
             <div className="clay s" style={{ alignSelf: "flex-start", borderRadius: 14, padding: "8px 14px", font: "600 14px var(--sans)" }}>
-              {xlsx.filename} · {xlsx.rowsCount} lignes
+              {xlsx.filename} · {t.rows(xlsx.rowsCount)}
             </div>
             <div className={`note${mapping.missing.length ? "" : " ok"}`}>
-              {mapping.recognized}/{tpl.columns.length} colonnes reconnues
-              {mapping.missing.length ? ` · ${mapping.missing.join(", ")} sera complété${mapping.missing.length > 1 ? "s" : ""} par l’équipe Standby.` : "."}
+              {t.recognized(mapping.recognized, tpl.columns.length)}
+              {mapping.missing.length ? t.missing(mapping.missing.map(col).join(", "), mapping.missing.length) : "."}
             </div>
             <div className="tblwrap">
               <table className="tbl">
                 <thead>
                   <tr>
                     {tpl.columns.slice(0, 6).map((c) => (
-                      <th key={c} scope="col">{c}</th>
+                      <th key={c} scope="col">{col(c)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -108,19 +121,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </tbody>
               </table>
             </div>
-            <p className="muted" style={{ fontSize: 14 }}>Aperçu des {preview.length} premières lignes sur {xlsx.rowsCount}.</p>
+            <p className="muted" style={{ fontSize: 14 }}>{t.preview(preview.length, xlsx.rowsCount)}</p>
           </>
         )}
 
-        <h2 style={{ font: "800 16px var(--sans)" }}>Photos de cartes de visite</h2>
+        <h2 style={{ font: "800 16px var(--sans)" }}>{t.cards}</h2>
         {cards.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10 }}>
             {cards.map((c) => (
               <div key={c.id} className="clay s" style={{ aspectRatio: "7/4", borderRadius: 12, overflow: "hidden", position: "relative" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={fileUrl(c.path)!} alt="Carte de visite" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={fileUrl(c.path)!} alt={t.card} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <span style={{ position: "absolute", left: 6, bottom: 6 }}>
-                  <Status tone={c.status === "saisie" ? "ok" : "info"}>{c.status === "saisie" ? "Lue" : "À saisir"}</Status>
+                  <Status tone={c.status === "saisie" ? "ok" : "info"}>{c.status === "saisie" ? t.read : t.toEnter}</Status>
                 </span>
               </div>
             ))}
@@ -130,16 +143,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <span className="clay s ic" aria-hidden="true"></span>
           <div>
             <label htmlFor="cards">
-              <b>Ajouter des photos de cartes de visite</b>
+              <b>{t.addCards}</b>
             </label>
-            <p className="muted small">JPG, PNG ou WebP. Les cartes sont lues automatiquement ; sinon saisies dans le fichier par l’équipe sous 24 h.</p>
+            <p className="muted small">{t.cardsHint}</p>
           </div>
           <input id="cards" className="input" type="file" name="cards" accept=".jpg,.jpeg,.png,.webp" multiple required style={{ maxWidth: 260 }} />
-          <Submit className="clay s btn sm ghost" pending="Envoi…">Ajouter</Submit>
+          <Submit className="clay s btn sm ghost" pending={t.sending}>{t.add}</Submit>
         </ActionForm>
 
         <ActionForm action={sendLeads.bind(null, id)} style={{ display: "flex", justifyContent: "flex-end", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-          <Submit disabled={!xlsx && !cardsBatch} pending="Envoi…">Envoyer à l’entreprise</Submit>
+          <Submit disabled={!xlsx && !cardsBatch} pending={t.sending}>{t.send}</Submit>
         </ActionForm>
       </section>
     </>

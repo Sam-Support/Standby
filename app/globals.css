@@ -321,6 +321,8 @@ details.more[open] > summary::after { transform: rotate(225deg); }
 
 /* facture imprimable */
 .invoice { background: #fff; border-radius: 18px; padding: 40px; display: flex; flex-direction: column; gap: 22px; color: #111; }
+.invoice .bi { display: block; font-size: .8em; font-weight: 500; color: #555; }
+.invoice .bi.inl { display: inline; }
 @media print {
   body { background: #fff; }
   nav.clay.nav, .foot, .noprint, .cookiebar { display: none !important; }
@@ -360,3 +362,8 @@ details.more[open] > summary::after { transform: rotate(225deg); }
 }
 button.bell { border: 0; cursor: pointer; font: inherit; }
 .navright form { display: flex; }
+/* sélecteur de langue (en-tête) */
+.langs { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(27, 33, 80, 0.06); }
+.langs a { font: 800 11px/1 var(--sans); color: var(--muted); text-decoration: none; padding: 7px 7px; border-radius: 9px; letter-spacing: 0.04em; }
+.langs a[aria-current="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(27, 33, 80, 0.15); }
+.langs a:hover { color: var(--ink); }

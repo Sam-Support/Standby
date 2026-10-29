@@ -1,28 +1,28 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { usePathname } from "next/navigation";
-
-const TABS = [
-  { href: "/", label: "Accueil", match: (p: string) => p === "/" },
-  { href: "/reserver", label: "Réserver", match: (p: string) => p.startsWith("/reserver") },
-  { href: "/entreprise", label: "Entreprise", match: (p: string) => p.startsWith("/entreprise") },
-  { href: "/commercial", label: "Commercial", match: (p: string) => p.startsWith("/commercial") },
-];
+import { splitLang } from "@/lib/i18n/config";
+import { common } from "@/lib/i18n/messages/common";
+import { useMessages } from "./i18n";
 
 export function NavTabs({ admin }: { admin: boolean }) {
-  const pathname = usePathname();
-  const tabs = admin ? [...TABS, { href: "/admin", label: "Admin", match: (p: string) => p.startsWith("/admin") }] : TABS;
+  const { path } = splitLang(usePathname() || "/");
+  const t = useMessages(common).nav;
+  const tabs = [
+    { href: "/", label: t.home, on: path === "/" },
+    { href: "/reserver", label: t.book, on: path.startsWith("/reserver") },
+    { href: "/entreprise", label: t.company, on: path.startsWith("/entreprise") },
+    { href: "/commercial", label: t.freelancer, on: path.startsWith("/commercial") },
+    ...(admin ? [{ href: "/admin", label: t.admin, on: path.startsWith("/admin") }] : []),
+  ];
   return (
     <div className="tabs sunk">
-      {tabs.map((t) => {
-        const on = t.match(pathname);
-        return (
-          <Link key={t.href} href={t.href} className={on ? "tab on clay s" : "tab"} aria-current={on ? "page" : undefined}>
-            {t.label}
-          </Link>
-        );
-      })}
+      {tabs.map((tab) => (
+        <Link key={tab.href} href={tab.href} className={tab.on ? "tab on clay s" : "tab"} aria-current={tab.on ? "page" : undefined}>
+          {tab.label}
+        </Link>
+      ))}
     </div>
   );
 }

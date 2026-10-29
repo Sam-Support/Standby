@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import { getLang } from "@/lib/i18n/server";
+import { localizePath } from "@/lib/i18n/config";
 import { getDb } from "@/db";
 import { requireCompany } from "@/lib/auth/session";
 import { getCompanyBooking, loadBookingContext } from "@/lib/services/booking";
@@ -9,7 +11,7 @@ export async function loadDraft(id: string, step: string, allowSent = false) {
   const db = await getDb();
   const booking = await getCompanyBooking(db, id, company.id);
   if (!booking) notFound();
-  if (!allowSent && booking.status !== "brouillon") redirect(`/reserver/${id}/confirmation`);
+  if (!allowSent && booking.status !== "brouillon") redirect(localizePath(`/reserver/${id}/confirmation`, await getLang()));
   const ctx = await loadBookingContext(db, booking);
   return { db, company, booking, ...ctx };
 }

@@ -1,22 +1,29 @@
-import Link from "next/link";
-import { FAQ } from "@/lib/content/legal";
+import Link from "@/components/link";
+import { legalContent } from "@/lib/content";
+import { pages } from "@/lib/i18n/messages/pages";
+import { getLang, getMessages } from "@/lib/i18n/server";
 import { FaqSearch } from "./search";
 
-export const metadata = { title: "Centre d’aide" };
+export async function generateMetadata() {
+  return { title: (await getMessages(pages)).faq.title };
+}
 
-export default function Page() {
+export default async function Page() {
+  const all = await getMessages(pages);
+  const t = all.faq;
   return (
     <>
       <div className="head">
         <div>
-          <span className="lab">Aide</span>
-          <h1>Centre d’aide</h1>
+          <span className="lab">{all.help}</span>
+          <h1>{t.title}</h1>
           <p>
-            Les réponses aux questions les plus fréquentes. Vous ne trouvez pas ? <Link href="/contact">Écrivez-nous</Link>.
+            {t.leadBefore}
+            <Link href="/contact">{t.write}</Link>.
           </p>
         </div>
       </div>
-      <FaqSearch faq={FAQ} />
+      <FaqSearch faq={legalContent(await getLang()).FAQ} />
     </>
   );
 }

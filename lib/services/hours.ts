@@ -104,8 +104,7 @@ export async function validateAssignmentHours(
       .set({ hoursAdjustedAt: new Date(), hoursAdjustmentNote: note, hoursDisputeNote: null })
       .where(eq(s.assignments.id, assignmentId));
     await notify(db, row.f.userId, {
-      title: `Heures ajustées (${row.b.ref})`,
-      body: `L’exposant a retenu ${hoursLabel(retained)} au lieu de ${hoursLabel(declared)}${note ? ` : « ${note} »` : ""}. Acceptez ou contestez sous ${ADJUSTMENT_WINDOW_HOURS} h ; sans réponse, l’ajustement est retenu.`,
+      t: (n) => n.hoursAdjusted({ ref: row.b.ref, retained, declared, note: note || null, window: ADJUSTMENT_WINDOW_HOURS }),
       link: `/commercial/missions/${assignmentId}`,
     });
   }
@@ -137,8 +136,7 @@ export async function respondToAdjustment(db: Db, assignmentId: string, freelanc
   const [c] = await db.select({ ownerId: s.companies.ownerId }).from(s.companies).where(eq(s.companies.id, row.b.companyId));
   const figures = `${hoursLabel(total(sheets, "declared"))} déclarées, ${hoursLabel(total(sheets, "validated"))} retenues`;
   await notify(db, c.ownerId, {
-    title: `${p.firstName} conteste l’ajustement de ses heures (${row.b.ref})`,
-    body: `${figures}. Motif : « ${motive} ». L’équipe Standby arbitre avec vous deux ; la facture est émise après l’arbitrage.`,
+    t: (n) => n.hoursDisputed({ first: p.firstName, ref: row.b.ref, declared: total(sheets, "declared"), retained: total(sheets, "validated"), motive }),
     link: `/entreprise/reservations/${row.b.id}`,
   });
   await notifyAdmins(db, {

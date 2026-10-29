@@ -1,4 +1,6 @@
-import Link from "next/link";
+import Link from "@/components/link";
+import { getFmt, getLang, getMessages } from "@/lib/i18n/server";
+import { localizePath } from "@/lib/i18n/config";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getDb, schema as s } from "@/db";
@@ -8,22 +10,24 @@ import { AccountFields, Progress, Why } from "@/components/onboarding";
 import { OrderedChips } from "@/components/ordered-chips";
 import { Chip, PageHead, Status } from "@/components/ui";
 import { getCurrentFreelancer, getCurrentUser } from "@/lib/auth/session";
-import { DOCUMENT_TYPES, LANGUAGES, ROLES, SIGNUP_ROLE_ORDER, SPECIALTIES, type DocumentKey } from "@/lib/domain";
-import { hourly } from "@/lib/format";
+import { LANGUAGES, SIGNUP_ROLE_ORDER, SPECIALTIES, type DocumentKey } from "@/lib/domain";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { signup } from "@/lib/i18n/messages/signup";
 import { getPricing } from "@/lib/settings";
 import { formatSiret } from "@/lib/siret";
 import { freelancerStep } from "../actions";
 
-export const metadata = { title: "Inscription commercial·e" };
+export async function generateMetadata() {
+  return { title: (await getMessages(signup)).freelancer.title };
+}
 
-const LABELS = ["Identité", "Profil", "Tenue", "Statut & documents"];
 const TOPS = ["XS", "S", "M", "L", "XL", "XXL"];
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ etape?: string }> }) {
   const user = await getCurrentUser();
-  if (user && user.role !== "commercial") redirect("/comptes?erreur=role");
+  if (user && user.role !== "commercial") redirect(localizePath("/comptes?erreur=role", await getLang()));
   const f = await getCurrentFreelancer();
-  if (f && f.onboardingStep > 4) redirect("/commercial");
+  if (f && f.onboardingStep > 4) redirect(localizePath("/commercial", await getLang()));
   const max = f?.onboardingStep ?? 1;
   const step = Math.min(Math.max(Number((await searchParams).etape) || max, 1), max);
   const db = await getDb();
@@ -31,15 +35,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
   const docs = f ? await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id)) : [];
   const otherLangs = f?.languages.filter((l) => !LANGUAGES.includes(l)) ?? [];
   const otherSpecs = f?.specialties.filter((x) => !SPECIALTIES.includes(x)) ?? [];
+  const m = await getMessages(signup);
+  const t = m.freelancer;
+  const fm = await getFmt();
+  const dl = domainLabels(fm.lang);
+  const labels = t.steps;
 
   return (
     <>
-      <PageHead label="Inscription commercial·e" title="Créer votre compte commercial">
-        Quatre étapes, environ trois minutes. Votre profil est visible des exposants dès la validation de vos documents.
+      <PageHead label={t.title} title={t.h1}>
+        {t.lead}
       </PageHead>
       <div className="layout">
         <section className="clay main">
-          <Progress step={step} label={LABELS[step - 1]} next={LABELS.slice(step).join(" → ")} color="#68D1A4" />
+          <Progress step={step} label={labels[step - 1]} next={labels.slice(step).join(" → ")} color="#68D1A4" />
           <ActionForm action={freelancerStep.bind(null, step)} className="stack" style={{ gap: 18 }}>
             {step === 1 && (
               <>
@@ -48,88 +57,86 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                 ) : (
                   <div className="fgrid">
                     <label className="field">
-                      Prénom
+                      {t.firstName}
                       <input className="input" name="firstName" defaultValue={user.firstName} required />
                     </label>
                     <label className="field">
-                      Nom
+                      {t.lastName}
                       <input className="input" name="lastName" defaultValue={user.lastName} required />
                     </label>
                     <label className="field">
-                      Téléphone
+                      {t.phone}
                       <input className="input" name="phone" type="tel" defaultValue={user.phone ?? ""} />
                     </label>
                   </div>
                 )}
-                <h2 className="ptitle">Où travaillez-vous ?</h2>
+                <h2 className="ptitle">{t.where}</h2>
                 <div className="fgrid">
                   <label className="field">
-                    <span>Ville <span className="req">*</span></span>
-                    <input className="input" name="city" required defaultValue={f?.city} autoComplete="address-level2" placeholder="Paris, Lyon, Cannes…" />
+                    <span>{t.city} <span className="req">*</span></span>
+                    <input className="input" name="city" required defaultValue={f?.city} autoComplete="address-level2" placeholder={t.cityPlaceholder} />
                   </label>
                 </div>
                 <label className="field">
-                  Présentation (facultatif)
-                  <textarea className="input" name="bio" defaultValue={f?.bio ?? ""} placeholder="Votre expérience des salons, vos points forts…"></textarea>
+                  {t.bio}
+                  <textarea className="input" name="bio" defaultValue={f?.bio ?? ""} placeholder={t.bioPlaceholder}></textarea>
                 </label>
               </>
             )}
             {step === 2 && (
               <>
-                <h2 className="ptitle">Postes <span className="req">*</span></h2>
-                <p className="muted small">Le premier choisi devient votre poste principal.</p>
-                <OrderedChips name="roles" options={SIGNUP_ROLE_ORDER.map((r) => ({ value: r, label: ROLES[r].label }))} initial={f?.roles ?? []} />
-                <h2 className="ptitle">Spécialités <span className="req">*</span></h2>
-                <p className="muted small">Les secteurs que vous connaissez : ils comptent dans le matching avec les événements.</p>
+                <h2 className="ptitle">{t.roles} <span className="req">*</span></h2>
+                <p className="muted small">{t.rolesHint}</p>
+                <OrderedChips name="roles" options={SIGNUP_ROLE_ORDER.map((r) => ({ value: r, label: dl.role(r).label }))} initial={f?.roles ?? []} />
+                <h2 className="ptitle">{t.specialties} <span className="req">*</span></h2>
+                <p className="muted small">{t.specialtiesHint}</p>
                 <div className="chips">
                   {SPECIALTIES.map((sp) => (
-                    <Chip key={sp} name="specialties" value={sp} checked={f?.specialties.includes(sp)}>{sp}</Chip>
+                    <Chip key={sp} name="specialties" value={sp} checked={f?.specialties.includes(sp)}>{dl.specialty(sp)}</Chip>
                   ))}
-                  <input className="input" name="otherSpecialty" aria-label="Autre spécialité" placeholder="+ Autre" defaultValue={otherSpecs[0] ?? ""} style={{ width: 180, minHeight: 40, padding: "8px 12px" }} />
+                  <input className="input" name="otherSpecialty" aria-label={t.otherSpecialty} placeholder={m.other} defaultValue={otherSpecs[0] ?? ""} style={{ width: 180, minHeight: 40, padding: "8px 12px" }} />
                 </div>
-                <h2 className="ptitle">Langues parlées <span className="req">*</span></h2>
+                <h2 className="ptitle">{t.languages} <span className="req">*</span></h2>
                 <div className="chips">
                   {LANGUAGES.map((l) => (
-                    <Chip key={l} name="languages" value={l} checked={f?.languages.length ? f.languages.includes(l) : l === "Français"}>{l}</Chip>
+                    <Chip key={l} name="languages" value={l} checked={f?.languages.length ? f.languages.includes(l) : l === "Français"}>{dl.language(l)}</Chip>
                   ))}
-                  <input className="input" name="otherLanguage" aria-label="Autre langue" placeholder="+ Autre" defaultValue={otherLangs[0] ?? ""} style={{ width: 160, minHeight: 40, padding: "8px 12px" }} />
+                  <input className="input" name="otherLanguage" aria-label={t.otherLanguage} placeholder={m.other} defaultValue={otherLangs[0] ?? ""} style={{ width: 160, minHeight: 40, padding: "8px 12px" }} />
                 </div>
                 <div className="fgrid">
                   <label className="field">
-                    <span>Tarif horaire HT (€) <span className="req">*</span></span>
+                    <span>{t.rate} <span className="req">*</span></span>
                     <input className="input" name="rate" inputMode="decimal" required defaultValue={f?.hourlyRateCents ? f.hourlyRateCents / 100 : ""} placeholder="30" />
-                    <span className="hint">
-                      Minimum selon le poste principal : {SIGNUP_ROLE_ORDER.map((r) => `${ROLES[r].short} ${hourly(pricing.floors[r])}`).join(" · ")}. Affiché aux exposants.
-                    </span>
+                    <span className="hint">{t.rateHint(SIGNUP_ROLE_ORDER.map((r) => `${dl.role(r).short} ${fm.hourly(pricing.floors[r])}`).join(" · "))}</span>
                   </label>
                 </div>
               </>
             )}
             {step === 3 && (
               <>
-                <p className="muted">Quand l’exposant prête une tenue, il la prépare à votre taille avant votre arrivée.</p>
+                <p className="muted">{t.outfitLead}</p>
                 <div className="fgrid3">
                   <label className="field">
-                    Haut
+                    {t.top}
                     <select className="input" name="top" defaultValue={f?.topSize ?? "M"}>
-                      {TOPS.map((t) => (
-                        <option key={t}>{t}</option>
+                      {TOPS.map((x) => (
+                        <option key={x}>{x}</option>
                       ))}
                     </select>
                   </label>
                   <label className="field">
-                    Pantalon / jupe
+                    {t.pants}
                     <select className="input" name="pants" defaultValue={f?.pantsSize ?? "40"}>
-                      {Array.from({ length: 9 }, (_, i) => String(34 + i * 2)).map((t) => (
-                        <option key={t}>{t}</option>
+                      {Array.from({ length: 9 }, (_, i) => String(34 + i * 2)).map((x) => (
+                        <option key={x}>{x}</option>
                       ))}
                     </select>
                   </label>
                   <label className="field">
-                    Pointure
+                    {t.shoe}
                     <select className="input" name="shoe" defaultValue={f?.shoeSize ?? "40"}>
-                      {Array.from({ length: 13 }, (_, i) => String(35 + i)).map((t) => (
-                        <option key={t}>{t}</option>
+                      {Array.from({ length: 13 }, (_, i) => String(35 + i)).map((x) => (
+                        <option key={x}>{x}</option>
                       ))}
                     </select>
                   </label>
@@ -144,79 +151,70 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                     <input className="input" name="siret" inputMode="numeric" required defaultValue={f?.siret ? formatSiret(f.siret) : ""} />
                   </label>
                   <label className="field">
-                    Statut
+                    {t.status}
                     <select className="input" name="legalStatus" defaultValue={f?.legalStatus ?? "Auto-entrepreneur"}>
-                      <option>Auto-entrepreneur</option>
-                      <option>Entreprise individuelle</option>
-                      <option>Société (EURL, SASU…)</option>
+                      {t.statuses.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
-                <h2 className="ptitle">Documents</h2>
-                <p className="muted small">PDF, JPG ou PNG, 20 Mo maximum. Stockés séparément, consultés uniquement par l’équipe de vérification.</p>
-                {(["identite", "urssaf", "rib", "siret"] as DocumentKey[]).map((t) => {
-                  const d = docs.find((x) => x.type === t);
+                <h2 className="ptitle">{t.documents}</h2>
+                <p className="muted small">{t.documentsHint}</p>
+                {(["identite", "urssaf", "rib", "siret"] as DocumentKey[]).map((k) => {
+                  const d = docs.find((x) => x.type === k);
                   return (
-                    <div key={t} className="sunk drop">
+                    <div key={k} className="sunk drop">
                       <span className="clay s ic" style={{ ["--c" as string]: "#68D1A4" }} aria-hidden="true"></span>
                       <div>
-                        <label htmlFor={`doc_${t}`}>
-                          <b>{DOCUMENT_TYPES[t]}</b> {t !== "siret" && <span className="req">*</span>}
+                        <label htmlFor={`doc_${k}`}>
+                          <b>{dl.document(k)}</b> {k !== "siret" && <span className="req">*</span>}
                         </label>
                         <p className="muted small">
                           {d ? (
                             <>
                               {d.filename} ·{" "}
                               <Status tone={d.status === "valide" ? "ok" : d.status === "refuse" ? "warn" : "info"}>
-                                {d.status === "valide" ? "Validé" : d.status === "refuse" ? `À corriger${d.comment ? ` : ${d.comment}` : ""}` : "Reçu"}
+                                {d.status === "valide" ? t.docValid : d.status === "refuse" ? t.docFix(d.comment) : t.docReceived}
                               </Status>
                             </>
-                          ) : t === "siret" ? (
-                            "Facultatif : accélère la vérification."
+                          ) : k === "siret" ? (
+                            t.siretOptional
                           ) : (
-                            "À déposer"
+                            t.toUpload
                           )}
                         </p>
                       </div>
-                      <input id={`doc_${t}`} className="input" type="file" name={`doc_${t}`} accept=".pdf,.jpg,.jpeg,.png" style={{ maxWidth: 280 }} />
-                      {t === "urssaf" && (
+                      <input id={`doc_${k}`} className="input" type="file" name={`doc_${k}`} accept=".pdf,.jpg,.jpeg,.png" style={{ maxWidth: 280 }} />
+                      {k === "urssaf" && (
                         <label className="field" style={{ flexBasis: "100%" }}>
-                          Date de délivrance de l’attestation (elle vaut 6 mois)
+                          {t.urssafDate}
                           <input className="input" type="date" name="urssafIssuedOn" defaultValue={d?.issuedOn ?? ""} style={{ maxWidth: 220 }} />
                         </label>
                       )}
                     </div>
                   );
                 })}
-                <h2 className="ptitle">Facturation</h2>
-                <p className="muted small">
-                  Après chaque mission, Standby établit la facture à votre nom (autofacturation) et vous la met à disposition avec votre relevé de paie.
-                </p>
+                <h2 className="ptitle">{t.billing}</h2>
+                <p className="muted small">{t.billingLead}</p>
                 <BillingFields f={f} />
               </>
             )}
             <div className="nav-row">
               {step > 1 ? (
                 <Link className="clay btn ghost" href={`/inscription/commercial?etape=${step - 1}`}>
-                  Retour
+                  {m.back}
                 </Link>
               ) : (
                 <span></span>
               )}
-              <Submit className="clay btn butter">{step === 4 ? "Envoyer mon profil ✓" : "Continuer →"}</Submit>
+              <Submit className="clay btn butter">{step === 4 ? t.submit : m.next}</Submit>
             </div>
           </ActionForm>
         </section>
-        <Why
-          color="#1C8755"
-          items={[
-            ["Spécialités et langues", "elles font remonter votre profil sur les bons événements."],
-            ["Tailles", "l’exposant prépare votre tenue avant votre arrivée."],
-            ["SIRET et URSSAF", "obligatoires pour facturer en auto-entrepreneur."],
-            ["RIB", "virement chaque lundi pour la semaine travaillée."],
-            ["Mandat de facturation", "vos factures sont établies pour vous, avec la bonne mention de TVA."],
-          ]}
-        />
+        <Why color="#1C8755" items={t.why} />
       </div>
     </>
   );

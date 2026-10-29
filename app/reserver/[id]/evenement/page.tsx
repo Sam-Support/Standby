@@ -1,4 +1,6 @@
 import { ActionForm } from "@/components/action-form";
+import { booking } from "@/lib/i18n/messages/booking";
+import { getMessages } from "@/lib/i18n/server";
 import { BookingAside, Stepper } from "@/components/booking";
 import { PageHead } from "@/components/ui";
 import { billableMinutesPerDay } from "@/lib/pricing";
@@ -7,7 +9,9 @@ import { saveEvent } from "../../actions";
 import { loadDraft, reachedStep } from "../data";
 import { EventPicker } from "./picker";
 
-export const metadata = { title: "Réserver · Événement" };
+export async function generateMetadata() {
+  return { title: (await getMessages(booking)).meta.event };
+}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,15 +20,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (d.event && !events.some((e) => e.id === d.event!.id)) {
     events.unshift(...(await upcomingEvents(d.db, { from: d.event.startsOn })).filter((e) => e.id === d.event!.id));
   }
+  const m = await getMessages(booking);
   return (
     <>
-      <PageHead label="Réservation exposant" title="Réserver une équipe de stand">
-        Cinq étapes. L’estimation se met à jour à chaque choix, le total définitif apparaît au récapitulatif.
+      <PageHead label={m.head.label} title={m.head.title}>
+        {m.head.lead}
       </PageHead>
       <Stepper id={id} current={1} reached={reachedStep(d)} />
       <div className="layout">
         <section className="clay main">
-          <p className="note info">Réservation au nom de {d.company.name}</p>
+          <p className="note info">{m.onBehalf(d.company.name)}</p>
           <ActionForm action={saveEvent.bind(null, id)} className="stack" style={{ gap: 18 }}>
             <EventPicker
               events={events}

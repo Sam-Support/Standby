@@ -1,14 +1,32 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db";
 import { auditLog, notifications, profiles } from "@/db/schema";
+import { DEFAULT_LANG, isLang, localizePath, type Lang } from "./i18n/config";
+import { notices, type Notices } from "./i18n/messages/notices";
 import { sendEmail } from "./integrations/email";
 
-/** Notification dans l'espace de l'utilisateur + e-mail. */
-export async function notify(db: Db, userId: string, n: { title: string; body: string; link?: string; email?: boolean }) {
-  await db.insert(notifications).values({ userId, title: n.title, body: n.body, link: n.link });
-  if (n.email === false) return;
-  const [p] = await db.select({ email: profiles.email }).from(profiles).where(eq(profiles.id, userId));
-  if (p) await sendEmail({ to: p.email, subject: n.title, text: n.body, link: n.link ? { label: "Ouvrir standby", href: n.link } : undefined }, db);
+type Text = { title: string; body: string };
+/** Texte fixe (messages internes, en français) ou choisi dans le catalogue selon la langue du destinataire. */
+type Notice = { link?: string; email?: boolean } & (Text | { t: (n: Notices, lang: Lang) => Text });
+
+/** Langue du compte (profiles.locale), français à défaut. */
+export async function localeOf(db: Db, userId: string): Promise<Lang> {
+  const [p] = await db.select({ locale: profiles.locale }).from(profiles).where(eq(profiles.id, userId));
+  return isLang(p?.locale) ? p.locale : DEFAULT_LANG;
+}
+
+/** Notification dans l'espace de l'utilisateur + e-mail, dans la langue de son compte. */
+export async function notify(db: Db, userId: string, n: Notice) {
+  const [p] = await db.select({ email: profiles.email, locale: profiles.locale }).from(profiles).where(eq(profiles.id, userId));
+  const lang: Lang = isLang(p?.locale) ? p.locale : DEFAULT_LANG;
+  const catalog = notices(lang);
+  const text = "t" in n ? n.t(catalog, lang) : n;
+  await db.insert(notifications).values({ userId, title: text.title, body: text.body, link: n.link });
+  if (n.email === false || !p) return;
+  await sendEmail(
+    { to: p.email, subject: text.title, text: text.body, link: n.link ? { label: catalog.open, href: localizePath(n.link, lang) } : undefined, lang },
+    db,
+  );
 }
 
 /** Même notification pour chaque administrateur. */

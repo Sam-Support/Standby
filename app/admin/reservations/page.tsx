@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { PageHead, BookingStatus } from "@/components/ui";
 import { getDb } from "@/db";
 import { BOOKING_STATUS_LABELS } from "@/lib/domain";

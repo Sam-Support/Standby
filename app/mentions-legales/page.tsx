@@ -1,8 +1,24 @@
 import { DocPage } from "@/components/doc-page";
-import { MENTIONS } from "@/lib/content/legal";
+import { legalContent } from "@/lib/content";
+import { pages } from "@/lib/i18n/messages/pages";
+import { getLang, getMessages } from "@/lib/i18n/server";
 
-export const metadata = { title: "Mentions légales" };
+export async function generateMetadata() {
+  return { title: (await getMessages(pages)).docs.mentions };
+}
 
-export default function Page() {
-  return <DocPage title="Mentions légales" intro="Dernière mise à jour : [date]" sections={MENTIONS} />;
+export default async function Page() {
+  const lang = await getLang();
+  const all = await getMessages(pages);
+  const t = all.docs;
+  return (
+    <DocPage
+      label={all.legal}
+      tocLabel={all.toc}
+      notice={all.frenchPrevails}
+      title={t.mentions}
+      intro={t.updated}
+      sections={legalContent(lang).MENTIONS}
+    />
+  );
 }

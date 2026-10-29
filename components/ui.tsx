@@ -1,18 +1,21 @@
-import Link from "next/link";
-import { ASSIGNMENT_STATUS_LABELS, BOOKING_STATUS_LABELS } from "@/lib/domain";
+"use client";
+
+import Link from "@/components/link";
+import { domainLabels } from "@/lib/i18n/messages/domain";
 import { initials } from "@/lib/format";
+import { useLang } from "./i18n";
 
 export function Status({ tone = "", children }: { tone?: "" | "ok" | "warn" | "info"; children: React.ReactNode }) {
   return <span className={`st ${tone}`}>{children}</span>;
 }
 
 export function BookingStatus({ status }: { status: string }) {
-  const s = BOOKING_STATUS_LABELS[status] ?? { label: status, tone: "" as const };
+  const s = domainLabels(useLang()).bookingStatus(status);
   return <Status tone={s.tone}>{s.label}</Status>;
 }
 
 export function AssignmentStatus({ status }: { status: string }) {
-  const s = ASSIGNMENT_STATUS_LABELS[status] ?? { label: status, tone: "" as const };
+  const s = domainLabels(useLang()).assignmentStatus(status);
   return <Status tone={s.tone}>{s.label}</Status>;
 }
 

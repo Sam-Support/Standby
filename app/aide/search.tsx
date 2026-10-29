@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { Rich } from "@/components/doc-page";
+import { useMessages } from "@/components/i18n";
+import { pages } from "@/lib/i18n/messages/pages";
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function FaqSearch({ faq }: { faq: { theme: string; items: [string, string][] }[] }) {
+  const t = useMessages(pages).faq;
   const [q, setQ] = useState("");
   const filtered = faq
     .map((t) => ({ ...t, items: t.items.filter(([qq, a]) => !q || norm(qq + a).includes(norm(q))) }))
@@ -13,12 +16,12 @@ export function FaqSearch({ faq }: { faq: { theme: string; items: [string, strin
   return (
     <>
       <label className="sr-only" htmlFor="faq-q">
-        Rechercher dans l’aide
+        {t.search}
       </label>
-      <input id="faq-q" className="input" type="search" placeholder="Rechercher dans l’aide…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input id="faq-q" className="input" type="search" placeholder={t.placeholder} value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="doc">
-        <nav className="clay toc" aria-label="Thèmes">
-          <span className="lab">Thèmes</span>
+        <nav className="clay toc" aria-label={t.themes}>
+          <span className="lab">{t.themes}</span>
           {faq.map((t, i) => (
             <a key={t.theme} href={`#t${i}`}>
               <b>{i + 1}</b>
@@ -42,7 +45,7 @@ export function FaqSearch({ faq }: { faq: { theme: string; items: [string, strin
               ))}
             </section>
           ))}
-          {filtered.length === 0 && <p className="muted">Aucune réponse ne correspond à « {q} ».</p>}
+          {filtered.length === 0 && <p className="muted">{t.none(q)}</p>}
         </div>
       </div>
     </>

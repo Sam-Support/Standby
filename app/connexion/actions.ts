@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { fail, safeNext, str, type FormState } from "@/lib/action";
+import { done, fail, oops, safeNext, str, type FormState } from "@/lib/action";
+import { localRedirect } from "@/lib/i18n/server";
 import { endSession, getCurrentUser, startSession } from "@/lib/auth/session";
 import { clientIp } from "@/lib/client-ip";
 import { check, hit, LIMITS, reset } from "@/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
     if (!profile) {
       // seuls les échecs comptent pour un compte donné
       await hit(db, `login:email:${email}`, LIMITS.loginEmail);
-      return { error: "E-mail ou mot de passe incorrect." };
+      return oops("E-mail ou mot de passe incorrect.");
     }
     await reset(db, `login:email:${email}`);
     await startSession(profile.id, profile.role, profile.sessionVersion);
@@ -30,12 +30,12 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
   } catch (e) {
     return fail(e);
   }
-  redirect(target);
+  return localRedirect(target);
 }
 
 export async function logoutAction() {
   await endSession();
-  redirect("/");
+  return localRedirect("/");
 }
 
 export async function forgotAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -45,7 +45,7 @@ export async function forgotAction(_: FormState, fd: FormData): Promise<FormStat
     await hit(db, `reset:ip:${await clientIp()}`, LIMITS.resetIp);
     await hit(db, `reset:email:${email}`, LIMITS.resetEmail);
     await requestPasswordReset(db, email);
-    return { ok: "Si un compte existe pour cette adresse, un lien de réinitialisation vient d’être envoyé." };
+    return done("Si un compte existe pour cette adresse, un lien de réinitialisation vient d’être envoyé.");
   } catch (e) {
     return fail(e);
   }
@@ -56,19 +56,19 @@ export async function resetAction(token: string, _: FormState, fd: FormData): Pr
     const db = await getDb();
     await hit(db, `reset:ip:${await clientIp()}`, LIMITS.resetIp);
     const pw = String(fd.get("password") ?? "");
-    if (pw !== String(fd.get("confirm") ?? "")) return { error: "Les deux mots de passe ne correspondent pas." };
+    if (pw !== String(fd.get("confirm") ?? "")) return oops("Les deux mots de passe ne correspondent pas.");
     await resetPassword(db, token, pw);
   } catch (e) {
     return fail(e);
   }
-  redirect("/connexion?reinitialise=1");
+  return localRedirect("/connexion?reinitialise=1");
 }
 
 export async function resendVerificationAction(): Promise<FormState> {
   try {
     const user = await getCurrentUser();
-    if (!user) return { error: "Session expirée : reconnectez-vous." };
-    if (user.emailVerifiedAt) return { ok: "Votre adresse est déjà confirmée." };
+    if (!user) return oops("Session expirée : reconnectez-vous.");
+    if (user.emailVerifiedAt) return done("Votre adresse est déjà confirmée.");
     const db = await getDb();
     await hit(db, `verify:user:${user.id}`, LIMITS.verifyEmail);
     await sendVerificationEmail(db, user);
@@ -76,5 +76,5 @@ export async function resendVerificationAction(): Promise<FormState> {
     return fail(e);
   }
   revalidatePath("/", "layout");
-  return { ok: "Nouveau lien envoyé. Pensez à vérifier vos courriers indésirables." };
+  return done("Nouveau lien envoyé. Pensez à vérifier vos courriers indésirables.");
 }

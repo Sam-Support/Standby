@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { fail, file, parseHours, str, type FormState } from "@/lib/action";
+import { done, fail, oops, file, parseHours, str, type FormState } from "@/lib/action";
 import { getCurrentUser, requireCompany } from "@/lib/auth/session";
 import { companyIdentity, companyLeadFormat, companyReferents, companyWeb } from "@/lib/services/accounts";
 import { validateAssignmentHours } from "@/lib/services/hours";
@@ -17,13 +17,13 @@ export async function validateHours(assignmentId: string, _: FormState, fd: Form
     const user = await getCurrentUser();
     const raw = str(fd, "hours");
     const minutes = raw ? parseHours(raw) : undefined;
-    if (minutes !== undefined && !Number.isFinite(minutes)) return { error: "Heures invalides : indiquez par exemple 16 ou 15:30." };
+    if (minutes !== undefined && !Number.isFinite(minutes)) return oops("Heures invalides : indiquez par exemple 16 ou 15:30.");
     ({ adjusted } = await validateAssignmentHours(await getDb(), assignmentId, company.id, user!.id, minutes, { note: str(fd, "note") }));
   } catch (e) {
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: adjusted ? "Ajustement envoyé : le commercial a 48 h pour l’accepter ou le contester." : "Heures validées." };
+  return done(adjusted ? "Ajustement envoyé : le commercial a 48 h pour l’accepter ou le contester." : "Heures validées.");
 }
 
 export async function reviewAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -34,7 +34,7 @@ export async function reviewAction(assignmentId: string, _: FormState, fd: FormD
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Merci, votre avis est publié." };
+  return done("Merci, votre avis est publié.");
 }
 
 export async function updateIdentity(_: FormState, fd: FormData): Promise<FormState> {
@@ -52,7 +52,7 @@ export async function updateIdentity(_: FormState, fd: FormData): Promise<FormSt
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Société mise à jour." };
+  return done("Société mise à jour.");
 }
 
 export async function updateWeb(_: FormState, fd: FormData): Promise<FormState> {
@@ -64,7 +64,7 @@ export async function updateWeb(_: FormState, fd: FormData): Promise<FormState> 
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Site, LinkedIn et plaquette mis à jour." };
+  return done("Site, LinkedIn et plaquette mis à jour.");
 }
 
 export async function updateReferents(_: FormState, fd: FormData): Promise<FormState> {
@@ -78,7 +78,7 @@ export async function updateReferents(_: FormState, fd: FormData): Promise<FormS
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Référents mis à jour." };
+  return done("Référents mis à jour.");
 }
 
 export async function updateLeadFormat(_: FormState, fd: FormData): Promise<FormState> {
@@ -100,5 +100,5 @@ export async function updateLeadFormat(_: FormState, fd: FormData): Promise<Form
     return fail(e);
   }
   revalidatePath("/entreprise", "layout");
-  return { ok: "Format des leads mis à jour." };
+  return done("Format des leads mis à jour.");
 }

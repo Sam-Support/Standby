@@ -2,7 +2,7 @@ import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { ROLES, isRoleKey, type RoleKey } from "@/lib/domain";
-import { eurosPrecise, longDate, nextMonday, todayIso } from "@/lib/format";
+import { nextMonday, todayIso } from "@/lib/format";
 import { chargeCustomer, stripeEnabled, transferToFreelancer } from "@/lib/integrations/stripe";
 import { audit, notify } from "@/lib/notify";
 import { payoutBreakdown } from "@/lib/pricing";
@@ -99,16 +99,10 @@ export async function finalizeBooking(db: Db, bookingId: string) {
   await db.update(s.bookings).set({ status: "validee", totalHtCents, totalTtcCents }).where(eq(s.bookings.id, b.id));
   const [payment] = await db.insert(s.payments).values({ bookingId: b.id, amountCents: totalTtcCents }).returning();
   await notify(db, company.ownerId, {
-    title: `Facture ${invoice.number} disponible`,
-    body: `Heures validées pour la réservation ${b.ref}. Montant TTC : ${eurosPrecise(totalTtcCents)}.`,
+    t: (n) => n.invoiceAvailable({ number: invoice.number, ref: b.ref, ttcCents: totalTtcCents }),
     link: `/entreprise/factures/${invoice.id}`,
   });
-  await notify(db, company.ownerId, {
-    title: "Notez votre équipe",
-    body: `Comment s’est passée la réservation ${b.ref} ? Vos avis aident les prochains exposants et les commerciaux.`,
-    link: `/entreprise/reservations/${b.id}#avis`,
-    email: false,
-  });
+  await notify(db, company.ownerId, { t: (n) => n.rateTeam({ ref: b.ref }), link: `/entreprise/reservations/${b.id}#avis`, email: false });
   await chargeBooking(db, payment.id);
 }
 
@@ -123,11 +117,7 @@ export async function chargeBooking(db: Db, paymentId: string) {
   }
   if (!company.stripeCustomerId || !company.stripePaymentMethodId) {
     await db.update(s.payments).set({ status: "echoue", error: "Aucun moyen de paiement enregistré" }).where(eq(s.payments.id, p.id));
-    await notify(db, company.ownerId, {
-      title: "Moyen de paiement requis",
-      body: `Enregistrez un mandat SEPA ou une carte pour régler la réservation ${b.ref}.`,
-      link: `/entreprise/reservations/${b.id}`,
-    });
+    await notify(db, company.ownerId, { t: (n) => n.paymentRequired({ ref: b.ref }), link: `/entreprise/reservations/${b.id}` });
     return;
   }
   try {
@@ -213,11 +203,7 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
     if (!cancelled) {
       await db.update(s.freelancers).set({ missionsCount: await missionCount(db, a.freelancerId) }).where(eq(s.freelancers.id, a.freelancerId));
     }
-    await notify(db, a.userId, {
-      title: cancelled ? "Indemnité d’annulation programmée" : "Paie programmée",
-      body: `${eurosPrecise(amount)} pour la mission ${b.ref}${cancelled ? " (annulée par l’exposant)" : ""}, virement le lundi ${longDate(monday)}.`,
-      link: "/commercial",
-    });
+    await notify(db, a.userId, { t: (n) => n.payoutScheduled({ amountCents: amount, ref: b.ref, cancelled: Boolean(cancelled), monday }), link: "/commercial" });
   }
 }
 

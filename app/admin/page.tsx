@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { getDb } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead } from "@/components/ui";

@@ -1,12 +1,14 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useState } from "react";
 import { ActionForm, Submit } from "@/components/action-form";
 import { BookingAside, type AsideEvent } from "@/components/booking";
 import type { FormState } from "@/lib/action";
+import { useFmt, useMessages } from "@/components/i18n";
 import { LANGUAGES, ROLES, ROLE_KEYS, type OutfitKey, type RoleKey } from "@/lib/domain";
-import { hourly } from "@/lib/format";
+import { booking } from "@/lib/i18n/messages/booking";
+import { domainLabels } from "@/lib/i18n/messages/domain";
 import { computeQuote } from "@/lib/pricing";
 
 type Props = {
@@ -24,12 +26,16 @@ type Props = {
   aside: { event: AsideEvent; stand: string | null; days: number; minutesPerDay: number; startTime: string; endTime: string };
 };
 
-const PRESET: Record<"salon" | "foire", { qty: Partial<Record<RoleKey, number>>; label: string }> = {
-  salon: { qty: { commercial: 2, accueil: 1 }, label: "2 commerciaux · 1 accueil" },
-  foire: { qty: { demonstrateur: 2, animateur: 1 }, label: "2 démonstrateurs · 1 animation" },
+const PRESET: Record<"salon" | "foire", Partial<Record<RoleKey, number>>> = {
+  salon: { commercial: 2, accueil: 1 },
+  foire: { demonstrateur: 2, animateur: 1 },
 };
 
 export function TeamForm(p: Props) {
+  const m = useMessages(booking);
+  const t = m.team;
+  const f = useFmt();
+  const dl = domainLabels(f.lang);
   const [qty, setQty] = useState<Partial<Record<RoleKey, number>>>(p.initialQty);
   const [outfit, setOutfit] = useState<OutfitKey>(p.initialOutfit);
   const [langs, setLangs] = useState<string[]>(p.initialLanguages.length ? p.initialLanguages : ["Français"]);
@@ -54,18 +60,18 @@ export function TeamForm(p: Props) {
       <div key={r} className={`row${n === 0 ? " off" : ""}`}>
         <span className="clay s" style={{ ["--c" as string]: ROLES[r].color, width: 36, height: 36, borderRadius: "50%", flex: "none" }} aria-hidden="true"></span>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 180 }}>
-          <b id={`l-${r}`}>{ROLES[r].label}</b>
+          <b id={`l-${r}`}>{dl.role(r).label}</b>
           <span className="muted small">
-            dès {hourly(p.floors[r])} · {ROLES[r].desc}
+            {t.from(f.hourly(p.floors[r]))} · {dl.role(r).desc}
           </span>
         </div>
-        <button type="button" className="clay s qb" disabled={n === 0} onClick={() => setQty({ ...qty, [r]: n - 1 })} aria-label={`Retirer un·e ${ROLES[r].label}`}>
+        <button type="button" className="clay s qb" disabled={n === 0} onClick={() => setQty({ ...qty, [r]: n - 1 })} aria-label={t.remove(dl.role(r).label)}>
           −
         </button>
         <span className="disp" style={{ fontSize: 22, minWidth: 28, textAlign: "center" }} aria-live="polite" aria-labelledby={`l-${r}`}>
           {n}
         </span>
-        <button type="button" className="clay s qb" disabled={n >= 20} onClick={() => setQty({ ...qty, [r]: n + 1 })} aria-label={`Ajouter un·e ${ROLES[r].label}`}>
+        <button type="button" className="clay s qb" disabled={n >= 20} onClick={() => setQty({ ...qty, [r]: n + 1 })} aria-label={t.add(dl.role(r).label)}>
           +
         </button>
         <input type="hidden" name={`qty_${r}`} value={n} />
@@ -81,42 +87,43 @@ export function TeamForm(p: Props) {
     <div className="layout">
       <section className="clay main">
         <ActionForm action={p.action} className="stack" style={{ gap: 18 }}>
-          <h2 className="ptitle">Qui voulez-vous sur le stand ?</h2>
+          <h2 className="ptitle">{t.who}</h2>
           <div className="sunk row-between" style={{ borderRadius: 20, padding: "14px 16px", fontSize: 14 }}>
             <span>
-              Équipe type pour {p.kind === "salon" ? "un salon professionnel" : "une foire"} : <b>{preset.label}</b>
+              {t.preset(p.kind === "salon")}
+              <b>{p.kind === "salon" ? t.presetSalon : t.presetFair}</b>
             </span>
-            <button type="button" className="clay s btn xs ghost" onClick={() => setQty({ ...preset.qty })}>
-              Appliquer
+            <button type="button" className="clay s btn xs ghost" onClick={() => setQty({ ...preset })}>
+              {t.apply}
             </button>
           </div>
           <div className="stack">{main.map(row)}</div>
           <details className="sunk more" open={rare.some((r) => (qty[r] ?? 0) > 0)}>
-            <summary>Autres profils, plus rares sur un salon : chef de stand, animation, démo produit</summary>
+            <summary>{t.rare}</summary>
             <div className="stack" style={{ padding: "6px 2px 2px" }}>
               {rare.map(row)}
             </div>
           </details>
 
-          <h2 className="ptitle">Langues parlées sur le stand</h2>
+          <h2 className="ptitle">{t.languages}</h2>
           <div className="chips">
             {LANGUAGES.map((l) => (
               <label key={l} className="clay s chip">
                 <input type="checkbox" name="languages" value={l} checked={langs.includes(l)} onChange={(e) => setLangs(e.target.checked ? [...langs, l] : langs.filter((x) => x !== l))} />
-                {l}
+                {dl.language(l)}
               </label>
             ))}
-            <input className="input" name="otherLanguage" aria-label="Autre langue" placeholder="+ Autre" defaultValue={other[0] ?? ""} style={{ width: 160, minHeight: 40, padding: "8px 12px" }} />
+            <input className="input" name="otherLanguage" aria-label={t.otherLanguage} placeholder={t.other} defaultValue={other[0] ?? ""} style={{ width: 160, minHeight: 40, padding: "8px 12px" }} />
           </div>
 
-          <h2 className="ptitle">Tenue</h2>
+          <h2 className="ptitle">{t.outfit}</h2>
           <fieldset className="seg sunk" style={{ border: 0, margin: 0 }}>
-            <legend className="sr-only">Tenue</legend>
+            <legend className="sr-only">{t.outfit}</legend>
             {(
               [
-                ["exposant", "Prêtée par l’exposant"],
-                ["perso", "Tenue perso noir & blanc"],
-                ["standby", `Tenue Standby · +${p.outfitSurchargeCents / 100} €/h`],
+                ["exposant", t.outfits.exposant],
+                ["perso", t.outfits.perso],
+                ["standby", t.outfits.standby(String(p.outfitSurchargeCents / 100))],
               ] as [OutfitKey, string][]
             ).map(([v, l]) => (
               <label key={v}>
@@ -128,9 +135,9 @@ export function TeamForm(p: Props) {
 
           <div className="nav-row">
             <Link className="clay btn ghost" href={`/reserver/${p.id}/evenement`}>
-              Retour
+              {m.back}
             </Link>
-            <Submit disabled={quote.people === 0}>Préparer le brief</Submit>
+            <Submit disabled={quote.people === 0}>{t.next}</Submit>
           </div>
         </ActionForm>
       </section>

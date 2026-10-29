@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useEffect, useState } from "react";
+import { common } from "@/lib/i18n/messages/common";
+import { useMessages } from "./i18n";
 
 export const CONSENT_COOKIE = "standby_consent";
 const SIX_MONTHS = 60 * 60 * 24 * 182;
@@ -26,6 +28,7 @@ export function writeConsent(c: Consent) {
 /** Bandeau CNIL : refuser est aussi simple qu'accepter. */
 export function CookieBanner() {
   const [open, setOpen] = useState(false);
+  const t = useMessages(common).cookies;
   useEffect(() => {
     const sync = () => setOpen(readConsent() === null);
     sync();
@@ -34,17 +37,16 @@ export function CookieBanner() {
   }, []);
   if (!open) return null;
   return (
-    <div className="clay cookiebar" role="region" aria-label="Choix des cookies">
+    <div className="clay cookiebar" role="region" aria-label={t.region}>
       <p>
-        Nous utilisons des cookies nécessaires au fonctionnement du site. Avec votre accord, nous mesurons aussi l’audience pour améliorer le
-        parcours. <Link href="/cookies">Personnaliser</Link>
+        {t.text} <Link href="/cookies">{t.customize}</Link>
       </p>
       <div className="inline">
         <button className="clay s btn sm ghost" onClick={() => writeConsent({ audience: false, perso: false, pub: false })}>
-          Tout refuser
+          {t.refuse}
         </button>
         <button className="clay s btn sm" onClick={() => writeConsent({ audience: true, perso: true, pub: true })}>
-          Tout accepter
+          {t.accept}
         </button>
       </div>
     </div>

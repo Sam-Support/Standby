@@ -1,23 +1,21 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";
+import { Bi } from "@/components/bilingual";
 import { BackLink } from "@/components/ui";
 import { getCurrentUser, requireUser } from "@/lib/auth/session";
-import { eurosPrecise, longDate, percent } from "@/lib/format";
+import { eurosPrecise, fmt, longDate, percent } from "@/lib/format";
+import { invoiceDocs } from "@/lib/i18n/messages/invoice";
+import { getLang } from "@/lib/i18n/server";
 import { invoiceClient, type InvoiceClient } from "@/lib/services/billing";
 import { assertCreditNoteAccess } from "@/lib/services/credit-notes";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "../../factures/[id]/print";
 
-export const metadata = { title: "Avoir" };
-
-const REFUND_TEXT = {
-  aucun: "Montant déduit du prélèvement de la facture.",
-  en_cours: "Remboursement en cours sur le moyen de paiement utilisé pour la facture.",
-  rembourse: "Remboursé sur le moyen de paiement utilisé pour la facture.",
-  echoue: "Remboursement en cours de traitement par l’équipe Standby.",
-} as const;
+export async function generateMetadata() {
+  return { title: invoiceDocs[await getLang()].creditNote };
+}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,12 +33,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const [client] = await db.select().from(s.companies).where(eq(s.companies.id, booking.companyId));
   const cl = (invoice.client as InvoiceClient | null) ?? invoiceClient(client);
   const vatBps = note.totalHtCents ? Math.round((note.vatCents / note.totalHtCents) * 10000) : 2000;
+  const lang = await getLang();
+  const F = invoiceDocs.fr;
+  const T = lang === "fr" ? null : invoiceDocs[lang];
+  const f = fmt(lang);
 
   return (
     <>
       <div className="row-between noprint">
-        <BackLink href={user.role === "admin" ? `/admin/reservations/${booking.id}` : `/entreprise/reservations/${booking.id}`}>Retour</BackLink>
-        <PrintButton />
+        <BackLink href={user.role === "admin" ? `/admin/reservations/${booking.id}` : `/entreprise/reservations/${booking.id}`}>{(T ?? F).back}</BackLink>
+        <PrintButton label={(T ?? F).print} />
       </div>
       <article className="invoice clay">
         <div className="row-between" style={{ alignItems: "flex-start" }}>
@@ -53,37 +55,45 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <h1 className="disp" style={{ fontSize: 30 }}>Avoir</h1>
+            <h1 className="disp" style={{ fontSize: 30 }}>
+              <Bi fr={F.creditNote} tr={T?.creditNote} lang={lang} />
+            </h1>
             <p><b>{note.number}</b></p>
-            <p className="small">Émis le {longDate(note.issuedAt)}</p>
+            <p className="small">
+              <Bi fr={F.issuedOnM(longDate(note.issuedAt))} tr={T?.issuedOnM(f.longDate(note.issuedAt))} lang={lang} />
+            </p>
           </div>
         </div>
         <div>
-          <span className="lab">Client</span>
+          <span className="lab">
+            <Bi fr={F.client} tr={T?.client} lang={lang} inline />
+          </span>
           <p>
             <b>{cl.name}</b>
             <br />
-            {cl.address ?? <span className="todo">[adresse de facturation non renseignée]</span>}
+            {cl.address ?? <span className="todo">{(T ?? F).noAddress}</span>}
             <br />
             SIRET {formatSiret(cl.siret)} · TVA {cl.vatNumber}
           </p>
         </div>
         <p>
-          Avoir sur la facture <Link href={`/entreprise/factures/${invoice.id}`}>{invoice.number}</Link> du {longDate(invoice.issuedAt)} · réf.{" "}
-          {booking.ref}
+          <Link href={`/entreprise/factures/${invoice.id}`}>
+            <Bi fr={F.creditOnInvoice(invoice.number, longDate(invoice.issuedAt))} tr={T?.creditOnInvoice(invoice.number, f.longDate(invoice.issuedAt))} lang={lang} />
+          </Link>{" "}
+          · {F.ref(booking.ref)}
         </p>
         <div className="tblwrap">
           <table className="tbl" style={{ fontSize: 14 }}>
             <thead>
               <tr>
-                <th scope="col">Désignation</th>
-                <th scope="col">Motif</th>
-                <th scope="col" style={{ textAlign: "right" }}>Montant HT</th>
+                <th scope="col"><Bi fr={F.designation} tr={T?.designation} lang={lang} /></th>
+                <th scope="col"><Bi fr={F.reason} tr={T?.reason} lang={lang} /></th>
+                <th scope="col" style={{ textAlign: "right" }}><Bi fr={F.amountHt} tr={T?.amountHt} lang={lang} /></th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Avoir sur facture {invoice.number}</td>
+                <td><Bi fr={F.creditOn(invoice.number)} tr={T?.creditOn(invoice.number)} lang={lang} /></td>
                 <td>{note.reason}</td>
                 <td style={{ textAlign: "right" }}>{eurosPrecise(-note.totalHtCents)}</td>
               </tr>
@@ -91,11 +101,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </table>
         </div>
         <div style={{ marginLeft: "auto", minWidth: 280, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="dev"><span>Total HT</span><b>{eurosPrecise(-note.totalHtCents)}</b></div>
-          <div className="dev"><span>TVA {percent(vatBps)}</span><b>{eurosPrecise(-note.vatCents)}</b></div>
-          <div className="ttc"><span>Total TTC</span><span className="disp">{eurosPrecise(-note.totalTtcCents)}</span></div>
+          <div className="dev"><span><Bi fr={F.totalHt} tr={T?.totalHt} lang={lang} /></span><b>{eurosPrecise(-note.totalHtCents)}</b></div>
+          <div className="dev"><span><Bi fr={F.vat(percent(vatBps))} tr={T?.vat(f.percent(vatBps))} lang={lang} /></span><b>{eurosPrecise(-note.vatCents)}</b></div>
+          <div className="ttc"><span><Bi fr={F.totalTtc} tr={T?.totalTtc} lang={lang} /></span><span className="disp">{eurosPrecise(-note.totalTtcCents)}</span></div>
         </div>
-        <p className="muted small">{REFUND_TEXT[note.refundStatus]}</p>
+        <p className="muted small">
+          <Bi fr={F.refund[note.refundStatus]} tr={T?.refund[note.refundStatus]} lang={lang} />
+        </p>
       </article>
     </>
   );

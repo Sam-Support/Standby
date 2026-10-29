@@ -1,18 +1,23 @@
-import Link from "next/link";
+import Link from "@/components/link";
+import { getFmt, getLang, getMessages } from "@/lib/i18n/server";
+import { booking } from "@/lib/i18n/messages/booking";
+import { domainLabels } from "@/lib/i18n/messages/domain";
+import { localizePath } from "@/lib/i18n/config";
 import { redirect } from "next/navigation";
 import { schema as s } from "@/db";
 import { eq } from "drizzle-orm";
 import { ActionForm, Submit } from "@/components/action-form";
 import { BookingAside, Stepper } from "@/components/booking";
 import { Avatar, PageHead, Status } from "@/components/ui";
-import { isRoleKey, languageCode, ROLES, type RoleKey } from "@/lib/domain";
-import { hourly, rating } from "@/lib/format";
+import { isRoleKey, languageCode, type RoleKey } from "@/lib/domain";
 import { billableMinutesPerDay } from "@/lib/pricing";
 import { findCandidates } from "@/lib/services/booking";
 import { reselect, toggleFav, toggleProfile } from "../../actions";
 import { loadDraft, reachedStep } from "../data";
 
-export const metadata = { title: "Réserver · Profils" };
+export async function generateMetadata() {
+  return { title: (await getMessages(booking)).meta.profiles };
+}
 
 type CardData = {
   id: string;
@@ -36,8 +41,8 @@ type CardData = {
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const d = await loadDraft(id, "profils");
-  if (!d.event) redirect(`/reserver/${id}/evenement`);
-  if (d.positions.length === 0) redirect(`/reserver/${id}/equipe`);
+  if (!d.event) redirect(localizePath(`/reserver/${id}/evenement`, await getLang()));
+  if (d.positions.length === 0) redirect(localizePath(`/reserver/${id}/equipe`, await getLang()));
   const favs = new Set((await d.db.select().from(s.favorites).where(eq(s.favorites.companyId, d.company.id))).map((f) => f.freelancerId));
   const taken = d.assignments.map((a) => a.freelancerId);
 
@@ -56,45 +61,50 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
   const allFilled = sections.every((sec) => sec.cards.filter((c) => c.selected).length >= sec.qty);
 
+  const m = await getMessages(booking);
+  const t = m.profiles;
+  const f = await getFmt();
+  const dl = domainLabels(f.lang);
   return (
     <>
-      <PageHead label="Réservation exposant" title="Réserver une équipe de stand">
-        Cinq étapes. L’estimation se met à jour à chaque choix, le total définitif apparaît au récapitulatif.
+      <PageHead label={m.head.label} title={m.head.title}>
+        {m.head.lead}
       </PageHead>
       <Stepper id={id} current={4} reached={reachedStep(d)} />
       <div className="layout">
         <section className="clay main">
           <div className="row-between">
-            <h2 className="ptitle">Profils proposés par le matching</h2>
+            <h2 className="ptitle">{t.title}</h2>
             <ActionForm action={reselect.bind(null, id)}>
-              <Submit className="clay s btn sm ghost" pending="Sélection…">
-                Re-sélection auto
+              <Submit className="clay s btn sm ghost" pending={t.reselecting}>
+                {t.reselect}
               </Submit>
             </ActionForm>
           </div>
           <p className="muted">
-            Disponibles sur vos dates, classés selon les langues demandées, la spécialité{" "}
-            <b>{d.event.specialty ?? d.event.sector}</b>, les notes d’exposants et l’expérience. Les avatars remplacent les photos.
+            {t.leadBefore}
+            <b>{dl.specialty(d.event.specialty ?? d.event.sector)}</b>
+            {t.leadAfter}
           </p>
           {sections.map((sec) => {
             const n = sec.cards.filter((c) => c.selected).length;
             return (
               <section key={sec.role} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div className="row-between">
-                  <h3 style={{ font: "800 16px var(--sans)" }}>{ROLES[sec.role].label}</h3>
+                  <h3 style={{ font: "800 16px var(--sans)" }}>{dl.role(sec.role).label}</h3>
                   <Status tone={n >= sec.qty ? "ok" : "warn"}>
-                    {n} / {sec.qty} sélectionné{sec.qty > 1 ? "s" : ""}
+                    {t.selectedCount(n, sec.qty)}
                   </Status>
                 </div>
-                {sec.cards.length === 0 && <p className="note">Aucun profil disponible sur ces dates pour ce poste. L’équipe Standby est prévenue et vous propose quelqu’un.</p>}
+                {sec.cards.length === 0 && <p className="note">{t.none}</p>}
                 <div className="tgrid">
                   {sec.cards.map((c) => (
                     <article key={c.id} className={`clay tc${c.selected ? " on" : ""}`}>
                       <div className="top">
                         <Avatar first={c.firstName} last={c.lastName} color={sec.role === "accueil" ? "#FF8CB6" : c.avatarColor} size={54} />
-                        <span className="match">{c.score} % compatible</span>
+                        <span className="match">{t.match(c.score)}</span>
                         <ActionForm action={toggleFav.bind(null, id, c.id)} style={{ marginLeft: "auto" }}>
-                          <button className={`fav${c.favorite ? " is" : ""}`} aria-pressed={c.favorite} aria-label={c.favorite ? `Retirer ${c.firstName} des favoris` : `Ajouter ${c.firstName} aux favoris`}>
+                          <button className={`fav${c.favorite ? " is" : ""}`} aria-pressed={c.favorite} aria-label={c.favorite ? t.unfav(c.firstName) : t.fav(c.firstName)}>
                             {c.favorite ? "♥" : "♡"}
                           </button>
                         </ActionForm>
@@ -103,29 +113,29 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         {c.firstName} {c.lastName}
                       </h3>
                       <span className="muted small">
-                        {ROLES[sec.role].short} · {c.city}
+                        {dl.role(sec.role).short} · {c.city}
                       </span>
                       <div className="stats">
-                        {c.ratingX10 > 0 && <span>★ {rating(c.ratingX10)}</span>}
-                        <span>{c.missionsCount} salons</span>
-                        <span>{hourly(c.hourlyRateCents)}</span>
+                        {c.ratingX10 > 0 && <span>★ {f.rating(c.ratingX10)}</span>}
+                        <span>{t.events(c.missionsCount)}</span>
+                        <span>{f.hourly(c.hourlyRateCents)}</span>
                       </div>
                       <div className="langs">
                         {c.specialties.slice(0, 2).map((sp) => (
-                          <span key={sp} className={`lang spec${sp === d.event!.specialty ? " hit" : ""}`}>{sp}</span>
+                          <span key={sp} className={`lang spec${sp === d.event!.specialty ? " hit" : ""}`}>{dl.specialty(sp)}</span>
                         ))}
                       </div>
                       <div className="langs">
                         {c.languages.map((l) => (
-                          <span key={l} className={`lang${d.booking.languages.includes(l) ? " hit" : ""}`} title={l}>{languageCode(l)}</span>
+                          <span key={l} className={`lang${d.booking.languages.includes(l) ? " hit" : ""}`} title={dl.language(l)}>{languageCode(l)}</span>
                         ))}
                       </div>
                       <span className="muted small">
-                        Tenue : {[c.topSize, c.pantsSize, c.shoeSize ? `P. ${c.shoeSize}` : null].filter(Boolean).join(" · ") || "non renseignée"}
+                        {t.outfit([c.topSize, c.pantsSize, c.shoeSize ? t.shoe(c.shoeSize) : null].filter(Boolean).join(" · "))}
                       </span>
                       <ActionForm action={toggleProfile.bind(null, id, c.id, sec.role)}>
                         <Submit className={c.selected ? "clay s btn sm" : "clay s btn sm ghost"} pending="…">
-                          {c.selected ? "✓ Sélectionné" : "Sélectionner"}
+                          {c.selected ? t.selected : t.select}
                         </Submit>
                       </ActionForm>
                     </article>
@@ -136,15 +146,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           })}
           <div className="nav-row">
             <Link className="clay btn ghost" href={`/reserver/${id}/brief`}>
-              Retour
+              {m.back}
             </Link>
             {allFilled ? (
               <Link className="clay btn" href={`/reserver/${id}/recap`}>
-                Voir le récapitulatif
+                {t.next}
               </Link>
             ) : (
-              <span className="clay btn" aria-disabled="true" title="Complétez chaque poste pour continuer">
-                Voir le récapitulatif
+              <span className="clay btn" aria-disabled="true" title={t.complete}>
+                {t.next}
               </span>
             )}
           </div>
