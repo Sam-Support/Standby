@@ -8,6 +8,7 @@ import { ROLES, type RoleKey } from "@/lib/domain";
 import { dateRange, dayLabel, euros, eurosPrecise, hourly, hoursLabel, longDate } from "@/lib/format";
 import { loadAssignments } from "@/lib/services/booking";
 import { creditableCents, creditNotesFor, REFUND_LABELS } from "@/lib/services/credit-notes";
+import { requireAdmin } from "@/lib/auth/session";
 import {
   adminCancelAction,
   adminValidateHours,
@@ -20,6 +21,7 @@ import {
 export const metadata = { title: "Réservation (admin)" };
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const db = await getDb();

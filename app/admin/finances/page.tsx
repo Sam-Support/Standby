@@ -6,10 +6,12 @@ import { PageHead, Status } from "@/components/ui";
 import { euros, longDate } from "@/lib/format";
 import { REFUND_LABELS } from "@/lib/services/credit-notes";
 import { retryPaymentAction, runJobsAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Finances" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const db = await getDb();
   const invoices = await db
     .select({ i: s.invoices, b: s.bookings, c: s.companies })

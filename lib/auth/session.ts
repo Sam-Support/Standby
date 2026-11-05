@@ -16,7 +16,7 @@ type SessionPayload = { uid: string; role: Role; v?: number };
 
 export async function startSession(userId: string, role: Role, version = 0) {
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, signToken({ uid: userId, role, v: version }, TTL), {
+  jar.set(SESSION_COOKIE, signToken("session", { uid: userId, role, v: version }, TTL), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production" && process.env.COOKIE_INSECURE !== "1",
@@ -31,7 +31,7 @@ export async function endSession() {
 
 export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  return verifyToken<SessionPayload>(token);
+  return verifyToken<SessionPayload>(token, "session");
 });
 
 export const getCurrentUser = cache(async () => {

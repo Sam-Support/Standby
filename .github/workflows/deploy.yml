@@ -13,8 +13,9 @@ permissions:
 
 jobs:
   deploy:
-    # ne se lance qu'une fois le VPS configuré (variable VPS_PATH de l'environnement « staging »)
-    if: (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && vars.VPS_PATH != ''
+    # ne se lance qu'une fois le VPS configuré (variable VPS_PATH de l'environnement « staging »), et seulement après
+    # une CI réussie sur un push : une PR venue d'un fork dont la branche s'appelle « main » ne déclenche rien
+    if: (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')) && vars.VPS_PATH != ''
     runs-on: ubuntu-latest
     environment: staging
     steps:

@@ -68,6 +68,7 @@ export async function companyStep(step: number, _: FormState, fd: FormData): Pro
     } else {
       const company = await getCurrentCompany();
       if (!company) return oops("Session expirée : reconnectez-vous.");
+      if (step > company.onboardingStep) return oops("Terminez d’abord l’étape précédente.");
       if (step === 2) {
         const brochure = await readUpload(file(fd, "brochure"), ["pdf", "ppt", "pptx"]);
         await companyWeb(db, company, { website: str(fd, "website"), linkedin: str(fd, "linkedin"), brochure });
@@ -118,6 +119,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
     } else {
       const f = await getCurrentFreelancer();
       if (!f) return oops("Session expirée : reconnectez-vous.");
+      if (step > f.onboardingStep) return oops("Terminez d’abord l’étape précédente.");
       if (step === 2) {
         await freelancerProfile(db, f, {
           roles: strs(fd, "roles"),

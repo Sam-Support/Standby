@@ -20,6 +20,7 @@ import { purgeExpiredData } from "@/lib/services/privacy";
 import { sendReminders } from "@/lib/services/reminders";
 import { deleteReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
+import { appUrl, sendEmail } from "@/lib/integrations/email";
 
 export async function saveEventAction(id: string | null, _: FormState, fd: FormData): Promise<FormState> {
   let eventId: string;
@@ -263,4 +264,26 @@ export async function handleMessageAction(id: string): Promise<FormState> {
   }
   revalidatePath("/admin/messages");
   return {};
+}
+
+/** E-mail de test à l'adresse de l'administrateur connecté (vérifie domaine, clé et expéditeur Resend). */
+export async function sendTestEmailAction(): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    const res = await sendEmail(
+      {
+        to: admin.email,
+        subject: "E-mail de test standby",
+        text: `Bonjour ${admin.firstName},\n\nCet e-mail confirme que l’envoi fonctionne depuis ${appUrl()}.`,
+        link: { label: "Ouvrir le journal des e-mails", href: "/admin/emails" },
+        category: "test",
+      },
+      await getDb(),
+    );
+    revalidatePath("/admin/emails");
+    if (res.status === "echec") return { error: `Échec de l’envoi : ${res.error}` };
+    return { ok: res.status === "envoye" ? `E-mail envoyé à ${admin.email} (Resend ${res.id}).` : `Resend n’est pas configuré : e-mail simulé, visible ci-dessous.` };
+  } catch (e) {
+    return fail(e);
+  }
 }

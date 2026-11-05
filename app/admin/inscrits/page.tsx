@@ -8,10 +8,12 @@ import { SIRET_LABELS, siretNameMatches } from "@/lib/services/compliance";
 import { formatSiret } from "@/lib/siret";
 import { fileUrl } from "@/lib/storage";
 import { confirmCompanyAction, freelancerStatusAction, reviewDocAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Inscrits à vérifier" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ tous?: string }> }) {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const { tous } = await searchParams;
   const db = await getDb();
   const today = todayIso();

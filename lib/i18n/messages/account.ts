@@ -65,6 +65,7 @@ export const account = defineMessages({
       leadBefore: "Identifiants de connexion et droits sur vos données (RGPD) : consultez, téléchargez ou supprimez ce que standby conserve sur vous. Détails dans la ",
       privacy: "politique de confidentialité",
       emailChanged: "Adresse e-mail modifiée : utilisez-la désormais pour vous connecter.",
+      undeliverable: "Nos derniers e-mails ne sont pas parvenus à cette adresse (refusés par votre messagerie). Vérifiez-la ou changez-la ci-dessous : missions, réservations et factures y sont annoncées.",
       password: {
         title: "Changer de mot de passe",
         current: "Mot de passe actuel",
@@ -171,6 +172,7 @@ export const account = defineMessages({
       leadBefore: "Login details and your data rights (GDPR): view, download or delete what standby keeps about you. Details in the ",
       privacy: "privacy policy",
       emailChanged: "E-mail address changed: use it from now on to log in.",
+      undeliverable: "Our latest e-mails did not reach this address (rejected by your mail server). Check it or change it below: assignments, bookings and invoices are announced there.",
       password: {
         title: "Change password",
         current: "Current password",
@@ -277,6 +279,7 @@ export const account = defineMessages({
       leadBefore: "Datos de acceso y derechos sobre sus datos (RGPD): consulte, descargue o elimine lo que standby conserva sobre usted. Detalles en la ",
       privacy: "política de privacidad",
       emailChanged: "Correo electrónico modificado: utilícelo a partir de ahora para iniciar sesión.",
+      undeliverable: "Nuestros últimos correos no han llegado a esta dirección (rechazados por su servidor de correo). Compruébela o cámbiela más abajo: allí le avisamos de misiones, reservas y facturas.",
       password: {
         title: "Cambiar la contraseña",
         current: "Contraseña actual",

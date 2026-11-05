@@ -65,6 +65,9 @@ export const profiles = pgTable("profiles", {
   phone: text("phone"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   locale: text("locale").notNull().default("fr"), // langue des e-mails et notifications (fr, en, es)
+  // rebond définitif, plainte ou adresse bloquée signalés par Resend : nos e-mails n'arrivent plus
+  emailUndeliverableAt: timestamp("email_undeliverable_at", { withTimezone: true }),
+  emailUndeliverableReason: text("email_undeliverable_reason"),
   // incrémentée à chaque changement de mot de passe : les sessions ouvertes avant sont refusées
   sessionVersion: integer("session_version").notNull().default(0),
   createdAt: createdAt(),
@@ -78,14 +81,25 @@ export const rateLimits = pgTable("rate_limits", {
 });
 
 // E-mails non envoyés faute de fournisseur (mode local / démo), consultables dans l'admin
-export const emailOutbox = pgTable("email_outbox", {
-  id: id(),
-  to: text("to").notNull(),
-  subject: text("subject").notNull(),
-  text: text("text").notNull(),
-  link: text("link"),
-  createdAt: createdAt(),
-});
+// Journal des e-mails : simulés sans clé Resend, sinon suivis jusqu'à la remise (webhook Resend)
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
+    id: id(),
+    to: text("to").notNull(),
+    subject: text("subject").notNull(),
+    text: text("text").notNull(),
+    link: text("link"), // seulement pour les e-mails simulés : un lien de connexion ne doit pas rester en base
+    category: text("category"),
+    // simule, en_attente, envoye, delivre, differe, rebond, plainte, bloque, echec
+    status: text("status").notNull().default("simule"),
+    providerId: text("provider_id"),
+    error: text("error"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("email_outbox_provider_idx").on(t.providerId)],
+);
 
 // Utilisé uniquement par le fournisseur d'identité local (sans Supabase)
 export const credentials = pgTable("credentials", {
@@ -93,44 +107,56 @@ export const credentials = pgTable("credentials", {
   passwordHash: text("password_hash").notNull(),
 });
 
-export const passwordResets = pgTable("password_resets", {
-  token: text("token").primaryKey(),
-  userId: uuid("user_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  usedAt: timestamp("used_at", { withTimezone: true }),
-});
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    token: text("token").primaryKey(),
+    userId: uuid("user_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+  },
+  (t) => [index("password_resets_user_idx").on(t.userId)],
+);
 
-export const companies = pgTable("companies", {
-  id: id(),
-  ownerId: uuid("owner_id").notNull().references(() => profiles.id),
-  name: text("name").notNull(),
-  siret: text("siret").notNull(),
-  siretVerified: boolean("siret_verified").notNull().default(false), // actif dans SIRENE et nom concordant (ou confirmé par l'admin)
-  siretName: text("siret_name"), // nom enregistré dans SIRENE, comparé à la raison sociale saisie
-  billingAddress: text("billing_address"), // mentions obligatoires des factures
-  vatNumber: text("vat_number"),
-  sector: text("sector"),
-  size: text("size"),
-  website: text("website"),
-  linkedin: text("linkedin"),
-  brochurePath: text("brochure_path"),
-  brochureName: text("brochure_name"),
-  leadMode: leadMode("lead_mode").notNull().default("standard"),
-  crmProvider: text("crm_provider"),
-  crmAdminEmail: text("crm_admin_email"),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripePaymentMethodId: text("stripe_payment_method_id"),
-  onboardingStep: integer("onboarding_step").notNull().default(1),
-  createdAt: createdAt(),
-});
+export const companies = pgTable(
+  "companies",
+  {
+    id: id(),
+    ownerId: uuid("owner_id").notNull().references(() => profiles.id),
+    name: text("name").notNull(),
+    siret: text("siret").notNull(),
+    siretVerified: boolean("siret_verified").notNull().default(false), // actif dans SIRENE et nom concordant (ou confirmé par l'admin)
+    siretName: text("siret_name"), // nom enregistré dans SIRENE, comparé à la raison sociale saisie
+    billingAddress: text("billing_address"), // mentions obligatoires des factures
+    vatNumber: text("vat_number"),
+    sector: text("sector"),
+    size: text("size"),
+    website: text("website"),
+    linkedin: text("linkedin"),
+    brochurePath: text("brochure_path"),
+    brochureName: text("brochure_name"),
+    leadMode: leadMode("lead_mode").notNull().default("standard"),
+    crmProvider: text("crm_provider"),
+    crmAdminEmail: text("crm_admin_email"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripePaymentMethodId: text("stripe_payment_method_id"),
+    onboardingStep: integer("onboarding_step").notNull().default(1),
+    createdAt: createdAt(),
+  },
+  (t) => [index("companies_owner_idx").on(t.ownerId)],
+);
 
-export const companyReferents = pgTable("company_referents", {
-  id: id(),
-  companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  title: text("title"),
-  phone: text("phone"),
-});
+export const companyReferents = pgTable(
+  "company_referents",
+  {
+    id: id(),
+    companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    title: text("title"),
+    phone: text("phone"),
+  },
+  (t) => [index("company_referents_company_idx").on(t.companyId)],
+);
 
 export const leadTemplates = pgTable("lead_templates", {
   id: id(),
@@ -339,30 +365,38 @@ export const timesheets = pgTable(
   (t) => [uniqueIndex("timesheets_assignment_day_idx").on(t.assignmentId, t.day)],
 );
 
-export const payments = pgTable("payments", {
-  id: id(),
-  bookingId: uuid("booking_id").notNull().references(() => bookings.id),
-  stripePaymentIntentId: text("stripe_payment_intent_id"),
-  stripeChargeId: text("stripe_charge_id"),
-  amountCents: integer("amount_cents").notNull(),
-  status: paymentStatus("status").notNull().default("en_attente"),
-  error: text("error"),
-  createdAt: createdAt(),
-});
+export const payments = pgTable(
+  "payments",
+  {
+    id: id(),
+    bookingId: uuid("booking_id").notNull().references(() => bookings.id),
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    stripeChargeId: text("stripe_charge_id"),
+    amountCents: integer("amount_cents").notNull(),
+    status: paymentStatus("status").notNull().default("en_attente"),
+    error: text("error"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("payments_booking_idx").on(t.bookingId)],
+);
 
-export const payouts = pgTable("payouts", {
-  id: id(),
-  assignmentId: uuid("assignment_id").notNull().unique().references(() => assignments.id),
-  freelancerId: uuid("freelancer_id").notNull().references(() => freelancers.id),
-  amountCents: integer("amount_cents").notNull(), // net viré : HT + TVA éventuelle - commission
-  grossCents: integer("gross_cents"), // HT de la prestation (ou de l'indemnité)
-  commissionCents: integer("commission_cents").notNull().default(0),
-  vatCents: integer("vat_cents").notNull().default(0),
-  scheduledFor: date("scheduled_for").notNull(),
-  stripeTransferId: text("stripe_transfer_id"),
-  status: payoutStatus("status").notNull().default("planifie"),
-  createdAt: createdAt(),
-});
+export const payouts = pgTable(
+  "payouts",
+  {
+    id: id(),
+    assignmentId: uuid("assignment_id").notNull().unique().references(() => assignments.id),
+    freelancerId: uuid("freelancer_id").notNull().references(() => freelancers.id),
+    amountCents: integer("amount_cents").notNull(), // net viré : HT + TVA éventuelle - commission
+    grossCents: integer("gross_cents"), // HT de la prestation (ou de l'indemnité)
+    commissionCents: integer("commission_cents").notNull().default(0),
+    vatCents: integer("vat_cents").notNull().default(0),
+    scheduledFor: date("scheduled_for").notNull(),
+    stripeTransferId: text("stripe_transfer_id"),
+    status: payoutStatus("status").notNull().default("planifie"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("payouts_freelancer_idx").on(t.freelancerId)],
+);
 
 export const invoices = pgTable("invoices", {
   id: id(),
@@ -422,20 +456,24 @@ export const creditNotes = pgTable(
   (t) => [index("credit_notes_invoice_idx").on(t.invoiceId)],
 );
 
-export const leadBatches = pgTable("lead_batches", {
-  id: id(),
-  assignmentId: uuid("assignment_id").notNull().references(() => assignments.id, { onDelete: "cascade" }),
-  bookingId: uuid("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
-  source: leadSource("source").notNull(),
-  filename: text("filename"),
-  mapping: jsonb("mapping"),
-  missing: textArray("missing"),
-  rowsCount: integer("rows_count").notNull().default(0),
-  status: batchStatus("status").notNull().default("brouillon"),
-  crmError: text("crm_error"),
-  sentAt: timestamp("sent_at", { withTimezone: true }),
-  createdAt: createdAt(),
-});
+export const leadBatches = pgTable(
+  "lead_batches",
+  {
+    id: id(),
+    assignmentId: uuid("assignment_id").notNull().references(() => assignments.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+    source: leadSource("source").notNull(),
+    filename: text("filename"),
+    mapping: jsonb("mapping"),
+    missing: textArray("missing"),
+    rowsCount: integer("rows_count").notNull().default(0),
+    status: batchStatus("status").notNull().default("brouillon"),
+    crmError: text("crm_error"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_batches_assignment_idx").on(t.assignmentId)],
+);
 
 export const leads = pgTable(
   "leads",
@@ -447,18 +485,22 @@ export const leads = pgTable(
     completedByStandby: boolean("completed_by_standby").notNull().default(false),
     createdAt: createdAt(),
   },
-  (t) => [index("leads_booking_idx").on(t.bookingId)],
+  (t) => [index("leads_booking_idx").on(t.bookingId), index("leads_batch_idx").on(t.batchId)],
 );
 
-export const businessCards = pgTable("business_cards", {
-  id: id(),
-  batchId: uuid("batch_id").notNull().references(() => leadBatches.id, { onDelete: "cascade" }),
-  path: text("path").notNull(),
-  status: cardStatus("status").notNull().default("a_saisir"),
-  ocr: jsonb("ocr"),
-  leadId: uuid("lead_id").references(() => leads.id),
-  createdAt: createdAt(),
-});
+export const businessCards = pgTable(
+  "business_cards",
+  {
+    id: id(),
+    batchId: uuid("batch_id").notNull().references(() => leadBatches.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    status: cardStatus("status").notNull().default("a_saisir"),
+    ocr: jsonb("ocr"),
+    leadId: uuid("lead_id").references(() => leads.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("business_cards_batch_idx").on(t.batchId)],
+);
 
 export const favorites = pgTable(
   "favorites",

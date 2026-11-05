@@ -49,6 +49,10 @@ export function billingFields(fd: FormData) {
   return { billingAddress: str(fd, "billingAddress"), vatRegime: str(fd, "vatRegime"), vatNumber: str(fd, "vatNumber"), acceptMandate: fd.get("acceptMandate") === "on" };
 }
 
+/**
+ * Adresse de retour après connexion : chemin interne uniquement. Refuse « //site » et « /\site »
+ * (les navigateurs lisent la barre oblique inverse comme « / » : redirection vers un autre domaine).
+ */
 export function safeNext(v: string | null | undefined, fallback: string) {
-  return v && v.startsWith("/") && !v.startsWith("//") ? v : fallback;
+  return v && /^\/(?![/\\])[^\\\s\x00-\x1f]*$/.test(v) ? v : fallback;
 }

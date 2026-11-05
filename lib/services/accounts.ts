@@ -2,7 +2,7 @@ import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { AuthError, createIdentity, storeLocalPassword, updateIdentityEmail, updateIdentityPassword, verifyIdentity } from "@/lib/auth/provider";
-import { randomToken, signToken, verifyToken } from "@/lib/crypto";
+import { hashToken, randomToken, signToken, verifyToken } from "@/lib/crypto";
 import {
   AVATAR_COLORS,
   BILLING_MANDATE_VERSION,
@@ -76,10 +76,10 @@ const VERIFY_TTL = 48 * 3600;
 
 /** Lien de confirmation d'adresse (48 h). Sans adresse confirmée : ni réservation, ni mission. */
 export async function sendVerificationEmail(db: Db, profile: { id: string; email: string; firstName: string; locale?: string }) {
-  const token = signToken({ uid: profile.id, email: profile.email, purpose: "verify" }, VERIFY_TTL);
+  const token = signToken("verify", { uid: profile.id, email: profile.email }, VERIFY_TTL);
   const lang = langOf(profile);
   const m = notices(lang).verifyEmail({ first: profile.firstName });
-  await sendEmail({ to: profile.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/verifier-email/${token}`, lang) }, lang }, db);
+  await sendEmail({ to: profile.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/verifier-email/${token}`, lang) }, lang, category: "compte" }, db);
 }
 
 /** Langue d'un compte pour ses e-mails. */
@@ -88,8 +88,8 @@ function langOf(p: { locale?: string | null }): Lang {
 }
 
 export async function confirmEmail(db: Db, token: string) {
-  const data = verifyToken<{ uid: string; email: string; purpose: string }>(token);
-  if (!data || data.purpose !== "verify") throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
+  const data = verifyToken<{ uid: string; email: string }>(token, "verify");
+  if (!data) throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, data.uid));
   if (!p || p.email !== data.email) throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
   if (!p.emailVerifiedAt) await db.update(s.profiles).set({ emailVerifiedAt: new Date() }).where(eq(s.profiles.id, p.id));
@@ -113,21 +113,23 @@ export async function requestPasswordReset(db: Db, email: string) {
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.email, email.trim().toLowerCase()));
   if (!p) return; // réponse identique, que le compte existe ou non
   const token = randomToken();
-  await db.insert(s.passwordResets).values({ token, userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
+  // seule l'empreinte est en base : une fuite de la base ne donne pas de lien de réinitialisation utilisable
+  await db.insert(s.passwordResets).values({ token: hashToken(token), userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
   const lang = langOf(p);
   const m = notices(lang).resetPassword();
-  await sendEmail({ to: p.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/reinitialiser/${token}`, lang) }, lang }, db);
+  await sendEmail({ to: p.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/reinitialiser/${token}`, lang) }, lang, category: "compte" }, db);
 }
 
 export async function resetPassword(db: Db, token: string, password: string) {
   if (password.length < 10) throw new AccountError("Le mot de passe doit contenir au moins 10 caractères.");
+  // consommé en une seule requête : deux envois simultanés du même lien ne passent pas tous les deux
   const [r] = await db
-    .select()
-    .from(s.passwordResets)
-    .where(and(eq(s.passwordResets.token, token), isNull(s.passwordResets.usedAt), gt(s.passwordResets.expiresAt, new Date())));
+    .update(s.passwordResets)
+    .set({ usedAt: new Date() })
+    .where(and(eq(s.passwordResets.token, hashToken(token)), isNull(s.passwordResets.usedAt), gt(s.passwordResets.expiresAt, new Date())))
+    .returning({ userId: s.passwordResets.userId });
   if (!r) throw new AccountError("Lien expiré ou déjà utilisé. Faites une nouvelle demande.");
   await updateIdentityPassword(db, r.userId, password);
-  await db.update(s.passwordResets).set({ usedAt: new Date() }).where(eq(s.passwordResets.token, token));
   await bumpSessionVersion(db, r.userId);
 }
 
@@ -156,7 +158,7 @@ export async function changePassword(db: Db, user: AccountUser, current: string,
   const version = await bumpSessionVersion(db, user.id);
   const lang = langOf(user);
   const m = notices(lang).passwordChanged({ first: user.firstName });
-  await sendEmail({ to: user.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath("/mot-de-passe-oublie", lang) }, lang }, db);
+  await sendEmail({ to: user.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath("/mot-de-passe-oublie", lang) }, lang, category: "compte" }, db);
   await audit(db, user.id, "account.password_change", "profile", user.id);
   return version;
 }
@@ -174,19 +176,19 @@ export async function requestEmailChange(db: Db, user: AccountUser, newEmail: st
   await assertPassword(db, user, password, "Mot de passe incorrect.");
   const [taken] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
   if (taken) throw new AccountError("Cette adresse est déjà utilisée par un autre compte.");
-  const token = signToken({ uid: user.id, from: user.email, to: email, purpose: "email-change" }, EMAIL_CHANGE_TTL);
+  const token = signToken("email-change", { uid: user.id, from: user.email, to: email }, EMAIL_CHANGE_TTL);
   const lang = langOf(user);
   const n = notices(lang);
   const confirm = n.confirmNewEmail({ first: user.firstName, old: user.email });
-  await sendEmail({ to: email, subject: confirm.subject, text: confirm.text, link: { label: confirm.link, href: localizePath(`/nouvelle-adresse/${token}`, lang) }, lang }, db);
+  await sendEmail({ to: email, subject: confirm.subject, text: confirm.text, link: { label: confirm.link, href: localizePath(`/nouvelle-adresse/${token}`, lang) }, lang, category: "compte" }, db);
   const alert = n.emailChangeRequested({ first: user.firstName, to: email });
-  await sendEmail({ to: user.email, subject: alert.subject, text: alert.text, lang }, db);
+  await sendEmail({ to: user.email, subject: alert.subject, text: alert.text, lang, category: "compte" }, db);
   await audit(db, user.id, "account.email_change_request", "profile", user.id, { to: email });
 }
 
 export async function confirmEmailChange(db: Db, token: string) {
-  const data = verifyToken<{ uid: string; from: string; to: string; purpose: string }>(token);
-  if (!data || data.purpose !== "email-change") throw new AccountError("Lien expiré ou invalide. Refaites la demande depuis votre compte.");
+  const data = verifyToken<{ uid: string; from: string; to: string }>(token, "email-change");
+  if (!data) throw new AccountError("Lien expiré ou invalide. Refaites la demande depuis votre compte.");
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, data.uid));
   if (!p || p.email !== data.from) throw new AccountError("Lien expiré ou déjà utilisé. Refaites la demande depuis votre compte.");
   const [taken] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, data.to));
@@ -203,7 +205,7 @@ export async function confirmEmailChange(db: Db, token: string) {
     .returning();
   const lang = langOf(p);
   const changed = notices(lang).emailChanged({ first: p.firstName, to: data.to });
-  await sendEmail({ to: data.from, subject: changed.subject, text: changed.text, lang }, db);
+  await sendEmail({ to: data.from, subject: changed.subject, text: changed.text, lang, category: "compte" }, db);
   await audit(db, p.id, "account.email_change", "profile", p.id, { from: data.from, to: data.to });
   return updated;
 }
@@ -332,11 +334,11 @@ export async function companyLeadFormat(
       .insert(s.crmConnections)
       .values({ companyId: company.id, provider: "HubSpot", status: "en_attente" })
       .onConflictDoNothing();
-    const token = signToken({ companyId: company.id, purpose: "crm" }, 7 * 24 * 3600);
+    const token = signToken("crm", { companyId: company.id }, 7 * 24 * 3600);
     // l'administrateur CRM travaille chez l'exposant : même langue que le compte entreprise
     const lang = await localeOf(db, company.ownerId);
     const m = notices(lang).hubspotRequest({ company: company.name });
-    await sendEmail({ to: adminEmail, subject: m.subject, text: m.text, link: { label: m.link, href: `/crm/connexion/${token}` }, lang }, db);
+    await sendEmail({ to: adminEmail, subject: m.subject, text: m.text, link: { label: m.link, href: `/crm/connexion/${token}` }, lang, category: "crm" }, db);
   }
   await db
     .update(s.companies)

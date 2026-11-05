@@ -30,6 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         <Link href="/confidentialite">{t.privacy}</Link>.
       </PageHead>
       {email === "modifie" && <p className="note ok">{t.emailChanged}</p>}
+      {user.emailUndeliverableAt && <p className="note err">{t.undeliverable}</p>}
       <div className="grid2">
         <section className="clay panel" aria-labelledby="pw-title">
           <h2 id="pw-title">{t.password.title}</h2>

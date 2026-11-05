@@ -57,6 +57,20 @@
       "when": 1793294285813,
       "tag": "0007_langue_des_comptes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793318480920,
+      "tag": "0008_journal_des_emails",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793319624566,
+      "tag": "0009_index_cles_etrangeres",
+      "breakpoints": true
     }
   ]
 }

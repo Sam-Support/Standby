@@ -28,7 +28,11 @@ export async function sendContact(_: FormState, fd: FormData): Promise<FormState
     const admins = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.role, "admin"));
     for (const a of admins) await notify(db, a.id, { title: "Nouveau message de contact", body: `${name} · ${str(fd, "subject")}`, link: "/admin/messages", email: false });
     if (process.env.SUPPORT_EMAIL) {
-      await sendEmail({ to: process.env.SUPPORT_EMAIL, subject: `[Contact] ${str(fd, "subject")}`, text: `${name} <${email}>\n\n${message}` }, db);
+      // « Répondre » dans la messagerie de l'équipe écrit directement au visiteur
+      await sendEmail(
+        { to: process.env.SUPPORT_EMAIL, subject: `[Contact] ${str(fd, "subject")}`, text: `${name} <${email}>\n\n${message}`, category: "contact", replyTo: email },
+        db,
+      );
     }
     return done("Message envoyé. Nous vous répondons par e-mail en jours ouvrés.");
   } catch (e) {

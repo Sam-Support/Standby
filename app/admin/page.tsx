@@ -11,10 +11,12 @@ import { supabaseEnabled } from "@/lib/integrations/supabase";
 import { dashboardStats } from "@/lib/services/admin";
 import { getPricing } from "@/lib/settings";
 import { runJobsAction } from "./actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Administration" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const db = await getDb();
   const st = await dashboardStats(db);
   const pricing = await getPricing(db);

@@ -9,5 +9,5 @@ export async function GET(req: NextRequest) {
   const company = await getCurrentCompany();
   if (!company) return NextResponse.redirect(new URL(localizePath("/connexion?next=/entreprise", await getLang()), req.url));
   if (!hubspotEnabled()) return NextResponse.redirect(new URL(localizePath("/entreprise?crm=erreur", await getLang()), req.url));
-  return NextResponse.redirect(hubspotAuthorizeUrl(signToken({ companyId: company.id, purpose: "crm" }, 3600)));
+  return NextResponse.redirect(hubspotAuthorizeUrl(signToken("crm", { companyId: company.id }, 3600)));
 }

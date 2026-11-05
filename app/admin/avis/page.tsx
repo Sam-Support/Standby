@@ -4,10 +4,12 @@ import { PageHead } from "@/components/ui";
 import { longDateTime } from "@/lib/format";
 import { reviewsFor } from "@/lib/services/reviews";
 import { deleteReviewAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Avis" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const rows = await reviewsFor(await getDb());
   return (
     <>

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createPgliteDb, type Db } from "@/db";
+import { hashToken } from "@/lib/crypto";
 import * as s from "@/db/schema";
 import { payoutCents } from "@/lib/pricing";
 import { changePassword, confirmEmailChange, login, registerAccount, requestEmailChange, resetPassword } from "./accounts";
@@ -219,9 +220,11 @@ describe("mot de passe et adresse e-mail", () => {
 
     // une réinitialisation ferme aussi les sessions
     const token = "jeton-de-test-reinitialisation";
-    await db.insert(s.passwordResets).values({ token, userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
+    await db.insert(s.passwordResets).values({ token: hashToken(token), userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
     await resetPassword(db, token, "encore-un-mdp-789");
     expect((await login(db, p.email, "encore-un-mdp-789"))?.sessionVersion).toBe(2);
+    // lien à usage unique
+    await expect(resetPassword(db, token, "autre-mdp-0123")).rejects.toThrow(/déjà utilisé/);
   });
 
   it("change l'adresse une fois le lien envoyé à la nouvelle confirmé", async () => {

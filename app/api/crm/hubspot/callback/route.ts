@@ -7,7 +7,7 @@ import { audit } from "@/lib/notify";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const state = verifyToken<{ companyId: string; purpose: string }>(req.nextUrl.searchParams.get("state") ?? undefined);
+  const state = verifyToken<{ companyId: string }>(req.nextUrl.searchParams.get("state"), "crm");
   const viewer = await getCurrentCompany();
   const back = (ok: boolean) =>
     viewer
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
           status: ok ? 200 : 400,
           headers: { "Content-Type": "text/plain; charset=utf-8" },
         });
-  if (!code || !state || state.purpose !== "crm") return back(false);
+  if (!code || !state) return back(false);
   try {
     const t = await exchangeHubspotCode(code);
     const db = await getDb();

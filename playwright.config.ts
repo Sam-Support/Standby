@@ -30,6 +30,7 @@ export default defineConfig({
       APP_URL: `http://localhost:${PORT}`,
       COOKIE_INSECURE: "1",
       CRON_SECRET: "e2e",
+      AUTH_SECRET: "e2e-secret-de-test-uniquement-pour-playwright",
     },
   },
 });

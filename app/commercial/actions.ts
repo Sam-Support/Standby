@@ -5,7 +5,7 @@ import { getDb } from "@/db";
 import { billingFields, eurosToCents, done, fail, oops, file, files, parseHours, str, strs, type FormState } from "@/lib/action";
 import { localRedirect } from "@/lib/i18n/server";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
-import type { DocumentKey } from "@/lib/domain";
+import { DOCUMENT_TYPES, type DocumentKey } from "@/lib/domain";
 import {
   freelancerBilling,
   freelancerIdentity,
@@ -176,6 +176,7 @@ export async function updateBillingAction(_: FormState, fd: FormData): Promise<F
 export async function uploadDocAction(type: DocumentKey, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const { f, db } = await me();
+    if (!Object.hasOwn(DOCUMENT_TYPES, type)) return oops("Document introuvable.");
     const upload = await readUpload(file(fd, "doc"), ["pdf", "jpg", "jpeg", "png"]);
     if (!upload) return oops("Choisissez un fichier.");
     await uploadFreelancerDocument(db, f, type, upload, type === "urssaf" ? str(fd, "issuedOn") : null);

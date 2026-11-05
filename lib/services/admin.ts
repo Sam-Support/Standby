@@ -9,6 +9,19 @@ export class AdminError extends Error {}
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Adresse web d'un salon : http(s) uniquement (pas de « javascript: » dans un lien affiché aux exposants). */
+function httpUrl(v: string | null | undefined): string | null {
+  const t = v?.trim();
+  if (!t) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error();
+    return url.toString();
+  } catch {
+    throw new AdminError(`Adresse web invalide : ${t}`);
+  }
+}
+
 export function slugify(v: string) {
   return v
     .normalize("NFD")
@@ -54,7 +67,7 @@ export async function saveEvent(db: Db, adminId: string, id: string | null, e: E
     setupOn: e.setupOn || null,
     sector: e.sector.trim(),
     specialty: e.specialty || null,
-    siteUrl: e.siteUrl?.trim() || null,
+    siteUrl: httpUrl(e.siteUrl),
     color: /^#[0-9a-fA-F]{6}$/.test(e.color ?? "") ? e.color! : "#FFCD4A",
     published: e.published,
     verifiedOn: e.verified ? new Date().toISOString().slice(0, 10) : null,

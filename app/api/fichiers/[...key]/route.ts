@@ -13,12 +13,15 @@ const UUID = /^[0-9a-f-]{36}$/;
  * private/freelancers/<id>/…   le commercial lui-même
  * L'admin voit tout.
  */
+// segment de clé sûr : ni « . » ni « .. », ni séparateur (/ ou \), ni caractère de contrôle
+const SEGMENT = /^(?!\.{1,2}$)[^/\\\x00-\x1f]+$/;
+
 export async function GET(_: Request, { params }: { params: Promise<{ key: string[] }> }) {
+  // les segments arrivent déjà décodés : pas de second décodage (« %252e%252e » ne doit pas devenir « .. »)
   const { key } = await params;
-  const path = key.map(decodeURIComponent).join("/");
-  if (key.some((p) => p === ".." || p === "")) return new Response("Introuvable", { status: 404 });
+  if (key.length < 2 || !key.every((p) => SEGMENT.test(p))) return new Response("Introuvable", { status: 404 });
   if (key[0] !== "public" && !(await canRead(key))) return new Response("Accès refusé", { status: 403 });
-  const data = await getFile(path);
+  const data = await getFile(key.join("/")).catch(() => null);
   if (!data) return new Response("Introuvable", { status: 404 });
   const name = key.at(-1)!;
   return new Response(new Uint8Array(data), {

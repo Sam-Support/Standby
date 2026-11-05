@@ -4,10 +4,12 @@ import { getDb } from "@/db";
 import { BOOKING_STATUS_LABELS } from "@/lib/domain";
 import { dateRange, euros, longDate } from "@/lib/format";
 import { bookingsWithStatus } from "@/lib/services/admin";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Réservations" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ statut?: string }> }) {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const { statut } = await searchParams;
   const rows = await bookingsWithStatus(await getDb(), statut && statut in BOOKING_STATUS_LABELS ? [statut] : []);
   return (

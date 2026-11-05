@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";
 import { BackLink, PageHead } from "@/components/ui";
 import { EventForm } from "../event-form";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Modifier un salon" };
 
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string }> }) {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const { id } = await params;
   const { ok } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();

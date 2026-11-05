@@ -183,11 +183,16 @@ export async function assertSelfBillAccess(db: Db, invoiceId: string, freelancer
   return row;
 }
 
-/** CSV pour Excel (séparateur point-virgule, BOM UTF-8). */
+/**
+ * CSV pour Excel (séparateur point-virgule, BOM UTF-8). Un texte saisi par un utilisateur qui commence par
+ * « = + - @ » serait exécuté comme une formule à l'ouverture : il est préfixé d'une apostrophe
+ * (les montants négatifs « -12,50 » restent des nombres).
+ */
 export function toCsv(rows: (string | number | null)[][]) {
   const cell = (v: string | number | null) => {
-    const t = v === null ? "" : String(v);
-    return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    let t = v === null ? "" : String(v);
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(t) && !/^-\d+(,\d+)?$/.test(t)) t = `'${t}`;
+    return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
   };
   return `﻿${rows.map((r) => r.map(cell).join(";")).join("\r\n")}\r\n`;
 }

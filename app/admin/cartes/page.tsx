@@ -5,10 +5,12 @@ import { PageHead } from "@/components/ui";
 import { longDateTime } from "@/lib/format";
 import { fileUrl } from "@/lib/storage";
 import { transcribeAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Cartes de visite à saisir" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const db = await getDb();
   const cards = await db
     .select({ card: s.businessCards, b: s.bookings, c: s.companies })

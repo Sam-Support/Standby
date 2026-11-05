@@ -6,10 +6,12 @@ import { PRICING_DEFAULTS } from "@/lib/domain";
 import { eurosPrecise, longDate, longDateTime, percent, todayIso } from "@/lib/format";
 import { getPricing } from "@/lib/settings";
 import { setPricingAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Tarification" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const db = await getDb();
   const pricing = await getPricing(db);
   const history = await db.select().from(s.pricingSettings).orderBy(desc(s.pricingSettings.createdAt)).limit(60);

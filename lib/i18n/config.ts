@@ -23,7 +23,7 @@ export function splitLang(pathname: string): { lang: Lang | null; path: string }
 
 /** Lien interne dans la langue voulue (« /entreprise » → « /en/entreprise »). */
 export function localizePath(href: string, lang: Lang): string {
-  if (!href.startsWith("/") || href.startsWith("//") || /^\/(api|_next)(\/|$)/.test(href)) return href;
+  if (!href.startsWith("/") || /^\/[/\\]/.test(href) || /^\/(api|_next)(\/|$)/.test(href)) return href;
   const { path } = splitLang(href);
   if (lang === DEFAULT_LANG) return path;
   // accueil : « /en », « /en?x=1 » (pas de barre finale, que Next redirigerait)

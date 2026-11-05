@@ -4,10 +4,12 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead, Status } from "@/components/ui";
 import { longDateTime } from "@/lib/format";
 import { handleMessageAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Messages" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const rows = await (await getDb()).select().from(s.contactMessages).orderBy(desc(s.contactMessages.createdAt)).limit(100);
   return (
     <>

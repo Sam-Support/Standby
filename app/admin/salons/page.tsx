@@ -5,10 +5,12 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead, Status } from "@/components/ui";
 import { dateRange, longDate, todayIso } from "@/lib/format";
 import { importCsvAction } from "../actions";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Salons et foires" };
 
 export default async function Page() {
+  await requireAdmin(); // le layout ne suffit pas : une navigation côté client ne le réexécute pas
   const db = await getDb();
   const events = await db.select().from(s.events).orderBy(asc(s.events.startsOn));
   const today = todayIso();
