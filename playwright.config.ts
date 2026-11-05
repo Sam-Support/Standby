@@ -31,6 +31,7 @@ export default defineConfig({
       COOKIE_INSECURE: "1",
       CRON_SECRET: "e2e",
       AUTH_SECRET: "e2e-secret-de-test-uniquement-pour-playwright",
+      DEMO_DATES_SLIDE: "1", // le calendrier de démo suit la date du jour (db/seed.ts)
     },
   },
 });

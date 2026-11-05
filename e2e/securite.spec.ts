@@ -12,9 +12,14 @@ test.describe("sécurité", () => {
     expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
     expect(csp).toContain("frame-ancestors 'none'");
     expect(res!.headers()["x-content-type-options"]).toBe("nosniff");
-    // l'application est interactive (hydratation autorisée par le nonce)
-    await page.getByRole("button", { name: /^MAPIC,/ }).click();
-    await expect(page.locator('[aria-roledescription="carrousel"] h3')).toHaveText("MAPIC");
+    // l'application est interactive (hydratation autorisée par le nonce) : on passe au deuxième événement à
+    // venir, quel qu'il soit, pour ne pas dépendre de la date du jour
+    const carousel = page.locator('[aria-roledescription="carrousel"]');
+    const dot = carousel.locator(".carousel-dots button").nth(1);
+    const label = (await dot.getAttribute("aria-label"))!; // « nom, date »
+    await dot.click();
+    await expect(dot).toHaveAttribute("aria-pressed", "true");
+    await expect(carousel.locator("h3")).toHaveText(label.slice(0, label.lastIndexOf(", ")));
     expect(violations).toEqual([]);
   });
 

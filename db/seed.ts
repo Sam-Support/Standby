@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { count, isNull } from "drizzle-orm";
 import { hashPassword } from "@/lib/auth/password";
 import { PRICING_DEFAULTS, STANDARD_LEAD_COLUMNS, AVATAR_COLORS, BILLING_MANDATE_VERSION, type RoleKey } from "@/lib/domain";
+import { addDays, daysUntil, todayIso } from "@/lib/format";
 import { computeQuote } from "@/lib/pricing";
 import type { Db } from "./index";
 import * as s from "./schema";
@@ -90,6 +91,24 @@ const EVENTS = [
   { slug: "salons-solutions-2026", name: "Les Salons Solutions", kind: "salon", city: "Paris", startsOn: "2026-10-14", endsOn: "2026-10-15", setupOn: null, sector: "Solutions de gestion", specialty: "Tech & SaaS", color: "#B39BFF", siteUrl: null },
   { slug: "foire-printemps-demo-2027", name: "Foire de printemps (démo)", kind: "foire", city: "Lyon", startsOn: "2027-03-27", endsOn: "2027-04-05", setupOn: "2027-03-26", sector: "Maison et grand public", specialty: "Maison & grand public", color: "#FF9F55", siteUrl: null },
 ] as const;
+
+/**
+ * Le calendrier de démonstration date du 30 octobre 2026. Avec DEMO_DATES_SLIDE=1 (tests de bout en bout, qui
+ * tournent à la date du jour), il avance d'autant de jours qu'il s'en est écoulé depuis : la démo garde ses salons
+ * passés, en cours et à venir. Les tests unitaires passent leurs propres dates et gardent le calendrier d'origine.
+ */
+const DEMO_CALENDAR_DATE = "2026-10-30";
+
+export function demoEvents(today = todayIso()) {
+  const shift = process.env.DEMO_DATES_SLIDE === "1" ? Math.max(0, daysUntil(today, DEMO_CALENDAR_DATE)) : 0;
+  return EVENTS.map((e) => ({
+    ...e,
+    kind: e.kind as "salon" | "foire",
+    startsOn: addDays(e.startsOn, shift),
+    endsOn: addDays(e.endsOn, shift),
+    setupOn: e.setupOn && addDays(e.setupOn, shift),
+  }));
+}
 
 function daysBetween(start: string, end: string): string[] {
   const out: string[] = [];
@@ -190,7 +209,7 @@ async function seedDemo(db: Db) {
 
   const eventRows = await db
     .insert(s.events)
-    .values(EVENTS.map((e) => ({ ...e, kind: e.kind as "salon" | "foire" })))
+    .values(demoEvents())
     .returning();
   const ev = (slug: string) => eventRows.find((e) => e.slug === slug)!;
 
