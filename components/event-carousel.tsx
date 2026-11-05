@@ -68,7 +68,7 @@ export function EventCarousel({ events }: { events: EventCard[] }) {
             </p>
           </div>
         </div>
-        <EventArt logoUrl={e.logoUrl} name={e.name} height={122} />
+        <EventArt logoUrl={e.logoUrl} name={e.name} color={e.color} height={122} />
         <div className="row-between">
           <div className="inline" style={{ gap: 6 }}>
             {e.specialty && <span className="tag">{labels.specialty(e.specialty)}</span>}

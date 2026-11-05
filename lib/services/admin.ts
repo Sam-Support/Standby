@@ -2,6 +2,7 @@ import { and, count, countDistinct, eq, gte, inArray, sql, sum } from "drizzle-o
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { PRICING_DEFAULTS } from "@/lib/domain";
+import { imageSize } from "@/lib/logo";
 import { audit } from "@/lib/notify";
 import { putFile } from "@/lib/storage";
 
@@ -89,16 +90,22 @@ export async function saveEvent(db: Db, adminId: string, id: string | null, e: E
     eventId = created.id;
   }
   if (logo) {
-    const key = `public/events/${eventId}-${Date.now()}.${logo.name.split(".").pop()}`;
+    const ext = logo.name.split(".").pop() ?? "";
+    const size = imageSize(logo.data, ext);
+    if (!size) throw new AdminError("Logo illisible : déposez un PNG, JPG, WebP ou SVG valide.");
+    const key = `public/events/${eventId}-${Date.now()}.${ext}`;
     await putFile(key, logo.data, logo.name);
-    await db.update(s.events).set({ logoPath: key }).where(eq(s.events.id, eventId!));
+    await db
+      .update(s.events)
+      .set({ logoPath: key, logoWidth: Math.round(size.width), logoHeight: Math.round(size.height) })
+      .where(eq(s.events.id, eventId!));
   }
   await audit(db, adminId, id ? "event.update" : "event.create", "event", eventId!, { name: values.name });
   return eventId!;
 }
 
 export async function removeEventLogo(db: Db, adminId: string, id: string) {
-  await db.update(s.events).set({ logoPath: null }).where(eq(s.events.id, id));
+  await db.update(s.events).set({ logoPath: null, logoWidth: null, logoHeight: null }).where(eq(s.events.id, id));
   await audit(db, adminId, "event.logo_remove", "event", id);
 }
 

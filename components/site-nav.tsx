@@ -8,6 +8,18 @@ import { getLang, getMessages } from "@/lib/i18n/server";
 import { LangSwitch } from "./lang-switch";
 import { NavTabs } from "./nav-tabs";
 
+/** « Maison Lumen » → « ML » (bouton du compte sur petit écran). */
+function initials(label: string) {
+  return (
+    label
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]!.toUpperCase())
+      .join("") || "?"
+  );
+}
+
 export async function SiteNav() {
   const user = await getCurrentUser();
   const lang = await getLang();
@@ -53,11 +65,18 @@ export async function SiteNav() {
             {unread > 0 && <b>{unread > 9 ? "9+" : unread}</b>}
           </Link>
         )}
-        <Link className="clay s btn sm butter" href={href}>
-          {label}
-        </Link>
+        {user ? (
+          <Link className="clay s btn sm butter acct" href={href} title={label}>
+            <span className="full">{label}</span>
+            <span className="short">{initials(label)}</span>
+          </Link>
+        ) : (
+          <Link className="clay s btn sm butter" href={href}>
+            {label}
+          </Link>
+        )}
         {user && (
-          <form action={logoutAction}>
+          <form action={logoutAction} className="nav-logout">
             <button className="clay s bell" type="submit" aria-label={t.logout} title={t.logout}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

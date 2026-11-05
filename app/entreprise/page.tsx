@@ -75,7 +75,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         </div>
       </div>
 
-      <div className="inline" style={{ gap: 18 }}>
+      <div className="kpis">
         <div className="clay kpi"><span className="lab">{t.kpiUpcoming}</span><b>{upcoming.length}</b></div>
         <div className="clay kpi"><span className="lab">{t.kpiHours}</span><b>{f.hoursLabel(pendingMinutes)}</b></div>
         <div className="clay kpi"><span className="lab">{t.kpiLeads}</span><b>{leads}</b></div>

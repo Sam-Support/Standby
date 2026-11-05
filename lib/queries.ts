@@ -4,6 +4,7 @@ import * as s from "@/db/schema";
 import { listDays, todayIso } from "./format";
 import { daysOverlap } from "./matching";
 import { fileUrl } from "./storage";
+import { logoFits } from "@/lib/logo";
 
 export type EventCard = {
   id: string;
@@ -53,7 +54,8 @@ export async function upcomingEvents(db: Db, opts: { limit?: number; kind?: "sal
       specialty: e.specialty,
       siteUrl: e.siteUrl,
       color: e.color,
-      logoUrl: e.logoAuthorized ? fileUrl(e.logoPath) : null,
+      // logo affiché seulement avec l’accord de l’organisateur et aux bonnes dimensions ; sinon le nom du salon sur sa couleur
+      logoUrl: e.logoAuthorized && logoFits({ width: e.logoWidth, height: e.logoHeight, vector: e.logoPath?.endsWith(".svg") }) ? fileUrl(e.logoPath) : null,
       available: Math.max(0, total - engaged.size),
     };
   });

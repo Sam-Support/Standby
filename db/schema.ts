@@ -262,6 +262,9 @@ export const events = pgTable("events", {
   siteUrl: text("site_url"),
   verifiedOn: date("verified_on"),
   logoPath: text("logo_path"),
+  // dimensions lues à l'envoi (lib/logo.ts) : hors règle, le nom du salon s'affiche à la place du logo
+  logoWidth: integer("logo_width"),
+  logoHeight: integer("logo_height"),
   logoAuthorized: boolean("logo_authorized").notNull().default(false),
   color: text("color").notNull().default("#FFCD4A"),
   published: boolean("published").notNull().default(true),

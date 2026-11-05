@@ -5,6 +5,7 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead, Status } from "@/components/ui";
 import { dateRange, longDate, todayIso } from "@/lib/format";
 import { importCsvAction } from "../actions";
+import { logoStatus } from "./event-form";
 import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Salons et foires" };
@@ -61,7 +62,7 @@ export default async function Page() {
                   <td>{e.kind === "salon" ? "Salon pro" : "Foire"}</td>
                   <td>{e.city}</td>
                   <td>{dateRange(e.startsOn, e.endsOn, true)}</td>
-                  <td>{e.logoPath ? (e.logoAuthorized ? "affiché" : "non autorisé") : "—"}</td>
+                  <td>{e.logoPath ? (logoStatus(e).shown ? "affiché" : e.logoAuthorized ? "hors dimensions" : "non autorisé") : "—"}</td>
                   <td>{e.verifiedOn ? longDate(e.verifiedOn) : <span className="todo">à vérifier</span>}</td>
                   <td>
                     {!e.published ? <Status>Masqué</Status> : e.endsOn < today ? <Status>Passé</Status> : <Status tone="ok">Publié</Status>}

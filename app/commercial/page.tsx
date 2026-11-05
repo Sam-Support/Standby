@@ -50,7 +50,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start" }}>
         <aside style={{ flex: "1 1 320px", maxWidth: 380, display: "flex", flexDirection: "column", gap: 22 }}>
-          <div className="clay" style={{ borderRadius: 22, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
+          <div className="clay me-card" style={{ borderRadius: 22, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
             <Avatar first={user.firstName} last={user.lastName} color={f.avatarColor} size={96} />
             <h1 style={{ font: "800 19px var(--sans)" }}>
               {user.firstName} {user.lastName}

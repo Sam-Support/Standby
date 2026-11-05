@@ -15,6 +15,7 @@ export const home = defineMessages({
     statEvents: "événements à venir",
     statRating: "note moyenne des profils",
     verified: (date: string) => `Calendrier des salons et foires, dates vérifiées le ${date}.`,
+    eyebrows: { how: "Comment ça marche", agenda: "Agenda", who: "Pour qui" },
     stepsTitle: "Trois étapes, zéro tableur",
     stepsLead: "Le parcours reprend ce qui marche sur les plateformes d’extras, adapté aux salons et aux foires : montage la veille, badges, tenues prêtées, leads au format de votre CRM.",
     steps: [
@@ -77,6 +78,7 @@ export const home = defineMessages({
     statEvents: "upcoming events",
     statRating: "average profile rating",
     verified: (date: string) => `Trade show and fair calendar, dates checked on ${date}.`,
+    eyebrows: { how: "How it works", agenda: "Calendar", who: "Who it is for" },
     stepsTitle: "Three steps, zero spreadsheets",
     stepsLead: "The flow takes what works on staffing platforms and adapts it to trade shows and fairs: set-up the day before, badges, loaned outfits, leads in your CRM format.",
     steps: [
@@ -139,6 +141,7 @@ export const home = defineMessages({
     statEvents: "eventos próximos",
     statRating: "valoración media de los perfiles",
     verified: (date: string) => `Calendario de ferias y salones, fechas verificadas el ${date}.`,
+    eyebrows: { how: "Cómo funciona", agenda: "Agenda", who: "Para quién" },
     stepsTitle: "Tres pasos, cero hojas de cálculo",
     stepsLead: "El proceso retoma lo que funciona en las plataformas de personal extra, adaptado a ferias y salones: montaje la víspera, acreditaciones, uniforme prestado, leads en el formato de su CRM.",
     steps: [

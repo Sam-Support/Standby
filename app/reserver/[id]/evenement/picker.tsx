@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Submit } from "@/components/action-form";
+import { EventArt } from "@/components/event-art";
 import { useFmt, useMessages } from "@/components/i18n";
 import { eventDayCount, listDays } from "@/lib/format";
 import { booking } from "@/lib/i18n/messages/booking";
@@ -54,7 +55,7 @@ export function EventPicker({
     <>
       <div className="row-between">
         <h2 className="ptitle">{t.which}</h2>
-        <div className="seg sunk" style={{ flex: "none" }} role="tablist">
+        <div className="seg sunk" style={{ flex: "0 1 auto", maxWidth: "100%" }} role="tablist">
           {(["salon", "foire"] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={kind === k} className={kind === k ? "on" : ""} onClick={() => setKind(k)} style={{ border: 0, background: "none", flex: 1, padding: "12px 16px", borderRadius: 14, font: "700 14px/1.2 var(--sans)", color: kind === k ? "#1B2150" : "#575B7E", cursor: "pointer", ...(kind === k ? { background: "radial-gradient(140% 140% at 24% 14%,#fff 0%,#FCFBF9 50%,#e9e7ee 100%)", boxShadow: "inset 0 1px 0 #fff,0 6px 12px -6px rgba(52,58,112,.5)" } : {}) }}>
               {k === "salon" ? t.salons : t.fairs}
@@ -97,13 +98,8 @@ export function EventPicker({
 
       {ev && (
         <div className="clay" style={{ borderRadius: 22, padding: "16px 18px", display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <div className="sunk" style={{ width: 120, height: 72, borderRadius: 14, display: "grid", placeItems: "center", overflow: "hidden" }}>
-            {ev.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={ev.logoUrl} alt={t.logo(ev.name)} style={{ maxWidth: 100, maxHeight: 56, objectFit: "contain" }} />
-            ) : (
-              <span className="clay s" style={{ ["--c" as string]: ev.color, width: 44, height: 30, borderRadius: 8, display: "block" }}></span>
-            )}
+          <div style={{ width: 120, flex: "none" }}>
+            <EventArt logoUrl={ev.logoUrl} name={ev.name} color={ev.color} height={72} />
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <b>{ev.name}</b>

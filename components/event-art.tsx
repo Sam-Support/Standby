@@ -1,18 +1,21 @@
-/** Illustration « stand » du design ; affiche le logo du salon s'il est autorisé. */
-export function EventArt({ logoUrl, name, height, ratio }: { logoUrl: string | null; name: string; height?: number; ratio?: string }) {
+import { textOn } from "@/lib/logo";
+
+/**
+ * Visuel d'un salon : son logo s'il est autorisé et aux bonnes dimensions (lib/logo.ts), sinon son nom écrit
+ * sur la couleur de l'événement. Le nom figurant déjà à côté, ce repli est masqué aux lecteurs d'écran.
+ */
+export function EventArt({ logoUrl, name, color, height, ratio }: { logoUrl: string | null; name: string; color: string; height?: number; ratio?: string }) {
+  if (logoUrl) {
+    return (
+      <div className="eart logo" style={{ height, aspectRatio: ratio }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoUrl} alt={name} />
+      </div>
+    );
+  }
   return (
-    <div className={ratio ? "sunk stand" : "stand"} style={{ height, aspectRatio: ratio, borderRadius: ratio ? 16 : 20 }} aria-hidden={logoUrl ? undefined : true}>
-      <div className="floor" style={{ height: ratio ? 22 : 24 }}></div>
-      <span className="clay s bx" style={{ ["--c" as string]: "#B39BFF", left: "8%", bottom: ratio ? 22 : 24, width: "22%", height: "38%" }}></span>
-      <span className="clay s bx" style={{ ["--c" as string]: "#FFCD4A", left: "36%", bottom: ratio ? 22 : 24, width: "24%", height: "52%" }}></span>
-      <span className="clay s bx" style={{ ["--c" as string]: "#82C9FF", left: "65%", bottom: ratio ? 22 : 24, width: "20%", height: "33%" }}></span>
-      {!ratio && <span className="clay s bx" style={{ ["--c" as string]: "#FCFBF9", left: "88%", bottom: 24, width: "9%", height: "44%" }}></span>}
-      {logoUrl && (
-        <div className="logo-img">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoUrl} alt={`Logo ${name}`} />
-        </div>
-      )}
+    <div className="eart name clay s" style={{ ["--c" as string]: color, color: textOn(color), height, aspectRatio: ratio }} aria-hidden="true">
+      <span className={name.length > 30 ? "long" : undefined}>{name}</span>
     </div>
   );
 }
