@@ -70,6 +70,9 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 
 ## Production (VPS + Supabase)
 
+Guide pas à pas de la mise en ligne (comptes, secrets, DNS, textes juridiques, recette) : [`docs/06-MISE-EN-LIGNE.md`](docs/06-MISE-EN-LIGNE.md).
+Ce qui reste à faire, par ordre et par responsable : [`docs/07-A-FAIRE.md`](docs/07-A-FAIRE.md).
+
 1. **Supabase** (région UE) : récupérer `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; créer les buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
 2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `refund.updated`, `refund.failed`, `account.updated`).
 3. **SIRENE** (facultatif) : clé `INSEE_API_KEY` de l'API Sirene de l'INSEE ; sans elle, ou en cas de panne de l'INSEE, les SIRET sont vérifiés via l'API publique Recherche d'entreprises.
