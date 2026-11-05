@@ -32,6 +32,7 @@ stateDiagram-v2
   Partielle --> Confirmée: toutes acceptations
   Envoyée --> Confirmée: toutes acceptations
   Partielle --> Remplacement: refus ou expiration
+  Confirmée --> Remplacement: désistement (jusqu'à la veille)
   Remplacement --> Partielle
   Confirmée --> EnCours: 1er jour du salon
   EnCours --> HeuresÀValider: fin d'événement
@@ -42,7 +43,7 @@ stateDiagram-v2
   Confirmée --> Annulée: barème d'annulation
 ```
 
-Statut d'une assignation (commercial) : `proposée → acceptée | refusée | expirée → effectuée → heures_validées → payée`.
+Statut d'une assignation (commercial) : `proposée → acceptée | refusée | expirée → effectuée → heures_validées → payée`, ou `acceptée → désistée` avant l'événement (remplaçant proposé, au même tarif ou moins en priorité ; motif transmis à l'équipe Standby seulement).
 
 ## 3. Chronologie post-réservation (design « Confirmation »)
 
@@ -67,7 +68,7 @@ flowchart LR
   T & H & F --> V[Compte créé: vérification email]
 ```
 
-SIRET contrôlé via API SIRENE à l'étape 1.
+SIRET contrôlé via API SIRENE à l'étape 1 : « vérifié » si l'établissement est actif et que le nom concorde avec la raison sociale, sinon confirmation par l'admin. Adresse de facturation obligatoire, n° de TVA calculé à partir du SIREN si vide.
 
 ## 5. Inscription commercial·e
 
@@ -82,7 +83,7 @@ flowchart LR
   R -->|refus| X[Pièce à corriger]
 ```
 
-Le profil n'apparaît dans le matching qu'après validation des documents.
+Le profil n'apparaît dans le matching qu'après validation des documents. Validation automatique seulement si le nom SIRENE correspond au prénom et au nom du compte ; sinon (SIRET d'un tiers, société), l'admin valide le profil manuellement. Au recontrôle mensuel, un établissement fermé retire du matching ; un SIRET devenu introuvable est signalé à l'admin.
 
 ## 6. Dépôt de leads (commercial → exposant)
 
@@ -117,13 +118,27 @@ sequenceDiagram
   C->>S: Pointage / heures effectuées
   S->>E: Heures à valider
   E->>S: Valide ou ajuste
+  opt Total revu à la baisse
+    S->>C: Ajustement à accepter ou contester (48 h)
+    C->>S: Accepte, conteste (motif) ou ne répond pas (retenu)
+    S->>S: Contestation : arbitrage admin, définitif
+  end
   S->>ST: Capture / débit de l'exposant
   S->>ST: Transfert au compte connecté
   ST-->>C: Virement le lundi
   S->>E: Facture dans l'espace
 ```
 
-Litige d'heures : l'exposant conteste, ticket Retool, arbitrage Standby avant capture.
+Heures par jour : `declare → valide`, ou `declare → ajuste → valide | conteste → valide (arbitrage)`. La facture n'est émise qu'une fois toutes les heures validées.
+
+Avoir : émis par l'admin depuis la fiche réservation (motif, montant TTC ≤ reste à créditer, même taux de TVA que la facture). Facture réglée : remboursement Stripe (`refund.updated` suit l'aboutissement, relance ou « remboursé par virement » en cas d'échec). Non réglée : déduit du prélèvement, réservation soldée à zéro. La paie des commerciaux n'est jamais modifiée par un avoir.
+
+Autofacturation : au virement (paiement de l'exposant encaissé), chaque commercial reçoit une facture émise à son nom par Standby (mandat accepté à l'inscription). Paie = HT (taux × heures validées, ou indemnité) + TVA s'il est assujetti − commission plateforme (missions seulement). Sans mandat au moment du virement, la facture est émise dès son acceptation. Relevés par mois de virement, récapitulatif annuel par trimestre (agrégats DAC7).
+
+## 7 bis. Compte
+
+- Mot de passe : l'actuel est exigé ; tous les autres appareils sont déconnectés (version de session incrémentée, aussi après une réinitialisation), alerte par e-mail.
+- E-mail : mot de passe exigé, lien de confirmation (24 h) envoyé à la nouvelle adresse, alerte sur l'ancienne ; l'ancienne reste l'identifiant jusqu'au clic.
 
 ## 8. Plan de navigation (écrans du design → routes)
 

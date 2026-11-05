@@ -1,0 +1,541 @@
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import type { Db } from "@/db";
+import * as s from "@/db/schema";
+import { AuthError, createIdentity, storeLocalPassword, updateIdentityEmail, updateIdentityPassword, verifyIdentity } from "@/lib/auth/provider";
+import { hashToken, randomToken, signToken, verifyToken } from "@/lib/crypto";
+import {
+  AVATAR_COLORS,
+  BILLING_MANDATE_VERSION,
+  DOCUMENT_TYPES,
+  isRoleKey,
+  LANGUAGES,
+  SPECIALTIES,
+  type DocumentKey,
+  type RoleKey,
+  type VatRegime,
+} from "@/lib/domain";
+import { hourly } from "@/lib/format";
+import { DEFAULT_LANG, isLang, localizePath, type Lang } from "@/lib/i18n/config";
+import { notices } from "@/lib/i18n/messages/notices";
+import { sendEmail } from "@/lib/integrations/email";
+import { lookupSiret } from "@/lib/integrations/sirene";
+import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/integrations/stripe";
+import { audit, localeOf, notify, notifyAdmins } from "@/lib/notify";
+import { getPricing } from "@/lib/settings";
+import { frVatNumber, isValidSiret, normalizeSiret } from "@/lib/siret";
+import { deleteFile, putFile } from "@/lib/storage";
+import {
+  checkFreelancerSiret,
+  companyNameMatches,
+  maybeValidateFreelancer,
+  refreshBlockedReason,
+  REQUIRED_DOCUMENTS,
+  urssafValidUntil,
+  type SiretLookup,
+} from "./compliance";
+import { issueMissingSelfBills } from "./self-billing";
+
+export class AccountError extends Error {}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function registerAccount(
+  db: Db,
+  input: { email: string; password: string; role: "exposant" | "commercial"; firstName: string; lastName: string; phone?: string; locale?: Lang },
+) {
+  const email = input.email.trim().toLowerCase();
+  if (!EMAIL.test(email)) throw new AccountError("Adresse e-mail invalide.");
+  if (input.password.length < 10) throw new AccountError("Le mot de passe doit contenir au moins 10 caractères.");
+  if (!input.firstName.trim() || !input.lastName.trim()) throw new AccountError("Indiquez votre prénom et votre nom.");
+  const [exists] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
+  if (exists) throw new AccountError("Un compte existe déjà avec cet e-mail. Connectez-vous.");
+  let id: string;
+  try {
+    id = await createIdentity(email, input.password);
+  } catch (e) {
+    throw new AccountError(e instanceof AuthError ? e.message : "Création du compte impossible.");
+  }
+  const [profile] = await db
+    .insert(s.profiles)
+    .values({
+      id,
+      email,
+      role: input.role,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      phone: input.phone?.trim() || null,
+      locale: input.locale ?? DEFAULT_LANG,
+    })
+    .returning();
+  await storeLocalPassword(db, id, input.password);
+  await sendVerificationEmail(db, profile);
+  return profile;
+}
+
+const VERIFY_TTL = 48 * 3600;
+
+/** Lien de confirmation d'adresse (48 h). Sans adresse confirmée : ni réservation, ni mission. */
+export async function sendVerificationEmail(db: Db, profile: { id: string; email: string; firstName: string; locale?: string }) {
+  const token = signToken("verify", { uid: profile.id, email: profile.email }, VERIFY_TTL);
+  const lang = langOf(profile);
+  const m = notices(lang).verifyEmail({ first: profile.firstName });
+  await sendEmail({ to: profile.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/verifier-email/${token}`, lang) }, lang, category: "compte" }, db);
+}
+
+/** Langue d'un compte pour ses e-mails. */
+function langOf(p: { locale?: string | null }): Lang {
+  return isLang(p.locale) ? p.locale : DEFAULT_LANG;
+}
+
+export async function confirmEmail(db: Db, token: string) {
+  const data = verifyToken<{ uid: string; email: string }>(token, "verify");
+  if (!data) throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, data.uid));
+  if (!p || p.email !== data.email) throw new AccountError("Lien expiré ou invalide. Demandez un nouveau lien depuis votre espace.");
+  if (!p.emailVerifiedAt) await db.update(s.profiles).set({ emailVerifiedAt: new Date() }).where(eq(s.profiles.id, p.id));
+  return p;
+}
+
+export function requireVerifiedEmail(profile: { emailVerifiedAt: Date | null }) {
+  if (!profile.emailVerifiedAt) {
+    throw new AccountError("Confirmez d’abord votre adresse e-mail : le lien vous a été envoyé à l’inscription (vous pouvez le renvoyer depuis le bandeau en haut de page).");
+  }
+}
+
+export async function login(db: Db, email: string, password: string) {
+  const id = await verifyIdentity(db, email.trim().toLowerCase(), password);
+  if (!id) return null;
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, id));
+  return p ?? null;
+}
+
+export async function requestPasswordReset(db: Db, email: string) {
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.email, email.trim().toLowerCase()));
+  if (!p) return; // réponse identique, que le compte existe ou non
+  const token = randomToken();
+  // seule l'empreinte est en base : une fuite de la base ne donne pas de lien de réinitialisation utilisable
+  await db.insert(s.passwordResets).values({ token: hashToken(token), userId: p.id, expiresAt: new Date(Date.now() + 3600_000) });
+  const lang = langOf(p);
+  const m = notices(lang).resetPassword();
+  await sendEmail({ to: p.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath(`/reinitialiser/${token}`, lang) }, lang, category: "compte" }, db);
+}
+
+export async function resetPassword(db: Db, token: string, password: string) {
+  if (password.length < 10) throw new AccountError("Le mot de passe doit contenir au moins 10 caractères.");
+  // consommé en une seule requête : deux envois simultanés du même lien ne passent pas tous les deux
+  const [r] = await db
+    .update(s.passwordResets)
+    .set({ usedAt: new Date() })
+    .where(and(eq(s.passwordResets.token, hashToken(token)), isNull(s.passwordResets.usedAt), gt(s.passwordResets.expiresAt, new Date())))
+    .returning({ userId: s.passwordResets.userId });
+  if (!r) throw new AccountError("Lien expiré ou déjà utilisé. Faites une nouvelle demande.");
+  await updateIdentityPassword(db, r.userId, password);
+  await bumpSessionVersion(db, r.userId);
+}
+
+/** Ferme toutes les sessions ouvertes du compte ; renvoie la nouvelle version pour rouvrir la session courante. */
+async function bumpSessionVersion(db: Db, userId: string) {
+  const [p] = await db
+    .update(s.profiles)
+    .set({ sessionVersion: sql`${s.profiles.sessionVersion} + 1` })
+    .where(eq(s.profiles.id, userId))
+    .returning({ v: s.profiles.sessionVersion });
+  return p.v;
+}
+
+type AccountUser = { id: string; email: string; firstName: string; locale?: string | null };
+
+async function assertPassword(db: Db, user: AccountUser, password: string, message: string) {
+  if ((await verifyIdentity(db, user.email, password)) !== user.id) throw new AccountError(message);
+}
+
+/** Changement de mot de passe depuis le compte : l'actuel est exigé, les autres appareils sont déconnectés. */
+export async function changePassword(db: Db, user: AccountUser, current: string, next: string) {
+  if (next.length < 10) throw new AccountError("Le nouveau mot de passe doit contenir au moins 10 caractères.");
+  if (next === current) throw new AccountError("Choisissez un mot de passe différent de l’actuel.");
+  await assertPassword(db, user, current, "Mot de passe actuel incorrect.");
+  await updateIdentityPassword(db, user.id, next);
+  const version = await bumpSessionVersion(db, user.id);
+  const lang = langOf(user);
+  const m = notices(lang).passwordChanged({ first: user.firstName });
+  await sendEmail({ to: user.email, subject: m.subject, text: m.text, link: { label: m.link, href: localizePath("/mot-de-passe-oublie", lang) }, lang, category: "compte" }, db);
+  await audit(db, user.id, "account.password_change", "profile", user.id);
+  return version;
+}
+
+const EMAIL_CHANGE_TTL = 24 * 3600;
+
+/**
+ * Changement d'adresse : lien de confirmation envoyé à la nouvelle adresse (24 h), alerte sur l'ancienne.
+ * L'ancienne adresse reste l'identifiant tant que la nouvelle n'est pas confirmée.
+ */
+export async function requestEmailChange(db: Db, user: AccountUser, newEmail: string, password: string) {
+  const email = newEmail.trim().toLowerCase();
+  if (!EMAIL.test(email)) throw new AccountError("Adresse e-mail invalide.");
+  if (email === user.email) throw new AccountError("C’est déjà l’adresse de votre compte.");
+  await assertPassword(db, user, password, "Mot de passe incorrect.");
+  const [taken] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
+  if (taken) throw new AccountError("Cette adresse est déjà utilisée par un autre compte.");
+  const token = signToken("email-change", { uid: user.id, from: user.email, to: email }, EMAIL_CHANGE_TTL);
+  const lang = langOf(user);
+  const n = notices(lang);
+  const confirm = n.confirmNewEmail({ first: user.firstName, old: user.email });
+  await sendEmail({ to: email, subject: confirm.subject, text: confirm.text, link: { label: confirm.link, href: localizePath(`/nouvelle-adresse/${token}`, lang) }, lang, category: "compte" }, db);
+  const alert = n.emailChangeRequested({ first: user.firstName, to: email });
+  await sendEmail({ to: user.email, subject: alert.subject, text: alert.text, lang, category: "compte" }, db);
+  await audit(db, user.id, "account.email_change_request", "profile", user.id, { to: email });
+}
+
+export async function confirmEmailChange(db: Db, token: string) {
+  const data = verifyToken<{ uid: string; from: string; to: string }>(token, "email-change");
+  if (!data) throw new AccountError("Lien expiré ou invalide. Refaites la demande depuis votre compte.");
+  const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, data.uid));
+  if (!p || p.email !== data.from) throw new AccountError("Lien expiré ou déjà utilisé. Refaites la demande depuis votre compte.");
+  const [taken] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, data.to));
+  if (taken) throw new AccountError("Cette adresse est déjà utilisée par un autre compte.");
+  try {
+    await updateIdentityEmail(p.id, data.to);
+  } catch (e) {
+    throw new AccountError(e instanceof AuthError ? e.message : "Mise à jour de l’adresse impossible.");
+  }
+  const [updated] = await db
+    .update(s.profiles)
+    .set({ email: data.to, emailVerifiedAt: new Date() })
+    .where(eq(s.profiles.id, p.id))
+    .returning();
+  const lang = langOf(p);
+  const changed = notices(lang).emailChanged({ first: p.firstName, to: data.to });
+  await sendEmail({ to: data.from, subject: changed.subject, text: changed.text, lang, category: "compte" }, db);
+  await audit(db, p.id, "account.email_change", "profile", p.id, { from: data.from, to: data.to });
+  return updated;
+}
+
+// ——— Entreprise ———
+
+/** Adresse postale complète (numéro, rue, code postal, ville) : mention obligatoire des factures. */
+export function cleanBillingAddress(v: string) {
+  const address = v.trim().replace(/\s+/g, " ");
+  if (address.length < 10 || !/\d/.test(address)) throw new AccountError("Indiquez l’adresse de facturation complète : numéro, rue, code postal et ville.");
+  return address.slice(0, 300);
+}
+
+const VAT_NUMBER_EU = /^[A-Z]{2}[0-9A-Z]{2,13}$/;
+
+export async function companyIdentity(
+  db: Db,
+  ownerId: string,
+  input: { name: string; siret: string; sector: string; size: string; billingAddress: string; vatNumber: string },
+  lookup: SiretLookup = lookupSiret,
+) {
+  const siret = normalizeSiret(input.siret);
+  const name = input.name.trim();
+  if (!name) throw new AccountError("Indiquez la raison sociale.");
+  if (!isValidSiret(siret)) throw new AccountError("SIRET invalide : 14 chiffres, vérifiez la saisie.");
+  const billingAddress = cleanBillingAddress(input.billingAddress);
+  // sans saisie : numéro de TVA intracommunautaire français calculé à partir du SIREN
+  const vatNumber = input.vatNumber.replace(/[\s.]/g, "").toUpperCase() || frVatNumber(siret);
+  if (!VAT_NUMBER_EU.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide (ex. FR12 834521907).");
+  const [existing] = await db.select().from(s.companies).where(eq(s.companies.ownerId, ownerId));
+  const check = await lookup(siret);
+  // un SIRET déjà enregistré ne bloque pas la mise à jour des autres informations
+  if (check && !check.found && existing?.siret !== siret) throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE.");
+  // vérifiée : établissement actif et nom SIRENE concordant ; une confirmation de l'équipe reste acquise tant que nom et SIRET ne changent pas
+  const confirmed = Boolean(existing?.siretVerified && existing.siret === siret && existing.name === name);
+  const matches = Boolean(check?.found && check.active && companyNameMatches(check.name, name));
+  const values = {
+    name,
+    siret,
+    siretVerified: confirmed || matches,
+    siretName: check?.name ?? existing?.siretName ?? null,
+    billingAddress,
+    vatNumber,
+    sector: input.sector.trim() || null,
+    size: input.size || null,
+  };
+  if (check?.found && !values.siretVerified) {
+    await notifyAdmins(db, {
+      title: "Entreprise à vérifier",
+      body: `« ${name} » a saisi le SIRET ${siret}, enregistré dans SIRENE sous le nom « ${check.name ?? "non diffusé"} »${check.active ? "" : " (établissement fermé)"}.`,
+      link: "/admin/inscrits",
+      email: false,
+    });
+  }
+  if (existing) {
+    await db.update(s.companies).set({ ...values, onboardingStep: Math.max(existing.onboardingStep, 2) }).where(eq(s.companies.id, existing.id));
+    return existing.id;
+  }
+  const [c] = await db.insert(s.companies).values({ ownerId, ...values, onboardingStep: 2 }).returning();
+  return c.id;
+}
+
+/** Confirmation manuelle de l'identité d'une entreprise (nom SIRENE différent, mais vérifié par l'équipe). */
+export async function confirmCompanySiret(db: Db, adminId: string, companyId: string) {
+  await db.update(s.companies).set({ siretVerified: true }).where(eq(s.companies.id, companyId));
+  await audit(db, adminId, "company.siret_confirm", "company", companyId);
+}
+
+function cleanUrl(v: string) {
+  const t = v.trim();
+  if (!t) return null;
+  const url = /^https?:\/\//.test(t) ? t : `https://${t}`;
+  try {
+    return new URL(url).toString();
+  } catch {
+    throw new AccountError(`Adresse web invalide : ${t}`);
+  }
+}
+
+export async function companyWeb(db: Db, company: typeof s.companies.$inferSelect, input: { website: string; linkedin: string; brochure?: { data: Buffer; name: string } | null }) {
+  let brochure = {};
+  if (input.brochure) {
+    const key = `private/companies/${company.id}/plaquette-${Date.now()}.${input.brochure.name.split(".").pop()}`;
+    await putFile(key, input.brochure.data, input.brochure.name);
+    brochure = { brochurePath: key, brochureName: input.brochure.name };
+  }
+  await db
+    .update(s.companies)
+    .set({ website: cleanUrl(input.website), linkedin: cleanUrl(input.linkedin), ...brochure, onboardingStep: Math.max(company.onboardingStep, 3) })
+    .where(eq(s.companies.id, company.id));
+}
+
+export async function companyReferents(db: Db, company: typeof s.companies.$inferSelect, referents: { name: string; title: string; phone: string }[]) {
+  const list = referents.filter((r) => r.name.trim());
+  if (list.length === 0) throw new AccountError("Ajoutez au moins un référent.");
+  const existing = await db.select().from(s.companyReferents).where(eq(s.companyReferents.companyId, company.id));
+  // les référents déjà utilisés par une réservation sont conservés
+  const used = new Set(
+    (await db.select({ id: s.bookings.referentId }).from(s.bookings).where(eq(s.bookings.companyId, company.id))).map((b) => b.id),
+  );
+  for (const r of existing) if (!used.has(r.id)) await db.delete(s.companyReferents).where(eq(s.companyReferents.id, r.id));
+  const kept = existing.filter((r) => used.has(r.id)).map((r) => r.name);
+  await db.insert(s.companyReferents).values(
+    list.filter((r) => !kept.includes(r.name.trim())).map((r) => ({ companyId: company.id, name: r.name.trim(), title: r.title.trim() || null, phone: r.phone.trim() || null })),
+  );
+  await db.update(s.companies).set({ onboardingStep: Math.max(company.onboardingStep, 4) }).where(eq(s.companies.id, company.id));
+}
+
+export async function companyLeadFormat(
+  db: Db,
+  company: typeof s.companies.$inferSelect,
+  input: { mode: "excel" | "crm" | "standard"; columns: string[]; crmProvider?: string; crmAdminEmail?: string },
+) {
+  if (input.mode === "excel") {
+    const columns = [...new Set(input.columns.map((c) => c.trim()).filter(Boolean))].slice(0, 40);
+    if (columns.length < 2) throw new AccountError("Déposez votre template Excel ou listez au moins deux colonnes.");
+    const [tpl] = await db.select().from(s.leadTemplates).where(eq(s.leadTemplates.companyId, company.id));
+    if (tpl) await db.update(s.leadTemplates).set({ columns }).where(eq(s.leadTemplates.id, tpl.id));
+    else await db.insert(s.leadTemplates).values({ companyId: company.id, name: `Template Excel ${company.name}`, columns });
+  }
+  if (input.mode === "crm") {
+    const adminEmail = input.crmAdminEmail?.trim().toLowerCase() ?? "";
+    if (!EMAIL.test(adminEmail)) throw new AccountError("Indiquez l’e-mail de l’administrateur CRM.");
+    if ((input.crmProvider ?? "HubSpot") !== "HubSpot") throw new AccountError("Seul HubSpot est connecté pour l’instant.");
+    await db
+      .insert(s.crmConnections)
+      .values({ companyId: company.id, provider: "HubSpot", status: "en_attente" })
+      .onConflictDoNothing();
+    const token = signToken("crm", { companyId: company.id }, 7 * 24 * 3600);
+    // l'administrateur CRM travaille chez l'exposant : même langue que le compte entreprise
+    const lang = await localeOf(db, company.ownerId);
+    const m = notices(lang).hubspotRequest({ company: company.name });
+    await sendEmail({ to: adminEmail, subject: m.subject, text: m.text, link: { label: m.link, href: `/crm/connexion/${token}` }, lang, category: "crm" }, db);
+  }
+  await db
+    .update(s.companies)
+    .set({ leadMode: input.mode, crmProvider: input.mode === "crm" ? "HubSpot" : null, crmAdminEmail: input.mode === "crm" ? input.crmAdminEmail!.trim() : null, onboardingStep: 5 })
+    .where(eq(s.companies.id, company.id));
+}
+
+// ——— Commercial·e ———
+
+export async function freelancerIdentity(db: Db, userId: string, input: { firstName: string; lastName: string; phone: string; city: string; bio: string }) {
+  if (!input.city.trim()) throw new AccountError("Indiquez votre ville.");
+  await db
+    .update(s.profiles)
+    .set({ firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone.trim() || null })
+    .where(eq(s.profiles.id, userId));
+  const [existing] = await db.select().from(s.freelancers).where(eq(s.freelancers.userId, userId));
+  if (existing) {
+    await db
+      .update(s.freelancers)
+      .set({ city: input.city.trim(), bio: input.bio.trim() || null, onboardingStep: Math.max(existing.onboardingStep, 2) })
+      .where(eq(s.freelancers.id, existing.id));
+    return existing.id;
+  }
+  const [f] = await db
+    .insert(s.freelancers)
+    .values({ userId, city: input.city.trim(), bio: input.bio.trim() || null, onboardingStep: 2, avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)] })
+    .returning();
+  return f.id;
+}
+
+export async function freelancerProfile(
+  db: Db,
+  f: typeof s.freelancers.$inferSelect,
+  input: { roles: string[]; specialties: string[]; languages: string[]; otherLanguage?: string; hourlyRateCents: number },
+) {
+  const roles = input.roles.filter(isRoleKey) as RoleKey[];
+  if (roles.length === 0) throw new AccountError("Choisissez au moins un poste.");
+  const specialties = input.specialties.filter((x) => SPECIALTIES.includes(x) || x.trim().length > 1).slice(0, 8);
+  if (specialties.length === 0) throw new AccountError("Choisissez au moins une spécialité.");
+  const languages = [...input.languages.filter((l) => LANGUAGES.includes(l)), ...(input.otherLanguage?.trim() ? [input.otherLanguage.trim()] : [])];
+  if (languages.length === 0) throw new AccountError("Choisissez au moins une langue.");
+  const pricing = await getPricing(db);
+  const floor = pricing.floors[roles[0]];
+  if (!Number.isFinite(input.hourlyRateCents) || input.hourlyRateCents < floor) {
+    throw new AccountError(`Tarif minimum pour ce poste : ${hourly(floor)}.`);
+  }
+  await db
+    .update(s.freelancers)
+    .set({ roles, specialties, languages, hourlyRateCents: Math.round(input.hourlyRateCents), onboardingStep: Math.max(f.onboardingStep, 3) })
+    .where(eq(s.freelancers.id, f.id));
+}
+
+export async function freelancerSizes(db: Db, f: typeof s.freelancers.$inferSelect, input: { top: string; pants: string; shoe: string }) {
+  await db
+    .update(s.freelancers)
+    .set({ topSize: input.top.trim() || null, pantsSize: input.pants.trim() || null, shoeSize: input.shoe.trim() || null, onboardingStep: Math.max(f.onboardingStep, 4) })
+    .where(eq(s.freelancers.id, f.id));
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Dépôt d'un document. Pour l'attestation URSSAF, la date de délivrance est obligatoire : l'échéance
+ * (6 mois) n'est enregistrée qu'à la validation, l'ancienne attestation restant valable d'ici là.
+ */
+export async function uploadFreelancerDocument(
+  db: Db,
+  f: typeof s.freelancers.$inferSelect,
+  type: DocumentKey,
+  file: { data: Buffer; name: string },
+  issuedOn?: string | null,
+  today = new Date().toISOString().slice(0, 10),
+) {
+  if (type === "urssaf") {
+    if (!issuedOn || !ISO_DATE.test(issuedOn)) throw new AccountError("Indiquez la date de délivrance de l’attestation URSSAF.");
+    if (issuedOn > today) throw new AccountError("La date de délivrance de l’attestation ne peut pas être dans le futur.");
+    if (urssafValidUntil(issuedOn) < today) {
+      throw new AccountError("Cette attestation a plus de 6 mois : téléchargez une attestation de vigilance à jour sur urssaf.fr.");
+    }
+  }
+  const key = `private/freelancers/${f.id}/${type}-${Date.now()}.${file.name.split(".").pop()}`;
+  await putFile(key, file.data, file.name);
+  const [previous] = await db
+    .select({ path: s.freelancerDocuments.path })
+    .from(s.freelancerDocuments)
+    .where(and(eq(s.freelancerDocuments.freelancerId, f.id), eq(s.freelancerDocuments.type, type)));
+  await db
+    .insert(s.freelancerDocuments)
+    .values({ freelancerId: f.id, type, path: key, filename: file.name, issuedOn: issuedOn ?? null })
+    .onConflictDoUpdate({
+      target: [s.freelancerDocuments.freelancerId, s.freelancerDocuments.type],
+      set: { path: key, filename: file.name, source: "depot", issuedOn: issuedOn ?? null, status: "en_attente", comment: null, reviewedAt: null, reviewedBy: null },
+    });
+  if (previous?.path && previous.path !== key) await deleteFile(previous.path);
+}
+
+export type BillingInput = { billingAddress: string; vatRegime: string; vatNumber: string; acceptMandate: boolean };
+
+const VAT_NUMBER = /^FR[0-9A-Z]{2}\d{9}$/;
+
+function checkBilling(f: typeof s.freelancers.$inferSelect, input: BillingInput) {
+  const address = cleanBillingAddress(input.billingAddress);
+  const vatRegime: VatRegime = input.vatRegime === "assujetti" ? "assujetti" : "franchise";
+  const vatNumber = vatRegime === "assujetti" ? input.vatNumber.replace(/\s/g, "").toUpperCase() : null;
+  if (vatNumber !== null && !VAT_NUMBER.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide : FR suivi de 11 caractères.");
+  if (!f.billingMandateAcceptedAt && !input.acceptMandate) {
+    throw new AccountError("Acceptez le mandat de facturation : Standby émet vos factures à votre place après chaque mission.");
+  }
+  return { billingAddress: address, vatRegime, vatNumber, accepting: !f.billingMandateAcceptedAt };
+}
+
+/**
+ * Coordonnées de facturation et mandat d'autofacturation. Les changements valent pour les factures suivantes ;
+ * à l'acceptation du mandat, les virements restés sans facture sont facturés.
+ */
+export async function freelancerBilling(db: Db, f: typeof s.freelancers.$inferSelect, input: BillingInput) {
+  const { accepting, ...values } = checkBilling(f, input);
+  await db
+    .update(s.freelancers)
+    .set({ ...values, ...(accepting ? { billingMandateAcceptedAt: new Date(), billingMandateVersion: BILLING_MANDATE_VERSION } : {}) })
+    .where(eq(s.freelancers.id, f.id));
+  await audit(db, f.userId, accepting ? "billing_mandate.accept" : "billing.update", "freelancer", f.id, { vatRegime: values.vatRegime, version: BILLING_MANDATE_VERSION });
+  if (accepting) await issueMissingSelfBills(db, f.id);
+}
+
+export async function freelancerStatusStep(
+  db: Db,
+  f: typeof s.freelancers.$inferSelect,
+  input: { siret: string; legalStatus: string } & BillingInput,
+  lookup?: SiretLookup,
+) {
+  const siret = normalizeSiret(input.siret);
+  if (!isValidSiret(siret)) throw new AccountError("SIRET invalide : 14 chiffres, vérifiez la saisie.");
+  const docs = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id));
+  const missing = REQUIRED_DOCUMENTS.filter((t) => !docs.some((d) => d.type === t));
+  if (missing.length) throw new AccountError(`Documents manquants : ${missing.map((t) => DOCUMENT_TYPES[t]).join(", ")}.`);
+  checkBilling(f, input);
+  const sirene = await checkFreelancerSiret(db, f.id, siret, lookup);
+  if (sirene.status === "introuvable") throw new AccountError("Ce SIRET est introuvable dans le répertoire SIRENE : vérifiez la saisie.");
+  if (sirene.status === "ferme") throw new AccountError("Ce SIRET correspond à un établissement fermé dans le répertoire SIRENE.");
+  await freelancerBilling(db, f, input);
+  await db
+    .update(s.freelancers)
+    .set({ siret, legalStatus: input.legalStatus || "Auto-entrepreneur", status: f.status === "valide" ? "valide" : "en_revue", onboardingStep: 5 })
+    .where(eq(s.freelancers.id, f.id));
+  if (f.status !== "valide" && !(await maybeValidateFreelancer(db, f.id))) {
+    const admins = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.role, "admin"));
+    for (const a of admins) {
+      await notify(db, a.id, { title: "Nouveau profil à vérifier", body: "Un commercial a transmis ses documents.", link: "/admin/inscrits", email: false });
+    }
+  }
+}
+
+/** Validation ou refus d'un document par l'équipe Standby (date de délivrance corrigeable pour l'URSSAF). */
+export async function reviewDocument(
+  db: Db,
+  docId: string,
+  adminId: string,
+  status: "valide" | "refuse",
+  comment?: string,
+  issuedOn?: string | null,
+  today = new Date().toISOString().slice(0, 10),
+) {
+  const [doc] = await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.id, docId));
+  if (!doc) throw new AccountError("Document introuvable.");
+  let dates = {};
+  if (status === "valide" && doc.type === "urssaf") {
+    const issued = issuedOn || doc.issuedOn;
+    if (!issued || !ISO_DATE.test(issued)) throw new AccountError("Indiquez la date de délivrance de l’attestation pour la valider.");
+    const validUntil = urssafValidUntil(issued);
+    if (validUntil < today) throw new AccountError(`Cette attestation a expiré le ${validUntil} : refusez-la et demandez-en une à jour.`);
+    dates = { issuedOn: issued, validUntil };
+  }
+  await db
+    .update(s.freelancerDocuments)
+    .set({ status, comment: comment?.trim() || null, reviewedBy: adminId, reviewedAt: new Date(), ...dates })
+    .where(eq(s.freelancerDocuments.id, docId));
+  await audit(db, adminId, `document.${status}`, "freelancer_document", docId, { comment, ...dates });
+  const [f] = await db.select().from(s.freelancers).where(eq(s.freelancers.id, doc.freelancerId));
+  await refreshBlockedReason(db, f.id, today);
+  if (status === "refuse") {
+    await notify(db, f.userId, { t: (n) => n.documentToFix({ doc: doc.type, comment: comment?.trim() || null }), link: "/commercial/profil" });
+  } else {
+    await maybeValidateFreelancer(db, f.id, today);
+  }
+}
+
+/** Lien d'onboarding Stripe Connect (identité + IBAN). En mode simulé, le compte est marqué prêt. */
+export async function stripeOnboarding(db: Db, f: typeof s.freelancers.$inferSelect, email: string): Promise<string | null> {
+  if (!stripeEnabled()) {
+    await db.update(s.freelancers).set({ payoutsEnabled: true }).where(eq(s.freelancers.id, f.id));
+    return null;
+  }
+  let accountId = f.stripeAccountId;
+  if (!accountId) {
+    accountId = await createConnectedAccount(email, f.id);
+    await db.update(s.freelancers).set({ stripeAccountId: accountId }).where(eq(s.freelancers.id, f.id));
+  }
+  return onboardingLink(accountId);
+}

@@ -41,3 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 !.env.example
+
+# base locale et fichiers deposes en developpement
+/.data/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/

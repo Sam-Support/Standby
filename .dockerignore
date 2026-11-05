@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env*
+!.env.example
+# base locale, fichiers déposés et artefacts de test : jamais dans l'image
+.data
+test-results
+playwright-report
+e2e
+docs
+deploy
+*.md
