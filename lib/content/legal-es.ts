@@ -12,7 +12,7 @@ export const MENTIONS: DocSection[] = [
     ],
   },
   { title: "Director de la publicación", body: ["[Nombre y cargo], en calidad de representante legal del editor."] },
-  { title: "Alojamiento", body: ["El sitio está alojado por [nombre del proveedor del VPS], [dirección], [teléfono o sitio web]. Los datos los almacena Supabase, región Unión Europea."] },
+  { title: "Alojamiento", body: ["El sitio está alojado por Vercel Inc., 440 N Barranca Avenue #4133, Covina, CA 91723, Estados Unidos (vercel.com), con ejecución en la Unión Europea (Fráncfort). Los datos los almacena Supabase, región Unión Europea (Fráncfort)."] },
   {
     title: "Propiedad intelectual",
     body: [

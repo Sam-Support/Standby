@@ -1,2 +1,2 @@
 # DevOps — index
-- plateforme : CI, image Docker, déploiement sur le VPS — voir `plateforme.md` [DISCOVERED]
+- plateforme : CI GitHub Actions, hébergement Vercel + Supabase (ADR-003), variables par environnement — voir `plateforme.md`

@@ -11,7 +11,7 @@ export const MENTIONS: DocSection[] = [
     ],
   },
   { title: "Directeur de la publication", body: ["[Nom et fonction], en qualité de représentant légal de l’éditeur."] },
-  { title: "Hébergeur", body: ["Le site est hébergé par [nom de l’hébergeur du VPS], [adresse], [téléphone ou site web]. Les données sont stockées par Supabase, région Union européenne."] },
+  { title: "Hébergeur", body: ["Le site est hébergé par Vercel Inc., 440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis (vercel.com), avec une exécution en Union européenne (Francfort). Les données sont stockées par Supabase, région Union européenne (Francfort)."] },
   {
     title: "Propriété intellectuelle",
     body: [

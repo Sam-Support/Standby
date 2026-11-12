@@ -52,7 +52,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 - **Limites de tentatives** (comptées en base) : connexion (8 échecs par e-mail et 50 tentatives par IP sur 15 min), mot de passe oublié, contact, inscription, renvoi du lien de vérification. Réglages dans [`lib/rate-limit.ts`](lib/rate-limit.ts).
 - **Formulaires** : une erreur serveur ne vide plus les champs (envoi par `onSubmit`, l'action reste disponible sans JavaScript) et le message d'erreur est ramené à l'écran ; les confirmations s'affichent en haut de page, même quand le formulaire disparaît (`components/flash.tsx`). Toute annulation de réservation demande une case de confirmation.
 - **Vérification de l'e-mail** à l'inscription (lien signé, 48 h) : sans elle, pas de réservation confirmée, pas de mission acceptée, pas de place dans le matching.
-- **En-têtes** posés par [`proxy.ts`](proxy.ts) : CSP avec nonce par requête, `nosniff`, `Referrer-Policy`, `Permissions-Policy` ; Caddy ajoute HSTS en production.
+- **En-têtes** posés par [`proxy.ts`](proxy.ts) : CSP avec nonce par requête, `nosniff`, `Referrer-Policy`, `Permissions-Policy` ; HSTS et `X-Frame-Options` dans [`next.config.ts`](next.config.ts).
 - **E-mails** : sans `RESEND_API_KEY`, les e-mails sont simulés et listés dans `/admin/emails` (liens de vérification compris). Avec Resend, ce journal suit chaque envoi jusqu'à la remise (webhook signé), signale rebonds et plaintes, et l'utilisateur concerné est averti dans « Mon compte » ([`docs/05-EMAILS.md`](docs/05-EMAILS.md)).
 
 ## Commandes
@@ -68,18 +68,17 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 | `npm run db:migrate` | Applique les migrations sur `DATABASE_URL` (aussi fait au démarrage) |
 | `npm run admin:create -- email "mot de passe" Prénom Nom` | Crée le premier administrateur |
 
-## Production (VPS + Supabase)
+## Production (Vercel + Supabase)
 
 Guide pas à pas de la mise en ligne (comptes, secrets, DNS, textes juridiques, recette) : [`docs/06-MISE-EN-LIGNE.md`](docs/06-MISE-EN-LIGNE.md).
-Ce qui reste à faire, par ordre et par responsable : [`docs/07-A-FAIRE.md`](docs/07-A-FAIRE.md).
+Ce qui reste à faire, par ordre et par responsable : [`docs/07-A-FAIRE.md`](docs/07-A-FAIRE.md). Pourquoi Vercel : [`.10x/adrs/003-hebergement-vercel.md`](.10x/adrs/003-hebergement-vercel.md).
 
-1. **Supabase** (région UE) : récupérer `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; créer les buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
+1. **Supabase** (région UE, un projet pour la production, un pour les aperçus) : récupérer `DATABASE_URL` (pooler en mode transaction), `DATABASE_URL_DIRECT` (pooler en mode session, pour les migrations), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ; buckets Storage `private` (privé) et `public` (public). L'application se connecte en direct à Postgres : RLS n'est pas utilisée par l'application, laissez-la activée sans règle pour bloquer l'API publique de Supabase.
 2. **Stripe Connect** : clé secrète, webhook vers `https://<domaine>/api/stripe/webhook` (événements `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `refund.updated`, `refund.failed`, `account.updated`).
 3. **SIRENE** (facultatif) : clé `INSEE_API_KEY` de l'API Sirene de l'INSEE ; sans elle, ou en cas de panne de l'INSEE, les SIRET sont vérifiés via l'API publique Recherche d'entreprises.
 4. **Resend** : domaine d'envoi vérifié (région Irlande), DNS SPF/DKIM puis DMARC, clé d'API, webhook vers `https://<domaine>/api/resend/webhook` ; pas à pas dans [`docs/05-EMAILS.md`](docs/05-EMAILS.md), puis e-mail de test depuis `/admin/emails`. **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
-5. **VPS** : Docker, dossier `/opt/standby/staging` avec `deploy/docker-compose.yml`, `deploy/Caddyfile` et un `.env` (modèle : [`.env.example`](.env.example), droits 600).
-6. **GitHub** : environnement `staging` avec la variable `VPS_PATH` et les secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PULL_USER`, `GHCR_PULL_TOKEN`. Chaque push sur `main` validé par la CI construit l'image, la publie sur ghcr.io et la déploie.
-7. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
+5. **Vercel** : projet relié au dépôt GitHub ; [`vercel.json`](vercel.json) fixe la région (Francfort), les migrations à la construction (`npm run db:migrate && npm run build`) et le Schedule `/api/cron` toutes les 15 min. Variables à renseigner pour *Production* et pour *Preview* (modèle : [`.env.example`](.env.example)). Chaque fusion dans `main` met en production ; chaque pull request a son aperçu.
+6. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
 
 ## À compléter avant l'ouverture
 

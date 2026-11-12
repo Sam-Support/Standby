@@ -12,7 +12,11 @@ import { notices } from "@/lib/i18n/messages/notices";
  * remise grâce au webhook Resend (app/api/resend/webhook). Un échec d'envoi ne casse jamais l'action en cours.
  */
 
-export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+/** Adresse publique : APP_URL, sinon celle que Vercel fournit (domaine de production, ou adresse de l'aperçu). */
+export const appUrl = () => {
+  const vercel = process.env.VERCEL_ENV === "production" ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL;
+  return (process.env.APP_URL || (vercel && `https://${vercel}`) || "http://localhost:3000").replace(/\/$/, "");
+};
 export const resendEnabled = () => Boolean(process.env.RESEND_API_KEY);
 
 const PLACEHOLDER_FROM = "Standby <notifications@standby.example>";

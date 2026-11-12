@@ -35,7 +35,7 @@ Dans les exemples, `standby.fr` désigne votre domaine. Remplacez-le partout.
    - événements : `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
      `email.complained`, `email.suppressed`, `email.failed` ;
    - copiez le secret de signature (`whsec_…`).
-7. **Variables** dans le `.env` du VPS (droits 600), puis redémarrez le conteneur `app` :
+7. **Variables** dans Vercel (*Project → Settings → Environment Variables*, environnement *Production*), puis *Redeploy* :
 
    ```
    APP_URL=https://standby.fr

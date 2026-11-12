@@ -12,7 +12,7 @@ export const MENTIONS: DocSection[] = [
     ],
   },
   { title: "Publication director", body: ["[Name and position], as the publisher’s legal representative."] },
-  { title: "Host", body: ["The website is hosted by [VPS host name], [address], [phone or website]. Data is stored by Supabase, European Union region."] },
+  { title: "Host", body: ["The website is hosted by Vercel Inc., 440 N Barranca Avenue #4133, Covina, CA 91723, USA (vercel.com), running in the European Union (Frankfurt). Data is stored by Supabase, European Union region (Frankfurt)."] },
   {
     title: "Intellectual property",
     body: [

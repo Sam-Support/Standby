@@ -1,5 +1,5 @@
 import Link from "@/components/link";
-import { getDb } from "@/db";
+import { databaseUrl, getDb } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead } from "@/components/ui";
 import { BOOKING_STATUS_LABELS } from "@/lib/domain";
@@ -38,7 +38,7 @@ export default async function Page() {
     );
   };
   const services: [string, boolean][] = [
-    ["Base et authentification Supabase", supabaseEnabled() || Boolean(process.env.DATABASE_URL)],
+    ["Base et authentification Supabase", supabaseEnabled() || Boolean(databaseUrl())],
     ["Paiements Stripe Connect", stripeEnabled()],
     ["E-mails Resend", Boolean(process.env.RESEND_API_KEY)],
     ["HubSpot", hubspotEnabled()],
