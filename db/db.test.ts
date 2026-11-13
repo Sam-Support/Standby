@@ -1,4 +1,4 @@
-import { count } from "drizzle-orm";
+import { count, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPgliteDb } from "./index";
 import * as s from "./schema";
@@ -13,6 +13,17 @@ describe("migrations et seed", () => {
     expect(events).toBeGreaterThanOrEqual(8);
     expect(freelancers).toBeGreaterThanOrEqual(30);
     expect(settings).toBeGreaterThanOrEqual(10);
+  }, 60_000);
+
+  it("active RLS sur chaque table : l'API publique de Supabase ne lit rien", async () => {
+    const db = await createPgliteDb(null, false);
+    // base PGlite : le résultat brut a la forme { rows }, pas celle de postgres-js que décrit le type Db
+    const { rows } = (await db.execute(
+      sql`select c.relname as "table" from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity order by 1`,
+    )) as unknown as { rows: { table: string }[] };
+    // une nouvelle table doit être créée avec RLS (ALTER TABLE … ENABLE ROW LEVEL SECURITY dans sa migration)
+    expect(rows.map((r) => r.table)).toEqual([]);
   }, 60_000);
 });
 

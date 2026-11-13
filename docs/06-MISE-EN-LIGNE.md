@@ -99,8 +99,10 @@ Pour chacun, récupérez quatre valeurs (à coller dans Vercel à l'étape 6) :
 3. **Clés d'API** : *Project Settings → API Keys*. `SUPABASE_URL` est l'URL du projet ; copiez la clé
    **publishable** (`sb_publishable_…`) dans `SUPABASE_ANON_KEY` et créez une clé **secret** (`sb_secret_…`) pour
    `SUPABASE_SERVICE_ROLE_KEY`. La seconde est un secret : seul le serveur l'utilise.
-4. Laissez la sécurité au niveau des lignes (*RLS*) **activée, sans règle**. L'application se connecte
-   directement à Postgres ; RLS bloque l'API publique de Supabase.
+4. La sécurité au niveau des lignes (*RLS*) est activée sur toutes les tables par une migration (`0011`), et
+   les rôles publics de Supabase (`anon`, `authenticated`) n'y ont aucun droit : l'API publique de Supabase ne
+   lit rien. **N'ajoutez pas de règle RLS** : l'application se connecte directement à Postgres et n'en a pas
+   besoin. *Advisors → Security* ne doit signaler aucune table « RLS Disabled ».
 
 Vérifiez les sauvegardes de votre offre (quotidiennes sur Pro, avec restauration à un instant donné en option).
 

@@ -78,6 +78,13 @@
       "when": 1793320457859,
       "tag": "0010_dimensions_des_logos",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794568392001,
+      "tag": "0011_api_supabase_fermee",
+      "breakpoints": true
     }
   ]
 }

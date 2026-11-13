@@ -6,7 +6,7 @@
 |---|---|
 | Front et back | Next.js (App Router) + TypeScript, Server Actions et route handlers |
 | UI | CSS « Clay » repris du design (`app/globals.css`, sans Tailwind) + composants React ; formulaires en Server Actions, contrôles natifs stylés (`:has()`) |
-| Base de données | PostgreSQL (Supabase, région UE) via Drizzle ORM en connexion directe ; migrations `db/migrations` appliquées au démarrage. Autorisations dans le code serveur (chaque requête filtrée par entreprise / commercial) ; RLS laissée active sans règle pour fermer l'API publique Supabase. En local : PGlite |
+| Base de données | PostgreSQL (Supabase, région UE) via Drizzle ORM en connexion directe ; migrations `db/migrations` appliquées à la construction sur Vercel. Autorisations dans le code serveur (chaque requête filtrée par entreprise / commercial) ; RLS activée sans règle sur toutes les tables et droits des rôles `anon` / `authenticated` retirés (migration 0011) pour fermer l'API publique Supabase. En local : PGlite |
 | Auth | Supabase Auth comme fournisseur d'identité (création, vérification du mot de passe, changement), session applicative en cookie signé HMAC (30 jours) ; rôles `exposant`, `commercial`, `admin`. En local : scrypt |
 | Stockage | Supabase Storage (buckets `private` et `public`), fichiers servis par `/api/fichiers` avec contrôle d'accès. En local : `.data/uploads` |
 | Paiement | Stripe Connect : mandat SEPA ou carte enregistré à la confirmation (Checkout en mode setup), débit après validation des heures, transferts vers les comptes Express, virements hebdomadaires le lundi. Simulé sans clé |
