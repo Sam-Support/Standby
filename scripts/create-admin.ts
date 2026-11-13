@@ -1,18 +1,15 @@
 /**
- * Crée un compte administrateur, ou promeut un compte existant et change son mot de passe.
+ * Crée un compte administrateur, ou promeut un compte existant et change son mot de passe, dans la base de
+ * l'environnement courant : base locale PGlite par défaut, ou celle désignée par DATABASE_URL (et Supabase Auth si
+ * SUPABASE_URL et la clé secrète sont définies).
  *
- * Usage : npm run admin:create (base locale), npm run admin:create:preview ou npm run admin:create:production
- * (raccourcis de --env preview|production, utiles sous PowerShell qui retire le « -- » de npm run).
+ * Usage : npm run admin:create -- [email] [Prénom] [Nom]
  *
  * Le mot de passe est demandé au clavier, sans s'afficher : il ne reste ni dans l'historique du terminal ni dans
- * la liste des processus (ADMIN_PASSWORD le fournit sans saisie, pour les tests et l'automatisation). Avec --env, les accès à la base et à Supabase sont lus dans les
- * variables de cet environnement Vercel (`vercel env pull`, CLI connectée et dossier lié au projet) puis
- * effacés à la fin ; sans --env, ceux de l'environnement courant (base locale PGlite par défaut).
+ * la liste des processus (ADMIN_PASSWORD le fournit sans saisie, pour les tests et l'automatisation).
+ * Sur Vercel, les secrets sont illisibles depuis un poste : le premier administrateur se crée par le formulaire
+ * d'inscription du site, puis est promu dans Supabase (docs/06-MISE-EN-LIGNE.md, étape 7).
  */
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { createInterface } from "node:readline";
 import { eq, sql } from "drizzle-orm";
 import { getDb, schema as s } from "../db";
@@ -39,37 +36,8 @@ function ask(query: string, hidden = false): Promise<string> {
   });
 }
 
-/** Variables d'un environnement Vercel, via un fichier temporaire effacé aussitôt lu. */
-function loadVercelEnv(target: string) {
-  const dir = mkdtempSync(path.join(tmpdir(), "standby-admin-"));
-  const file = path.join(dir, "env");
-  try {
-    const r = spawnSync("vercel", ["env", "pull", file, `--environment=${target}`, "--yes"], { encoding: "utf8", shell: true });
-    if (r.status !== 0) throw new Error(`vercel env pull a échoué (CLI connectée ? dossier lié au projet ?)\n${r.stderr}`);
-    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
-      const m = /^([A-Z0-9_]+)=(?:"(.*)"|(.*))$/.exec(line);
-      if (m) process.env[m[1]] = (m[2] ?? m[3] ?? "").replace(/\n/g, "\n");
-    }
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-  if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) throw new Error(`Aucune DATABASE_URL dans l'environnement Vercel « ${target} ».`);
-}
-
 async function main() {
-  const args = process.argv.slice(2);
-  const envAt = args.indexOf("--env");
-  const target = envAt >= 0 ? args.splice(envAt, 2)[1] : undefined;
-  if (target !== undefined && target !== "preview" && target !== "production") {
-    console.error("--env attend preview ou production.");
-    process.exit(1);
-  }
-  if (target) {
-    loadVercelEnv(target);
-    console.info(`Environnement Vercel : ${target} (${new URL(process.env.SUPABASE_URL ?? "http://local").host})`);
-  }
-
-  let [email = "", firstName = "", lastName = ""] = args;
+  let [email = "", firstName = "", lastName = ""] = process.argv.slice(2);
   email ||= await ask("E-mail de l'administrateur : ");
   email = email.toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -81,7 +49,7 @@ async function main() {
   try {
     await db.execute(sql`select 1 from profiles limit 1`);
   } catch {
-    console.error("La base n'est pas migrée : déployez d'abord cet environnement sur Vercel (les migrations s'appliquent à la construction).");
+    console.error("La base n'est pas migrée : lancez npm run db:migrate, ou déployez cet environnement sur Vercel.");
     process.exit(1);
   }
   const [existing] = await db.select().from(s.profiles).where(eq(s.profiles.email, email));

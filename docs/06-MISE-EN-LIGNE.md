@@ -176,22 +176,25 @@ Production*). C'est immédiat, sans reconstruction.
 
 ## Étape 7 : le premier administrateur
 
-Après le premier déploiement de production (les tables sont créées à la construction), depuis votre poste,
-dans le dossier du dépôt, avec la CLI Vercel connectée (`npm i -g vercel`, `vercel login`, `vercel link`) :
+Le mot de passe d'administrateur ne passe que par vous : vous le tapez dans le formulaire d'inscription du site,
+puis le compte est promu administrateur dans la base. (Depuis un poste, les secrets marqués *Sensitive* dans
+Vercel sont illisibles : le script `npm run admin:create` ne sert qu'à la base locale de développement.)
 
-```bash
-npm run admin:create:production
-```
+1. Sur le site en production (après le premier déploiement), ouvrez **`/inscription/commercial`** et remplissez
+   seulement l'**étape 1** : prénom, nom, votre adresse e-mail, un mot de passe long et unique (rangé dans votre
+   gestionnaire de mots de passe), ville, conditions acceptées, puis *Continuer*. Arrêtez-vous là.
+2. Dans Supabase, projet de **production** → *SQL Editor*, exécutez ceci avec votre adresse (ou demandez-le à
+   Claude) :
+   ```sql
+   update profiles set role = 'admin', email_verified_at = coalesce(email_verified_at, now())
+   where email = 'prenom.nom@standby.fr';
+   delete from freelancers where user_id = (select id from profiles where email = 'prenom.nom@standby.fr');
+   ```
+   La seconde ligne retire la fiche commercial ébauchée à l'inscription.
+3. Déconnectez-vous, puis reconnectez-vous.
 
-Le script lit seul les accès à la base de production dans Vercel, puis demande l'e-mail, le prénom, le nom et le
-mot de passe (deux fois, sans l'afficher : il ne reste pas dans l'historique du terminal). Choisissez un mot de
-passe long et unique, rangé dans votre gestionnaire de mots de passe.
-
-- Relancer la même commande avec la même adresse **change le mot de passe** de ce compte et ferme ses sessions
-  ouvertes : c'est aussi la marche à suivre en cas d'oubli.
-- `npm run admin:create:preview` fait de même sur la base des aperçus (`standby-staging`), pour essayer l'admin
-  d'une pull request.
-- `npm run admin:create` crée le compte dans la base locale de développement.
+Pour changer ce mot de passe plus tard : *Mon compte → Mot de passe*. Même marche à suivre sur un aperçu de pull
+request, avec le projet Supabase `standby-staging`.
 
 Connectez-vous ensuite sur `https://standby.fr/connexion`, puis ouvrez **`/admin`**.
 
