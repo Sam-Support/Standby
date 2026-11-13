@@ -1,6 +1,8 @@
 import { count, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPgliteDb } from "./index";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { createPgliteDb, serializeDates } from "./index";
 import * as s from "./schema";
 import { demoEvents } from "./seed";
 
@@ -25,6 +27,22 @@ describe("migrations et seed", () => {
     // une nouvelle table doit être créée avec RLS (ALTER TABLE … ENABLE ROW LEVEL SECURITY dans sa migration)
     expect(rows.map((r) => r.table)).toEqual([]);
   }, 60_000);
+});
+
+describe("pilote Postgres de production", () => {
+  it("convertit les dates passées dans un fragment sql`` malgré Drizzle", async () => {
+    // aucune connexion n'est ouverte : postgres-js se connecte à la première requête
+    const client = postgres("postgres://u:p@127.0.0.1:1/x", { prepare: false });
+    drizzle(client);
+    const options = client.options as unknown as { serializers: Record<number, (v: unknown) => unknown> };
+    const at = new Date("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1184](at)).toBe(at); // ce que laisse Drizzle : le pilote planterait
+    serializeDates(client as unknown as Parameters<typeof serializeDates>[0]);
+    expect(options.serializers[1184](at)).toBe("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1114](at)).toBe("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1184]("2026-11-13T10:32:02.455Z")).toBe("2026-11-13T10:32:02.455Z"); // colonnes : déjà converties
+    await client.end({ timeout: 0 });
+  });
 });
 
 describe("calendrier de démonstration", () => {
