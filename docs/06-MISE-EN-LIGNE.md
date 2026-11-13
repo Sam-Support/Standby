@@ -120,20 +120,37 @@ Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé 
 - [ ] Domaine d'envoi ajouté chez Resend (`notifications.standby.fr`), **région Irlande**.
 - [ ] Enregistrements DNS DKIM et SPF copiés exactement depuis l'onglet *Records*, puis domaine **vérifié**.
 - [ ] DMARC `p=none` ajouté sur `_dmarc.standby.fr`.
-- [ ] Clé d'API limitée à l'envoi, webhook vers `https://standby.fr/api/resend/webhook`.
-- [ ] Variables `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SUPPORT_EMAIL`, `RESEND_WEBHOOK_SECRET`
-      renseignées.
+- [ ] Clé d'API limitée à l'envoi (*Sending access*, restreinte au domaine) dans Vercel : `RESEND_API_KEY`,
+      environnements Production et Preview.
+- [ ] `EMAIL_FROM` (`Standby <notifications@notifications.standby.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
+      dans Vercel ; puis, sur un aperçu, *Redeploy* et « M'envoyer un e-mail de test » dans `/admin/emails`.
+- [ ] Après le premier déploiement de production : webhook vers `https://standby.fr/api/resend/webhook`, son
+      secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas
+      suivie.
 
 ### 5.2 Paiements (Stripe Connect), obligatoire pour encaisser
 
-1. Créez le compte Stripe de la société et activez **Connect** (comptes *Express* pour les commerciaux).
-2. **Commencez en mode test.** Copiez la clé secrète de test dans `STRIPE_SECRET_KEY`.
-3. Créez un webhook vers `https://standby.fr/api/stripe/webhook` avec ces événements :
-   `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`,
-   `refund.updated`, `refund.failed`, `account.updated`. Copiez son secret dans `STRIPE_WEBHOOK_SECRET`.
-4. Activez les prélèvements **SEPA** et les cartes dans les moyens de paiement.
-5. Après la recette (étape 9), passez en mode production. Il faut alors **une nouvelle clé et un nouveau
-   webhook**, car ceux du mode test ne valent pas en production.
+Le compte Stripe de la société (« Stand-By ») existe. **Tout se fait d'abord en mode test**, jusqu'à la
+recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
+
+1. **Connect** : menu *Connect → Get started*. Choisissez une plateforme / place de marché, des comptes
+   connectés **Express**, pays **France**. Le site crée lui-même le compte de chaque commercial et le renvoie
+   vers Stripe pour son identité et son RIB.
+2. **Moyens de paiement** : *Settings → Payment methods*, activez **Prélèvement SEPA** et **Cartes**.
+3. **Clé** : *Developers → API keys*, clé secrète de test `sk_test_…`, à coller dans Vercel sous
+   `STRIPE_SECRET_KEY`, environnements **Production et Preview** (la clé de test partout jusqu'à la recette).
+4. **Webhooks**, une fois le site déployé à son adresse publique : *Workbench → Webhooks → Create an event
+   destination*, **deux fois**, avec la même adresse `https://standby.fr/api/stripe/webhook`, le format
+   **Snapshot** et la version d'API **`2026-09-30.endive`** (celle du code) :
+   - *Events from* : **Your account**, événements `checkout.session.completed`, `payment_intent.succeeded`,
+     `payment_intent.payment_failed`, `refund.updated`, `refund.failed` ; son secret `whsec_…` dans
+     `STRIPE_WEBHOOK_SECRET` ;
+   - *Events from* : **Connected accounts**, événement `account.updated` (un commercial a fini son
+     inscription Stripe) ; son secret dans `STRIPE_CONNECT_WEBHOOK_SECRET`.
+   Stripe n'envoie les `account.updated` des commerciaux qu'à la seconde destination : sans elle, leurs virements
+   restent bloqués.
+5. Après la recette, passez en mode production : **nouvelle clé et deux nouvelles destinations**, car celles du
+   mode test ne valent pas en production. Le site ignore de lui-même les événements de l'autre mode.
 
 ### 5.3 Facultatif, à activer quand vous en avez besoin
 
@@ -160,7 +177,7 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | déjà en place | déjà en place |
 | `DATABASE_URL`, `DATABASE_URL_DIRECT`, `SUPABASE_SERVICE_ROLE_KEY` | **à coller** : projet Supabase de production | **à coller** : projet `standby-staging` |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SUPPORT_EMAIL`, `RESEND_WEBHOOK_SECRET` | étape 5.1 | facultatif : sans clé, les e-mails sont simulés et lisibles dans `/admin/emails` |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | étape 5.2 (mode test d'abord) | facultatif : paiements simulés |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | étape 5.2 (mode test d'abord) | facultatif : paiements simulés |
 | `INSEE_API_KEY`, `HUBSPOT_*`, `ANTHROPIC_API_KEY` | étape 5.3 | facultatif |
 
 Puis *Deployments → ⋯ sur le dernier déploiement → Redeploy*. La construction applique les migrations, puis met

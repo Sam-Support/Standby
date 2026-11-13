@@ -7,17 +7,34 @@ import { markPaymentFailed, markPaymentSucceeded } from "@/lib/services/billing"
 import { applyStripeVerification, stripeVerification } from "@/lib/services/compliance";
 import { applyRefundUpdate } from "@/lib/services/credit-notes";
 
+/**
+ * Secrets des deux destinations Stripe, qui pointent sur cette même adresse : « Votre compte » (paiements,
+ * remboursements) et « Comptes connectés », seule à recevoir les account.updated des commerciaux.
+ */
+function webhookSecrets() {
+  return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter((v): v is string => Boolean(v));
+}
+
 /** Webhook Stripe : moyen de paiement enregistré, paiement réussi/échoué, remboursement, compte Connect prêt. */
 export async function POST(req: Request) {
-  if (!stripeEnabled() || !process.env.STRIPE_WEBHOOK_SECRET) return new Response("Stripe non configuré", { status: 404 });
-  const signature = req.headers.get("stripe-signature");
+  const secrets = webhookSecrets();
+  if (!stripeEnabled() || !secrets.length) return new Response("Stripe non configuré", { status: 404 });
+  const signature = req.headers.get("stripe-signature") ?? "";
   const body = await req.text();
-  let event: Stripe.Event;
-  try {
-    event = stripe().webhooks.constructEvent(body, signature ?? "", process.env.STRIPE_WEBHOOK_SECRET);
-  } catch {
-    return new Response("Signature invalide", { status: 400 });
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = stripe().webhooks.constructEvent(body, signature, secret);
+      break;
+    } catch {
+      // essai du secret suivant
+    }
   }
+  if (!event) return new Response("Signature invalide", { status: 400 });
+  // une destination « Comptes connectés » de production reçoit aussi les événements de test (et inversement) :
+  // seuls ceux du mode de la clé configurée sont traités
+  const liveKey = /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "");
+  if (event.livemode !== liveKey) return Response.json({ received: true, ignored: "autre mode" });
   const db = await getDb();
   try {
     switch (event.type) {
