@@ -7,23 +7,23 @@ heures, factures, rappels J-7 et J-2, invitation HubSpot, messages du formulaire
 ## Mise en place sur le nouveau domaine
 
 Le domaine est `stand-by.fr`, géré chez **PHPNET** : zone DNS sur `ns1.modns.fr`, boîtes e-mail chez eux
-(`mx.webmo.fr`). Resend envoie depuis le sous-domaine `notifications.stand-by.fr` : la messagerie actuelle et
+(`mx.webmo.fr`). Resend envoie depuis le sous-domaine `notification.stand-by.fr` : la messagerie actuelle et
 sa règle SPF ne changent pas.
 
 1. **Compte Resend** : créez le compte (au nom de la société), puis activez la double authentification.
 2. **Domaine** (Domains → Add domain) :
-   - Ajoutez un sous-domaine d'envoi plutôt que le domaine principal, par exemple `notifications.stand-by.fr`.
+   - Ajoutez un sous-domaine d'envoi plutôt que le domaine principal, par exemple `notification.stand-by.fr`.
      Sa réputation reste ainsi séparée de vos boîtes de messagerie habituelles.
    - **Région : Ireland (eu-west-1)**, la plus proche des destinataires et en Union européenne. Elle ne se
      change plus ensuite : il faudrait supprimer puis recréer le domaine.
 3. **DNS** : dans l'espace client PHPNET, zone DNS du domaine `stand-by.fr`, ajoutez les enregistrements que
    Resend affiche dans l'onglet *Records*, **en copiant exactement leurs valeurs** :
-   - DKIM : un enregistrement `TXT` (clé publique de signature) ;
-   - SPF et adresse de retour : un `MX` et un `TXT` sur le sous-domaine de retour (par défaut `send.…`) ;
+   - DKIM : un `TXT` sur `resend._domainkey.notification` (clé publique de signature, `p=MIGf…`) ;
+   - SPF et adresse de retour : deux `CNAME`, sur `rsend.notification` et `send.notification` ;
    - si l'interface ajoute le domaine d'elle-même au nom de l'enregistrement, saisissez seulement la partie
-     avant `.stand-by.fr` (par exemple `resend._domainkey.notifications`) ;
+     avant `.stand-by.fr` (par exemple `resend._domainkey.notification`) ;
    - ne touchez pas au `TXT` SPF de `stand-by.fr` (`v=spf1 mx include:spf.webmo.fr ~all`) : il sert à la
-     messagerie PHPNET. Celui de Resend va sur `send.notifications.stand-by.fr`.
+     messagerie PHPNET. Ceux de Resend vont sur le sous-domaine `notification`.
 
    Cliquez ensuite sur *Verify* (la propagation prend de quelques minutes à quelques heures).
 4. **DMARC** : déjà en place sur `stand-by.fr` (`v=DMARC1; p=none;`), elle couvre aussi le sous-domaine. Pour
@@ -47,7 +47,7 @@ sa règle SPF ne changent pas.
 
    ```
    RESEND_API_KEY=re_…
-   EMAIL_FROM=Standby <notifications@notifications.stand-by.fr>
+   EMAIL_FROM=Standby <notifications@notification.stand-by.fr>
    EMAIL_REPLY_TO=contact@stand-by.fr
    SUPPORT_EMAIL=contact@stand-by.fr
    RESEND_WEBHOOK_SECRET=whsec_…

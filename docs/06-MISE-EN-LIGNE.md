@@ -118,12 +118,12 @@ vide reçoit toutes les tables au premier déploiement. La production démarre s
 
 Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé :
 
-- [ ] Domaine d'envoi ajouté chez Resend (`notifications.stand-by.fr`), **région Irlande**.
+- [ ] Domaine d'envoi ajouté chez Resend (`notification.stand-by.fr`), **région Irlande**.
 - [ ] Enregistrements DNS DKIM et SPF copiés exactement depuis l'onglet *Records*, puis domaine **vérifié**.
 - [ ] DMARC `p=none` ajouté sur `_dmarc.stand-by.fr`.
 - [ ] Clé d'API limitée à l'envoi (*Sending access*, restreinte au domaine) dans Vercel : `RESEND_API_KEY`,
       environnements Production et Preview.
-- [ ] `EMAIL_FROM` (`Standby <notifications@notifications.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
+- [ ] `EMAIL_FROM` (`Standby <notifications@notification.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
       dans Vercel ; puis, sur un aperçu, *Redeploy* et « M'envoyer un e-mail de test » dans `/admin/emails`.
 - [ ] Après le premier déploiement de production : webhook vers `https://stand-by.fr/api/resend/webhook`, son
       secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas
