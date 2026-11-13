@@ -63,8 +63,9 @@ par pull request). Chacun a ses propres variables et son propre projet Supabase 
 
 ## Étape 3 : les secrets de l'application
 
-Générez-les sur votre poste et collez-les dans Vercel à l'étape 6. Ne les mettez jamais dans le dépôt. Générez
-des valeurs **différentes** pour Production et pour Preview.
+Ils sont déjà en place dans Vercel (générés le 12 novembre 2026, un jeu pour Production, un autre pour Preview,
+marqués sensibles). Pour les renouveler un jour, générez-les sur votre poste et remplacez-les dans Vercel à
+l'étape 6. Ne les mettez jamais dans le dépôt.
 
 | Variable | Commande | Rôle |
 |---|---|---|
@@ -153,9 +154,9 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 | Variable | Production | Preview |
 |---|---|---|
 | `APP_URL` | `https://standby.fr` | laissez vide : l'adresse de l'aperçu est déduite |
-| `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` | étape 3 | étape 3, autres valeurs |
-| `DATABASE_URL`, `DATABASE_URL_DIRECT` | projet Supabase de production | projet `standby-staging` |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | idem | idem |
+| `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` | déjà en place (étape 3) | déjà en place, autres valeurs |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | déjà en place | déjà en place |
+| `DATABASE_URL`, `DATABASE_URL_DIRECT`, `SUPABASE_SERVICE_ROLE_KEY` | **à coller** : projet Supabase de production | **à coller** : projet `standby-staging` |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SUPPORT_EMAIL`, `RESEND_WEBHOOK_SECRET` | étape 5.1 | facultatif : sans clé, les e-mails sont simulés et lisibles dans `/admin/emails` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | étape 5.2 (mode test d'abord) | facultatif : paiements simulés |
 | `INSEE_API_KEY`, `HUBSPOT_*`, `ANTHROPIC_API_KEY` | étape 5.3 | facultatif |

@@ -21,12 +21,12 @@ Légende : 🧑 vous · ⚖️ avocat ou expert-comptable · 🤖 Claude peut le
 ## 2. Mettre en ligne (tutoriel, étapes 2 à 7)
 
 Déjà fait par 🤖 : les deux projets Supabase (production et `standby-staging`, Francfort) avec leurs buckets
-`private` et `public` ; le projet Vercel relié au dépôt, avec les variables non secrètes.
+`private` et `public` ; le projet Vercel `standby-salons` relié au dépôt, avec `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un jeu par environnement).
 
 | | Tâche | Qui | Durée indicative |
 |---|---|---|---|
 | [ ] | Vercel : domaine `standby.fr` ajouté au projet, enregistrements DNS chez le registraire | 🧑 | 15 min, puis propagation DNS |
-| [ ] | Secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` générés, un jeu pour Production, un pour Preview | 🧑 | 10 min |
 | [ ] | Supabase : mot de passe de chaque base, chaînes *Transaction pooler* et *Session pooler*, clé secrète ; collés dans Vercel | 🧑 | 20 min |
 | [ ] | Resend : domaine d'envoi (Irlande), DNS DKIM, SPF puis DMARC, clé, webhook ([`05-EMAILS.md`](05-EMAILS.md)) | 🧑 | 30 min, puis propagation DNS |
 | [ ] | Stripe Connect **en mode test** : clé, webhook, SEPA et cartes | 🧑 | 1 h, plus la validation du compte |
