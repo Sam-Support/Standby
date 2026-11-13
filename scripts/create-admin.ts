@@ -1,7 +1,8 @@
 /**
  * Crée un compte administrateur, ou promeut un compte existant et change son mot de passe.
  *
- * Usage : npm run admin:create -- [--env preview|production] [email] [Prénom] [Nom]
+ * Usage : npm run admin:create (base locale), npm run admin:create:preview ou npm run admin:create:production
+ * (raccourcis de --env preview|production, utiles sous PowerShell qui retire le « -- » de npm run).
  *
  * Le mot de passe est demandé au clavier, sans s'afficher : il ne reste ni dans l'historique du terminal ni dans
  * la liste des processus (ADMIN_PASSWORD le fournit sans saisie, pour les tests et l'automatisation). Avec --env, les accès à la base et à Supabase sont lus dans les

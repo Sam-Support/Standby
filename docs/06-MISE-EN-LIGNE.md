@@ -180,7 +180,7 @@ Après le premier déploiement de production (les tables sont créées à la con
 dans le dossier du dépôt, avec la CLI Vercel connectée (`npm i -g vercel`, `vercel login`, `vercel link`) :
 
 ```bash
-npm run admin:create -- --env production
+npm run admin:create:production
 ```
 
 Le script lit seul les accès à la base de production dans Vercel, puis demande l'e-mail, le prénom, le nom et le
@@ -189,8 +189,9 @@ passe long et unique, rangé dans votre gestionnaire de mots de passe.
 
 - Relancer la même commande avec la même adresse **change le mot de passe** de ce compte et ferme ses sessions
   ouvertes : c'est aussi la marche à suivre en cas d'oubli.
-- `--env preview` fait de même sur la base des aperçus (`standby-staging`), pour essayer l'admin d'une pull request.
-- Sans `--env`, le compte est créé dans la base locale de développement.
+- `npm run admin:create:preview` fait de même sur la base des aperçus (`standby-staging`), pour essayer l'admin
+  d'une pull request.
+- `npm run admin:create` crée le compte dans la base locale de développement.
 
 Connectez-vous ensuite sur `https://standby.fr/connexion`, puis ouvrez **`/admin`**.
 
