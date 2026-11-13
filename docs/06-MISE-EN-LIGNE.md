@@ -131,6 +131,8 @@ Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé 
 
 ### 5.2 Paiements (Stripe Connect), obligatoire pour encaisser
 
+Le pas à pas complet, avec les valeurs de test, est dans [`docs/08-STRIPE.md`](08-STRIPE.md). En résumé :
+
 Le compte Stripe de la société (« Stand-By ») existe. **Tout se fait d'abord en mode test**, jusqu'à la
 recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
 
