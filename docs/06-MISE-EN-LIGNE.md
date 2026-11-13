@@ -144,7 +144,7 @@ recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
    `STRIPE_SECRET_KEY`, environnements **Production et Preview** (la clé de test partout jusqu'à la recette).
 4. **Webhooks**, une fois le site déployé à son adresse publique : *Workbench → Webhooks → Create an event
    destination*, **deux fois**, avec la même adresse `https://stand-by.fr/api/stripe/webhook`, le format
-   **Snapshot** et la version d'API **`2026-09-30.endive`** (celle du code) :
+   **Snapshot** et la version d'API **`endive` la plus récente** proposée (par exemple `2026-10-28.endive` ; le code utilise `2026-09-30.endive`, de la même famille, donc compatible) :
    - *Events from* : **Your account**, événements `checkout.session.completed`, `payment_intent.succeeded`,
      `payment_intent.payment_failed`, `refund.updated`, `refund.failed` ; son secret `whsec_…` dans
      `STRIPE_WEBHOOK_SECRET` ;

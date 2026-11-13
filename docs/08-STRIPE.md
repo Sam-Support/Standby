@@ -71,7 +71,7 @@ Le site a besoin de **deux destinations**, sur la même adresse, chacune avec so
 | Commerciaux | **Connected accounts** | `account.updated` | `STRIPE_CONNECT_WEBHOOK_SECRET` |
 
 Pour chacune : *Workbench → Webhooks → Create an event destination*, *Events from* comme ci-dessus, format
-**Snapshot**, version d'API **`2026-09-30.endive`** (celle du code), les événements du tableau, type *Webhook
+**Snapshot**, version d'API **`endive` la plus récente** proposée (par exemple `2026-10-28.endive` ; le code utilise `2026-09-30.endive`, de la même famille, donc compatible), les événements du tableau, type *Webhook
 endpoint*, puis l'adresse. Sur la page de la destination, *Reveal secret* donne le `whsec_…` à coller dans Vercel.
 
 **Quelle adresse ?**
