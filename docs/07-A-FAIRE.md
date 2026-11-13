@@ -26,7 +26,7 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
 
 | | Tâche | Qui | Durée indicative |
 |---|---|---|---|
-| [ ] | Vercel : domaine `standby.fr` ajouté au projet, enregistrements DNS chez le registraire | 🧑 | 15 min, puis propagation DNS |
+| [ ] | Vercel : domaine `stand-by.fr` ajouté au projet, enregistrements DNS chez le registraire | 🧑 | 15 min, puis propagation DNS |
 | [ ] | Supabase : mot de passe de chaque base, chaînes *Transaction pooler* et *Session pooler*, clé secrète ; collés dans Vercel | 🧑 | 20 min |
 | [ ] | Resend : domaine d'envoi (Irlande), DNS DKIM, SPF puis DMARC, clé, webhook ([`05-EMAILS.md`](05-EMAILS.md)) | 🧑 | 30 min, puis propagation DNS |
 | [ ] | Stripe Connect **en mode test** : clé, webhook, SEPA et cartes | 🧑 | 1 h, plus la validation du compte |

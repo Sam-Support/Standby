@@ -12,7 +12,8 @@ Ce guide liste, dans l'ordre, ce qu'une personne doit faire : créer les comptes
 renseigner les secrets, compléter les textes juridiques, puis faire une dernière recette. Comptez une journée,
 hors délais de validation (DNS, Stripe, avocat).
 
-Dans les exemples, **`standby.fr`** remplace votre nom de domaine.
+Le domaine est **`stand-by.fr`**, géré chez PHPNET (zone DNS et boîtes e-mail). Il sert aujourd'hui un site
+hébergé chez PHPNET : le faire pointer vers Vercel (étape 2) le remplace par l'application.
 
 > Cochez au fur et à mesure. Chaque étape indique **où** agir et **comment vérifier** qu'elle est faite.
 
@@ -48,8 +49,8 @@ par pull request). Chacun a ses propres variables et son propre projet Supabase 
    Vercel reconnaît Next.js et lit `vercel.json` (région Francfort, migrations à la construction, tâche planifiée).
    Laissez-le créer le projet ; le premier déploiement échouera tant que les variables de l'étape 6 ne sont pas
    renseignées, c'est attendu. Si Claude a déjà créé le projet, il apparaît dans votre tableau de bord.
-2. **Le domaine** : *Project → Settings → Domains*, ajoutez `standby.fr` et `www.standby.fr`. Vercel affiche les
-   enregistrements DNS à créer chez votre registraire (en général un `A` vers `76.76.21.21` pour `standby.fr`
+2. **Le domaine** : *Project → Settings → Domains*, ajoutez `stand-by.fr` et `www.stand-by.fr`. Vercel affiche les
+   enregistrements DNS à créer chez votre registraire (en général un `A` vers `76.76.21.21` pour `stand-by.fr`
    et un `CNAME` vers `cname.vercel-dns.com` pour `www`). Le certificat HTTPS est obtenu seul.
 3. **Protection des aperçus** : *Settings → Deployment Protection*, laissez *Vercel Authentication* activée
    sur les aperçus : seuls les membres connectés à Vercel voient les adresses de pull request.
@@ -57,7 +58,7 @@ par pull request). Chacun a ses propres variables et son propre projet Supabase 
    acceptée. Passez à Pro (20 $/mois) si vous voulez plusieurs membres d'équipe, des journaux conservés plus
    longtemps ou une protection par mot de passe.
 
-**Vérification** : dans *Settings → Domains*, `standby.fr` est marqué *Valid Configuration*.
+**Vérification** : dans *Settings → Domains*, `stand-by.fr` est marqué *Valid Configuration*.
 
 ---
 
@@ -85,7 +86,7 @@ avec leurs buckets **`private`** (pièces d'identité, RIB, leads) et **`public`
 
 | Projet Supabase | Référence | Sert à |
 |---|---|---|
-| Production | `wdtjojycylemjgthbafg` | l'environnement Vercel **Production** (`standby.fr`) |
+| Production | `wdtjojycylemjgthbafg` | l'environnement Vercel **Production** (`stand-by.fr`) |
 | `standby-staging` | `jorsocbnxfzkohnjemss` | l'environnement Vercel **Preview** (aperçus de pull request) |
 
 Pour chacun, récupérez quatre valeurs (à coller dans Vercel à l'étape 6) :
@@ -117,14 +118,14 @@ vide reçoit toutes les tables au premier déploiement. La production démarre s
 
 Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé :
 
-- [ ] Domaine d'envoi ajouté chez Resend (`notifications.standby.fr`), **région Irlande**.
+- [ ] Domaine d'envoi ajouté chez Resend (`notifications.stand-by.fr`), **région Irlande**.
 - [ ] Enregistrements DNS DKIM et SPF copiés exactement depuis l'onglet *Records*, puis domaine **vérifié**.
-- [ ] DMARC `p=none` ajouté sur `_dmarc.standby.fr`.
+- [ ] DMARC `p=none` ajouté sur `_dmarc.stand-by.fr`.
 - [ ] Clé d'API limitée à l'envoi (*Sending access*, restreinte au domaine) dans Vercel : `RESEND_API_KEY`,
       environnements Production et Preview.
-- [ ] `EMAIL_FROM` (`Standby <notifications@notifications.standby.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
+- [ ] `EMAIL_FROM` (`Standby <notifications@notifications.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
       dans Vercel ; puis, sur un aperçu, *Redeploy* et « M'envoyer un e-mail de test » dans `/admin/emails`.
-- [ ] Après le premier déploiement de production : webhook vers `https://standby.fr/api/resend/webhook`, son
+- [ ] Après le premier déploiement de production : webhook vers `https://stand-by.fr/api/resend/webhook`, son
       secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas
       suivie.
 
@@ -140,7 +141,7 @@ recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
 3. **Clé** : *Developers → API keys*, clé secrète de test `sk_test_…`, à coller dans Vercel sous
    `STRIPE_SECRET_KEY`, environnements **Production et Preview** (la clé de test partout jusqu'à la recette).
 4. **Webhooks**, une fois le site déployé à son adresse publique : *Workbench → Webhooks → Create an event
-   destination*, **deux fois**, avec la même adresse `https://standby.fr/api/stripe/webhook`, le format
+   destination*, **deux fois**, avec la même adresse `https://stand-by.fr/api/stripe/webhook`, le format
    **Snapshot** et la version d'API **`2026-09-30.endive`** (celle du code) :
    - *Events from* : **Your account**, événements `checkout.session.completed`, `payment_intent.succeeded`,
      `payment_intent.payment_failed`, `refund.updated`, `refund.failed` ; son secret `whsec_…` dans
@@ -157,7 +158,7 @@ recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
 - **SIRENE** : `INSEE_API_KEY` (portail-api.insee.fr, application « Simple »). Sans elle, la vérification
   des SIRET passe par l'API publique Recherche d'entreprises.
 - **HubSpot** (leads envoyés directement dans le CRM des exposants) : application publique avec la redirection
-  `https://standby.fr/api/crm/hubspot/callback` et les portées `crm.objects.contacts.write` et `.read`.
+  `https://stand-by.fr/api/crm/hubspot/callback` et les portées `crm.objects.contacts.write` et `.read`.
   Renseignez `HUBSPOT_CLIENT_ID` et `HUBSPOT_CLIENT_SECRET`.
 - **Lecture automatique des cartes de visite** : `ANTHROPIC_API_KEY`. Sans elle, les cartes sont saisies à la
   main depuis l'admin.
@@ -172,7 +173,7 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 
 | Variable | Production | Preview |
 |---|---|---|
-| `APP_URL` | `https://standby.fr` | laissez vide : l'adresse de l'aperçu est déduite |
+| `APP_URL` | `https://stand-by.fr` | laissez vide : l'adresse de l'aperçu est déduite |
 | `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` | déjà en place (étape 3) | déjà en place, autres valeurs |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | déjà en place | déjà en place |
 | `DATABASE_URL`, `DATABASE_URL_DIRECT`, `SUPABASE_SERVICE_ROLE_KEY` | **à coller** : projet Supabase de production | **à coller** : projet `standby-staging` |
@@ -183,7 +184,7 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 Puis *Deployments → ⋯ sur le dernier déploiement → Redeploy*. La construction applique les migrations, puis met
 la version en ligne. Les suivantes partiront seules à chaque fusion dans `main`.
 
-**Vérification** : `https://standby.fr` s'ouvre en HTTPS, `https://standby.fr/api/health?db=1` répond
+**Vérification** : `https://stand-by.fr` s'ouvre en HTTPS, `https://stand-by.fr/api/health?db=1` répond
 `{"ok":true,…,"db":"ok"}`, et l'onglet *Schedules* du projet montre `taches-planifiees` toutes les 15 min.
 
 **Retour arrière** : *Deployments*, choisissez le déploiement précédent, *⋯ → Instant Rollback* (ou *Promote to
@@ -204,8 +205,8 @@ Vercel sont illisibles : le script `npm run admin:create` ne sert qu'à la base 
    Claude) :
    ```sql
    update profiles set role = 'admin', email_verified_at = coalesce(email_verified_at, now())
-   where email = 'prenom.nom@standby.fr';
-   delete from freelancers where user_id = (select id from profiles where email = 'prenom.nom@standby.fr');
+   where email = 'prenom.nom@stand-by.fr';
+   delete from freelancers where user_id = (select id from profiles where email = 'prenom.nom@stand-by.fr');
    ```
    La seconde ligne retire la fiche commercial ébauchée à l'inscription.
 3. Déconnectez-vous, puis reconnectez-vous.
@@ -213,7 +214,7 @@ Vercel sont illisibles : le script `npm run admin:create` ne sert qu'à la base 
 Pour changer ce mot de passe plus tard : *Mon compte → Mot de passe*. Même marche à suivre sur un aperçu de pull
 request, avec le projet Supabase `standby-staging`.
 
-Connectez-vous ensuite sur `https://standby.fr/connexion`, puis ouvrez **`/admin`**.
+Connectez-vous ensuite sur `https://stand-by.fr/connexion`, puis ouvrez **`/admin`**.
 
 - [ ] Le tableau de bord indique les services configurés : base, Stripe, Resend, et le cas échéant HubSpot et
       la lecture des cartes.
@@ -294,7 +295,7 @@ supprimez les comptes et données de test depuis l'admin ou Supabase.
 - [ ] **Protection de `main`** : dans GitHub, *Settings → Branches*, exigez la CI verte (`check` et `e2e`) avant
       toute fusion, puisque la fusion met en production.
 - [ ] **Supervision** : un service externe (UptimeRobot, Better Stack…) qui appelle
-      `https://standby.fr/api/health?db=1` toutes les minutes et vous alerte après deux échecs.
+      `https://stand-by.fr/api/health?db=1` toutes les minutes et vous alerte après deux échecs.
 - [ ] **Suivi des erreurs** : Sentry ou équivalent, recommandé ; l'intégration Vercel de Sentry s'installe depuis
       la place de marché Vercel. À défaut, les journaux d'exécution sont dans Vercel (*Project → Logs*).
 - [ ] **Vercel Firewall** : en cas de trafic anormal, *Project → Firewall → Attack Challenge Mode* bloque les
