@@ -124,7 +124,7 @@ Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé 
 - [ ] Clé d'API limitée à l'envoi (*Sending access*, restreinte au domaine) dans Vercel : `RESEND_API_KEY`,
       environnements Production et Preview.
 - [ ] `EMAIL_FROM` (`Standby <notifications@notification.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
-      dans Vercel ; puis, sur un aperçu, *Redeploy* et « M'envoyer un e-mail de test » dans `/admin/emails`.
+      dans Vercel ; puis, sur un aperçu, *Redeploy* et « Envoyer un e-mail de test » dans `/admin/emails`.
 - [ ] Après le premier déploiement de production : webhook vers `https://stand-by.fr/api/resend/webhook`, son
       secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas
       suivie.
@@ -219,7 +219,7 @@ Connectez-vous ensuite sur `https://stand-by.fr/connexion`, puis ouvrez **`/admi
 - [ ] Le tableau de bord indique les services configurés : base, Stripe, Resend, et le cas échéant HubSpot et
       la lecture des cartes.
 - [ ] Dans **`/admin/emails`**, le bloc *Configuration* ne signale plus de problème. Le bouton
-      « M'envoyer un e-mail de test » fonctionne, et l'e-mail passe à l'état « remis ».
+      « Envoyer un e-mail de test » fonctionne, et l'e-mail passe à l'état « remis ».
 - [ ] Dans **`/admin/tarification`**, les frais de service, la commission, la TVA, les tarifs plancher par poste
       et le barème d'annulation sont ceux que vous voulez appliquer.
 

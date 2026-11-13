@@ -59,9 +59,16 @@ sa règle SPF ne changent pas.
    - `SUPPORT_EMAIL` reçoit les messages du formulaire de contact : « Répondre » y écrit directement au
      visiteur.
 8. **Vérification** : dans `/admin/emails`, le bloc *Configuration* ne doit plus signaler de problème.
-   Le bouton « M'envoyer un e-mail de test » écrit à l'adresse de l'administrateur connecté. Le journal
+   Le bouton « Envoyer un e-mail de test » écrit à l'adresse de l'administrateur connecté, ou à celle du
+   champ *Destinataire* (pratique pour comparer Outlook et Gmail). Le journal
    doit afficher l'e-mail « remis » peu après. Ouvrez-le et vérifiez dans ses en-têtes qu'il passe
    `spf=pass`, `dkim=pass` et `dmarc=pass`.
+
+**Remis mais introuvable ?** « Delivered » chez Resend veut dire que le serveur du destinataire a accepté le
+message. Outlook.com / Hotmail filtre ensuite très sévèrement un domaine d'envoi neuf : regardez *Courrier
+indésirable* et l'onglet *Autres*, ajoutez `notifications@notification.stand-by.fr` aux *Expéditeurs approuvés*
+(Paramètres → Courrier → Courrier indésirable), et comparez avec un envoi vers Gmail. Si Gmail le reçoit, le
+domaine est bon : la réputation auprès de Microsoft se construit en quelques jours d'envois réguliers.
 
 ## Fonctionnement
 
