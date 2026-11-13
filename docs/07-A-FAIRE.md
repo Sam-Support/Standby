@@ -32,7 +32,7 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
 | [ ] | Stripe Connect **en mode test** : clé, webhook, SEPA et cartes | 🧑 | 1 h, plus la validation du compte |
 | [ ] | Facultatif : clé INSEE (SIRENE), application HubSpot, clé Anthropic (cartes de visite) | 🧑 | 15 min chacun |
 | [ ] | Vercel : *Redeploy* une fois les variables posées ; `/api/health?db=1` répond, le Schedule tourne | 🧑 (🤖 peut vérifier) | 10 min |
-| [ ] | Premier administrateur (`npm run admin:create`), contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
+| [ ] | Premier administrateur après le premier déploiement : `npm run admin:create -- --env production` (mot de passe demandé au clavier) ; contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
 
 ## 3. Contenu, juridique, métier
 

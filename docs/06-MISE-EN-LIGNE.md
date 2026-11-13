@@ -176,12 +176,21 @@ Production*). C'est immédiat, sans reconstruction.
 
 ## Étape 7 : le premier administrateur
 
-Depuis votre poste, avec les variables de production dans l'environnement du terminal (`DATABASE_URL`,
-`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) :
+Après le premier déploiement de production (les tables sont créées à la construction), depuis votre poste,
+dans le dossier du dépôt, avec la CLI Vercel connectée (`npm i -g vercel`, `vercel login`, `vercel link`) :
 
 ```bash
-npm run admin:create -- prenom.nom@standby.fr "un mot de passe long et unique" Prénom Nom
+npm run admin:create -- --env production
 ```
+
+Le script lit seul les accès à la base de production dans Vercel, puis demande l'e-mail, le prénom, le nom et le
+mot de passe (deux fois, sans l'afficher : il ne reste pas dans l'historique du terminal). Choisissez un mot de
+passe long et unique, rangé dans votre gestionnaire de mots de passe.
+
+- Relancer la même commande avec la même adresse **change le mot de passe** de ce compte et ferme ses sessions
+  ouvertes : c'est aussi la marche à suivre en cas d'oubli.
+- `--env preview` fait de même sur la base des aperçus (`standby-staging`), pour essayer l'admin d'une pull request.
+- Sans `--env`, le compte est créé dans la base locale de développement.
 
 Connectez-vous ensuite sur `https://standby.fr/connexion`, puis ouvrez **`/admin`**.
 

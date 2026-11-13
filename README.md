@@ -66,7 +66,7 @@ Repartir d'une base vierge : arrêtez le serveur et supprimez le dossier `.data`
 | `npm run build` | Build de production (`output: standalone`) |
 | `npm run db:generate` | Génère une migration après modification de `db/schema.ts` |
 | `npm run db:migrate` | Applique les migrations sur `DATABASE_URL` (aussi fait au démarrage) |
-| `npm run admin:create -- email "mot de passe" Prénom Nom` | Crée le premier administrateur |
+| `npm run admin:create -- [--env preview\|production]` | Crée un administrateur, ou change son mot de passe (demandé au clavier, sans s'afficher ; `--env` lit les accès dans Vercel) |
 
 ## Production (Vercel + Supabase)
 
@@ -78,7 +78,7 @@ Ce qui reste à faire, par ordre et par responsable : [`docs/07-A-FAIRE.md`](doc
 3. **SIRENE** (facultatif) : clé `INSEE_API_KEY` de l'API Sirene de l'INSEE ; sans elle, ou en cas de panne de l'INSEE, les SIRET sont vérifiés via l'API publique Recherche d'entreprises.
 4. **Resend** : domaine d'envoi vérifié (région Irlande), DNS SPF/DKIM puis DMARC, clé d'API, webhook vers `https://<domaine>/api/resend/webhook` ; pas à pas dans [`docs/05-EMAILS.md`](docs/05-EMAILS.md), puis e-mail de test depuis `/admin/emails`. **HubSpot** (application publique, redirection `https://<domaine>/api/crm/hubspot/callback`, portées `crm.objects.contacts.write` et `.read`), **Anthropic** (lecture des cartes).
 5. **Vercel** : projet relié au dépôt GitHub ; [`vercel.json`](vercel.json) fixe la région (Francfort), les migrations à la construction (`npm run db:migrate && npm run build`) et le Schedule `/api/cron` toutes les 15 min. Variables à renseigner pour *Production* et pour *Preview* (modèle : [`.env.example`](.env.example)). Chaque fusion dans `main` met en production ; chaque pull request a son aperçu.
-6. Créer l'administrateur depuis votre poste, avec les variables de production (`DATABASE_URL`, `SUPABASE_*`) dans l'environnement : `npm run admin:create -- email "mot de passe" Prénom Nom`.
+6. Créer l'administrateur après le premier déploiement de production : `npm run admin:create -- --env production` (CLI Vercel connectée ; le mot de passe est demandé au clavier).
 
 ## À compléter avant l'ouverture
 
