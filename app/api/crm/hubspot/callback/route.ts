@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const back = (ok: boolean) =>
     viewer
       ? NextResponse.redirect(new URL(`/entreprise?crm=${ok ? "ok" : "erreur"}`, req.url))
-      : new NextResponse(ok ? "HubSpot est connecté à standby. Vous pouvez fermer cette page." : "La connexion HubSpot a échoué.", {
+      : new NextResponse(ok ? "HubSpot est connecté à stand-by. Vous pouvez fermer cette page." : "La connexion HubSpot a échoué.", {
           status: ok ? 200 : 400,
           headers: { "Content-Type": "text/plain; charset=utf-8" },
         });

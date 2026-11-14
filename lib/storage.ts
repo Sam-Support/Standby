@@ -10,6 +10,12 @@ import { supabaseAdmin, supabaseEnabled } from "@/lib/integrations/supabase";
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const LOCAL_ROOT = path.join(process.cwd(), ".data", "uploads");
 
+/** Sur Vercel, le disque d'une fonction est éphémère : sans Supabase, un fichier serait perdu sans bruit. */
+function localRoot() {
+  if (process.env.VERCEL) throw new Error("Stockage non configuré : renseignez SUPABASE_URL et la clé secrète Supabase.");
+  return LOCAL_ROOT;
+}
+
 const MIME: Record<string, string> = {
   pdf: "application/pdf",
   png: "image/png",
@@ -56,7 +62,7 @@ export async function putFile(key: string, data: Buffer, filename: string): Prom
     if (error) throw new Error(`Envoi du fichier impossible : ${error.message}`);
     return key;
   }
-  const target = path.join(LOCAL_ROOT, bucket, objectPath);
+  const target = path.join(localRoot(), bucket, objectPath);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, data);
   return key;
@@ -69,7 +75,7 @@ export async function getFile(key: string): Promise<Buffer | null> {
     return error || !data ? null : Buffer.from(await data.arrayBuffer());
   }
   try {
-    return await readFile(path.join(LOCAL_ROOT, bucket, objectPath));
+    return await readFile(path.join(localRoot(), bucket, objectPath));
   } catch {
     return null;
   }
@@ -82,7 +88,7 @@ export async function deleteFile(key: string | null | undefined) {
     await supabaseAdmin().storage.from(bucket).remove([objectPath]);
     return;
   }
-  await rm(path.join(LOCAL_ROOT, bucket, objectPath), { force: true });
+  await rm(path.join(localRoot(), bucket, objectPath), { force: true });
 }
 
 /** URL servie par l'application (contrôle d'accès dans /api/fichiers). */

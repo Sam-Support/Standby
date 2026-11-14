@@ -12,10 +12,14 @@ import { notices } from "@/lib/i18n/messages/notices";
  * remise grâce au webhook Resend (app/api/resend/webhook). Un échec d'envoi ne casse jamais l'action en cours.
  */
 
-export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+/** Adresse publique : APP_URL, sinon celle que Vercel fournit (domaine de production, ou adresse de l'aperçu). */
+export const appUrl = () => {
+  const vercel = process.env.VERCEL_ENV === "production" ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL;
+  return (process.env.APP_URL || (vercel && `https://${vercel}`) || "http://localhost:3000").replace(/\/$/, "");
+};
 export const resendEnabled = () => Boolean(process.env.RESEND_API_KEY);
 
-const PLACEHOLDER_FROM = "Standby <notifications@standby.example>";
+const PLACEHOLDER_FROM = "Stand-By <notifications@standby.example>";
 
 /** Réglages et points à corriger avant d'envoyer pour de vrai (affichés dans /admin/emails). */
 export function emailConfig() {
@@ -112,7 +116,7 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, Math.min(ms, 5000
 function renderHtml(msg: EmailMessage, href: string | null, lang: Lang) {
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(msg.subject)}</title></head>
 <body style="margin:0;padding:24px;background:#F6F5F2"><div style="font-family:Arial,sans-serif;color:#1B2150;max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;line-height:1.55">
-<p style="font-size:22px;font-weight:700;margin:0 0 16px">standby</p>
+<p style="font-size:22px;font-weight:700;margin:0 0 16px">stand-by</p>
 ${msg.text
   .split("\n\n")
   .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)

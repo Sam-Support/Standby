@@ -46,7 +46,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const lf = (await getMessages(bookingMessages)).leadFormats;
   const fm = await getFmt();
   const dl = domainLabels(fm.lang);
-  const standard = tpl.name === "Fiche standard Standby";
+  const standard = tpl.name === "Fiche standard Stand-By";
   const tplName = m.c.leadMode === "crm" ? lf.crm(m.c.crmProvider ?? "CRM") : standard ? lf.standard : tpl.name;
   const adjusted = t.adjusted(fm.hoursLabel(retainedTotal), fm.hoursLabel(declaredTotal));
 

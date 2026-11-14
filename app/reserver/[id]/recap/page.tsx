@@ -35,7 +35,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const f = await getFmt();
   const dl = domainLabels(f.lang);
   const h = f.timeLabel;
-  const tplName = d.company.leadMode === "crm" ? m.leadFormats.crm(d.company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Standby" ? m.leadFormats.standard : tpl.name;
+  const tplName = d.company.leadMode === "crm" ? m.leadFormats.crm(d.company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Stand-By" ? m.leadFormats.standard : tpl.name;
 
   return (
     <>
@@ -86,7 +86,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   <span>
                     {l.qty} × {dl.role(l.role).short}
                     <br />
-                    <span className="muted small">{t.lineDetail(f.hoursLabel(minutes), d.quote.days, d.booking.outfit === "standby")}</span>
+                    <span className="muted small">{t.lineDetail(f.hoursLabel(minutes), d.quote.days)}</span>
                   </span>
                   <b>{f.euros(l.totalCents)}</b>
                 </div>

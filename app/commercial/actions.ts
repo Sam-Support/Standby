@@ -64,7 +64,7 @@ export async function withdraw(assignmentId: string, _: FormState, fd: FormData)
   return done(
     replaced
       ? "Désistement enregistré : un remplaçant a reçu la mission et l’exposant est prévenu."
-      : "Désistement enregistré. Aucun remplaçant n’est libre pour l’instant : l’équipe Standby prend le relais auprès de l’exposant.",
+      : "Désistement enregistré. Aucun remplaçant n’est libre pour l’instant : l’équipe Stand-By prend le relais auprès de l’exposant.",
   );
 }
 
@@ -76,7 +76,7 @@ export async function answerAdjustment(assignmentId: string, accept: boolean, _:
     return fail(e);
   }
   revalidatePath("/commercial", "layout");
-  return done(accept ? "Ajustement accepté : la paie part après la facturation de l’exposant." : "Contestation envoyée : l’équipe Standby arbitre et vous tient informé·e.");
+  return done(accept ? "Ajustement accepté : la paie part après la facturation de l’exposant." : "Contestation envoyée : l’équipe Stand-By arbitre et vous tient informé·e.");
 }
 
 export async function uploadLeadsAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {

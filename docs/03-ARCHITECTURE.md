@@ -6,18 +6,18 @@
 |---|---|
 | Front et back | Next.js (App Router) + TypeScript, Server Actions et route handlers |
 | UI | CSS « Clay » repris du design (`app/globals.css`, sans Tailwind) + composants React ; formulaires en Server Actions, contrôles natifs stylés (`:has()`) |
-| Base de données | PostgreSQL (Supabase, région UE) via Drizzle ORM en connexion directe ; migrations `db/migrations` appliquées au démarrage. Autorisations dans le code serveur (chaque requête filtrée par entreprise / commercial) ; RLS laissée active sans règle pour fermer l'API publique Supabase. En local : PGlite |
+| Base de données | PostgreSQL (Supabase, région UE) via Drizzle ORM en connexion directe ; migrations `db/migrations` appliquées à la construction sur Vercel. Autorisations dans le code serveur (chaque requête filtrée par entreprise / commercial) ; RLS activée sans règle sur toutes les tables et droits des rôles `anon` / `authenticated` retirés (migration 0011) pour fermer l'API publique Supabase. En local : PGlite |
 | Auth | Supabase Auth comme fournisseur d'identité (création, vérification du mot de passe, changement), session applicative en cookie signé HMAC (30 jours) ; rôles `exposant`, `commercial`, `admin`. En local : scrypt |
 | Stockage | Supabase Storage (buckets `private` et `public`), fichiers servis par `/api/fichiers` avec contrôle d'accès. En local : `.data/uploads` |
 | Paiement | Stripe Connect : mandat SEPA ou carte enregistré à la confirmation (Checkout en mode setup), débit après validation des heures, transferts vers les comptes Express, virements hebdomadaires le lundi. Simulé sans clé |
 | Emails | Resend via son API HTTP ; notifications aussi visibles dans `/notifications` |
-| Jobs asynchrones | Conteneur cron du VPS qui appelle `/api/cron` toutes les 15 min (statuts, expiration 48 h + remplaçant, validation J+3, virements) |
+| Jobs asynchrones | Schedule Vercel (`vercel.json`) qui appelle `/api/cron` toutes les 15 min (statuts, expiration 48 h + remplaçant, validation J+3, virements) |
 | Excel | `exceljs` (lecture, rapprochement des colonnes par synonymes, export au format de l'entreprise) |
 | OCR cartes | Claude (vision + sortie structurée, `@anthropic-ai/sdk`) ; repli sur la saisie manuelle dans `/admin/cartes` |
 | CRM | HubSpot OAuth (portées `crm.objects.contacts.write` et `.read`), jetons chiffrés AES-256-GCM, invitation de l'admin CRM par lien signé |
 | Back-office | Espace `/admin` dans Next.js (rôle `admin`, table `audit_log`) |
-| Hébergement | **VPS** (Docker Compose : Next.js standalone + Caddy pour HTTPS) + Supabase cloud UE (Paris ou Francfort) ; voir `deploy/` |
-| Observabilité | Sentry, PostHog (hébergement UE), logs Docker, alertes Stripe webhooks |
+| Hébergement | **Vercel** (fonctions Node.js à Francfort, aperçu par pull request, production depuis `main`) + Supabase cloud UE (Francfort) ; voir `vercel.json` et ADR-003 |
+| Observabilité | Journaux et Schedules Vercel, Sentry (intégration Vercel), alertes Stripe webhooks |
 | Qualité | Vitest (dont un test du parcours complet sur PGlite), Playwright + axe-core (WCAG 2.1 AA) sur le build de production, ESLint, TypeScript strict, GitHub Actions (jobs `check` et `e2e`) |
 | Sécurité applicative | Limites de tentatives en base (`rate_limits`), vérification d'e-mail à l'inscription, CSP avec nonce et en-têtes de sécurité via `proxy.ts` |
 
@@ -29,7 +29,7 @@ Remarque Retool + Airtable : Retool suffit et lit directement Postgres. Airtable
 
 ```mermaid
 flowchart LR
-  U[Navigateur] --> V[Caddy puis Next.js sur le VPS]
+  U[Navigateur] --> V[Next.js sur Vercel, Francfort]
   V --> DB[(Supabase Postgres + RLS)]
   V --> ST[(Supabase Storage)]
   V --> AU[Supabase Auth]
@@ -106,9 +106,9 @@ Le design débite l'exposant après validation des heures. Une autorisation cart
 Stripe Connect : charges de plateforme, transferts vers comptes Express des commerciaux, payout planifié le lundi. Webhooks idempotents (`stripe_events`), réconciliation quotidienne.
 
 ## 7. Sécurité et conformité
-- RGPD : registre des traitements, DPA (Supabase, hébergeur du VPS, Stripe, Resend), consentement cookies (CMP conforme CNIL), droit d'accès et d'effacement.
-- Secrets dans un `.env` sur le VPS (droits 600, hors dépôt) et secrets GitHub pour la CI, aucune clé côté client ; tokens CRM chiffrés.
-- VPS : accès SSH par clé uniquement, pare-feu (80/443/SSH), mises à jour de sécurité automatiques, fail2ban, sauvegardes hors site, utilisateur de déploiement sans root.
+- RGPD : registre des traitements, DPA (Supabase, Vercel, Stripe, Resend), consentement cookies (CMP conforme CNIL), droit d'accès et d'effacement.
+- Secrets dans les variables d'environnement Vercel (marquées sensibles, par environnement, hors dépôt), aucune clé côté client ; tokens CRM chiffrés.
+- Plateforme : pas de serveur à administrer ; HTTPS, HSTS, DDoS et pare-feu gérés par Vercel ; sauvegardes de la base par Supabase.
 - Scan antivirus et validation MIME/taille des uploads (20 Mo), limitation de débit sur auth et upload.
 - Journal d'audit sur toute action admin (Retool).
 - RGAA : navigation clavier, contrastes ≥ 4,5, `aria-label` des icônes ; tests axe en CI.
@@ -122,7 +122,7 @@ Stripe Connect : charges de plateforme, transferts vers comptes Express des comm
 - Le design est en 1360 px : prévoir les points de rupture tablette/mobile (les artboards « fill » le supposent). Prévoir un mode `prefers-reduced-motion` et vérifier les contrastes des ombres.
 
 ## 9. Environnements
-`local` (Supabase CLI), `staging` et `production` (deux stacks Docker Compose sur le VPS, domaines distincts, deux projets Supabase). Pas de preview par PR au départ ; CI = lint, typecheck, tests, build. Seed de données (salons, 50+ profils fictifs) pour les démos.
+`local` (PGlite, sans compte), `preview` (une adresse Vercel par pull request, projet Supabase `standby-staging`) et `production` (branche `main`, projet Supabase de production). CI = lint, typecheck, tests, build, tests de bout en bout. Seed de données (salons, 30+ profils fictifs) en local et pour les démos.
 
 ## 10. Structure du repo (proposée)
 

@@ -54,7 +54,7 @@ export async function saveTeam(id: string, _: FormState, fd: FormData): Promise<
     for (const r of ROLE_KEYS) positions[r] = Math.max(0, Math.min(20, Number(fd.get(`qty_${r}`)) || 0));
     const languages = [...strs(fd, "languages"), ...(str(fd, "otherLanguage") ? [str(fd, "otherLanguage")] : [])];
     const outfit = str(fd, "outfit");
-    await saveTeamStep(db, booking, { positions, languages, outfit: outfit === "perso" || outfit === "standby" ? outfit : "exposant" });
+    await saveTeamStep(db, booking, { positions, languages, outfit: outfit === "perso" ? "perso" : "exposant" });
   } catch (e) {
     return fail(e);
   }

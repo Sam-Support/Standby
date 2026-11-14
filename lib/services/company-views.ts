@@ -56,7 +56,7 @@ export async function companyDashboard(db: Db, companyId: string) {
         retained: mine.reduce((n, t) => n + (t.minutesValidated ?? t.minutesDeclared), 0),
         hasDeclared: mine.length > 0,
         validated,
-        // ajustement en attente du commercial, ou contesté (arbitrage Standby)
+        // ajustement en attente du commercial, ou contesté (arbitrage Stand-By)
         pending: mine.some((t) => t.status === "conteste") ? ("conteste" as const) : mine.some((t) => t.status === "ajuste") ? ("ajuste" as const) : null,
       };
     });

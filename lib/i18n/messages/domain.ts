@@ -107,9 +107,9 @@ const ASSIGNMENT_STATUS: Record<string, { fr: string; en: string; es: string; to
 };
 
 const OUTFITS = {
-  fr: { exposant: "Prêtée par l’exposant", perso: "Tenue perso noir & blanc", standby: "Tenue Standby" },
-  en: { exposant: "Provided by the exhibitor", perso: "Own black & white outfit", standby: "Standby outfit" },
-  es: { exposant: "Prestada por el expositor", perso: "Ropa propia en blanco y negro", standby: "Uniforme Standby" },
+  fr: { exposant: "Prêtée par l’exposant", perso: "Tenue perso noir & blanc" },
+  en: { exposant: "Provided by the exhibitor", perso: "Own black & white outfit" },
+  es: { exposant: "Prestada por el expositor", perso: "Ropa propia en blanco y negro" },
 };
 const DOCUMENTS = {
   fr: { identite: "Pièce d’identité", urssaf: "Attestation URSSAF", siret: "Avis de situation SIRENE (SIRET)", rib: "RIB" },

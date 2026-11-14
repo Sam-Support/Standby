@@ -8,7 +8,7 @@ test.describe.serial("missions : désistement, heures contestées, avoir", () =>
     await page.getByRole("link", { name: "Supply Chain Event" }).click();
     await page.getByRole("heading", { name: "Se désister" }).waitFor();
     await expectAccessible(page);
-    await page.getByLabel("Motif (transmis uniquement à l’équipe Standby)").fill("Formation obligatoire ces deux jours-là.");
+    await page.getByLabel("Motif (transmis uniquement à l’équipe Stand-By)").fill("Formation obligatoire ces deux jours-là.");
     await page.getByLabel("Je confirme me désister de cette mission.").check();
     await page.getByRole("button", { name: "Me désister" }).click();
     await expect(page.locator(".head").getByText("Désisté·e")).toBeVisible();

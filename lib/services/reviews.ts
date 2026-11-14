@@ -41,7 +41,7 @@ export async function submitReview(db: Db, companyId: string, assignmentId: stri
   await notify(db, row.f.userId, { t: (n) => n.newReview({ rating, ref: row.b.ref }), link: "/commercial/profil#avis" });
 }
 
-/** Modération : suppression d'un avis par l'équipe Standby. */
+/** Modération : suppression d'un avis par l'équipe Stand-By. */
 export async function deleteReview(db: Db, adminId: string, reviewId: string) {
   const [r] = await db.select().from(s.reviews).where(eq(s.reviews.id, reviewId));
   if (!r) return;

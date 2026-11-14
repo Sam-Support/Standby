@@ -10,7 +10,7 @@ export async function GET() {
   return new Response(JSON.stringify(data, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Disposition": `attachment; filename="standby-mes-donnees-${new Date().toISOString().slice(0, 10)}.json"`,
+      "Content-Disposition": `attachment; filename="stand-by-mes-donnees-${new Date().toISOString().slice(0, 10)}.json"`,
       "Cache-Control": "private, no-store",
     },
   });

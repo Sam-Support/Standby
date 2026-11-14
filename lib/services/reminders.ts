@@ -7,7 +7,7 @@ import { loadAssignments } from "./booking";
 
 /**
  * Rappels automatiques (tâche planifiée) :
- * J-7 : badges exposants à demander (équipe Standby), point sur l'équipe pour l'exposant et les commerciaux.
+ * J-7 : badges exposants à demander (équipe Stand-By), point sur l'équipe pour l'exposant et les commerciaux.
  * J-2 : briefing visio avec le référent, coordonnées échangées.
  * Chaque rappel n'est envoyé qu'une fois ; une réservation faite tardivement reçoit les rappels en retard au premier passage.
  */

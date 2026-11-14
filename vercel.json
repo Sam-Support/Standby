@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["fra1"],
+  "buildCommand": "npm run db:migrate && npm run build",
+  "schedules": {
+    "taches-planifiees": {
+      "schedule": "*/15 * * * *",
+      "path": "/api/cron",
+      "requestMethod": "GET"
+    }
+  }
+}

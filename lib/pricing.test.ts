@@ -33,18 +33,6 @@ describe("computeQuote", () => {
     expect(quote.people).toBe(3);
   });
 
-  it("applique la majoration tenue Standby par heure et par personne", () => {
-    const quote = computeQuote({
-      positions: [{ role: "accueil", rates: [2000] }],
-      days: 1,
-      billableMinutesPerDay: 480,
-      serviceFeeBps: 0,
-      vatBps: 0,
-      surchargeCents: 300,
-    });
-    expect(quote.subtotalCents).toBe(8 * 2300);
-  });
-
   it("ignore les postes sans personne", () => {
     const quote = computeQuote({ positions: [{ role: "interprete", rates: [] }], days: 2, billableMinutesPerDay: 480, serviceFeeBps: 1200, vatBps: 2000 });
     expect(quote.lines).toEqual([]);

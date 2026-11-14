@@ -1,6 +1,8 @@
-import { count } from "drizzle-orm";
+import { count, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPgliteDb } from "./index";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { createPgliteDb, serializeDates } from "./index";
 import * as s from "./schema";
 import { demoEvents } from "./seed";
 
@@ -14,6 +16,33 @@ describe("migrations et seed", () => {
     expect(freelancers).toBeGreaterThanOrEqual(30);
     expect(settings).toBeGreaterThanOrEqual(10);
   }, 60_000);
+
+  it("active RLS sur chaque table : l'API publique de Supabase ne lit rien", async () => {
+    const db = await createPgliteDb(null, false);
+    // base PGlite : le résultat brut a la forme { rows }, pas celle de postgres-js que décrit le type Db
+    const { rows } = (await db.execute(
+      sql`select c.relname as "table" from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity order by 1`,
+    )) as unknown as { rows: { table: string }[] };
+    // une nouvelle table doit être créée avec RLS (ALTER TABLE … ENABLE ROW LEVEL SECURITY dans sa migration)
+    expect(rows.map((r) => r.table)).toEqual([]);
+  }, 60_000);
+});
+
+describe("pilote Postgres de production", () => {
+  it("convertit les dates passées dans un fragment sql`` malgré Drizzle", async () => {
+    // aucune connexion n'est ouverte : postgres-js se connecte à la première requête
+    const client = postgres("postgres://u:p@127.0.0.1:1/x", { prepare: false });
+    drizzle(client);
+    const options = client.options as unknown as { serializers: Record<number, (v: unknown) => unknown> };
+    const at = new Date("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1184](at)).toBe(at); // ce que laisse Drizzle : le pilote planterait
+    serializeDates(client as unknown as Parameters<typeof serializeDates>[0]);
+    expect(options.serializers[1184](at)).toBe("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1114](at)).toBe("2026-11-13T10:32:02.455Z");
+    expect(options.serializers[1184]("2026-11-13T10:32:02.455Z")).toBe("2026-11-13T10:32:02.455Z"); // colonnes : déjà converties
+    await client.end({ timeout: 0 });
+  });
 });
 
 describe("calendrier de démonstration", () => {

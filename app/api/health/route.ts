@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 
 /**
- * Vivacité (sonde Docker) : répond sans toucher à la base, pour ne pas redémarrer le conteneur à la moindre
- * coupure de Postgres. « ?db=1 » vérifie aussi la base (supervision externe).
+ * Vivacité : répond sans toucher à la base. « ?db=1 » vérifie aussi la base (supervision externe, à appeler
+ * toutes les minutes avec une alerte après deux échecs).
  */
 export async function GET(req: Request) {
   if (new URL(req.url).searchParams.get("db") !== "1") return Response.json({ ok: true, service: "standby-salons" });

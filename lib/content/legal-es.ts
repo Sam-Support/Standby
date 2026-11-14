@@ -7,16 +7,16 @@ export const MENTIONS: DocSection[] = [
   {
     title: "Editor del sitio",
     body: [
-      "El sitio standby lo edita [razón social], [forma jurídica] con un capital social de [importe] €, inscrita en el Registro Mercantil (RCS) de [ciudad] con el número [número].",
+      "El sitio stand-by lo edita [razón social], [forma jurídica] con un capital social de [importe] €, inscrita en el Registro Mercantil (RCS) de [ciudad] con el número [número].",
       ["Domicilio social: [dirección completa]", "SIRET: [14 cifras]", "IVA intracomunitario: [número]", "Contacto: [correo electrónico] · [teléfono]"],
     ],
   },
   { title: "Director de la publicación", body: ["[Nombre y cargo], en calidad de representante legal del editor."] },
-  { title: "Alojamiento", body: ["El sitio está alojado por [nombre del proveedor del VPS], [dirección], [teléfono o sitio web]. Los datos los almacena Supabase, región Unión Europea."] },
+  { title: "Alojamiento", body: ["El sitio está alojado por Vercel Inc., 440 N Barranca Avenue #4133, Covina, CA 91723, Estados Unidos (vercel.com), con ejecución en la Unión Europea (Fráncfort). Los datos los almacena Supabase, región Unión Europea (Fráncfort)."] },
   {
     title: "Propiedad intelectual",
     body: [
-      "Todos los elementos del sitio (estructura, textos, gráficos, interfaz, logotipo de standby) están protegidos por el derecho de propiedad intelectual. Queda prohibida cualquier reproducción, representación o adaptación, total o parcial, sin la autorización previa por escrito del editor.",
+      "Todos los elementos del sitio (estructura, textos, gráficos, interfaz, logotipo de stand-by) están protegidos por el derecho de propiedad intelectual. Queda prohibida cualquier reproducción, representación o adaptación, total o parcial, sin la autorización previa por escrito del editor.",
     ],
   },
   {
@@ -36,7 +36,7 @@ export const MANDAT_FACTURATION: DocSection[] = [
   {
     title: "Partes y objeto",
     body: [
-      "El presente mandato se celebra entre el comercial, azafato/a, animador/a o intérprete autónomo registrado en standby (el «mandante») y [razón social del editor], editor de standby (el «mandatario»).",
+      "El presente mandato se celebra entre el comercial, azafato/a, animador/a o intérprete autónomo registrado en stand-by (el «mandante») y [razón social del editor], editor de stand-by (el «mandatario»).",
       "El mandante encarga al mandatario la elaboración y emisión, en su nombre y por su cuenta, de las facturas correspondientes a las misiones realizadas a través de la plataforma y a las indemnizaciones por cancelación que se le abonen. El mandatario es su destinatario y pagador.",
     ],
   },
@@ -78,7 +78,7 @@ export const CGU: DocSection[] = [
   {
     title: "Objeto",
     body: [
-      "Las presentes condiciones regulan el uso de la plataforma standby, que pone en contacto a empresas expositoras con comerciales, azafatos/as, animadores e intérpretes autónomos para atender stands en ferias profesionales y salones.",
+      "Las presentes condiciones regulan el uso de la plataforma stand-by, que pone en contacto a empresas expositoras con comerciales, azafatos/as, animadores e intérpretes autónomos para atender stands en ferias profesionales y salones.",
     ],
   },
   {
@@ -103,7 +103,7 @@ export const CGU: DocSection[] = [
     body: [
       [
         "Respetar las fechas, horarios y briefings acordados para cada misión; en caso de imprevisto, renunciar a la misión lo antes posible y, a más tardar, la víspera del primer día (una renuncia cuenta como un rechazo en la tasa de aceptación).",
-        "No eludir la plataforma para facturar o pagar una misión encontrada a través de standby. Las facturas de los comerciales las emite standby en virtud del {mandato de facturación|/mandat-facturation} aceptado en el registro.",
+        "No eludir la plataforma para facturar o pagar una misión encontrada a través de stand-by. Las facturas de los comerciales las emite stand-by en virtud del {mandato de facturación|/mandat-facturation} aceptado en el registro.",
         "No publicar ningún contenido ilícito, engañoso o que vulnere derechos de terceros.",
       ],
     ],
@@ -117,7 +117,7 @@ export const CGU: DocSection[] = [
   {
     title: "Responsabilidad",
     body: [
-      "standby actúa como intermediario técnico y aplica los medios razonables para garantizar la calidad de los perfiles. No se le puede exigir responsabilidad por daños indirectos ni por el incumplimiento por parte de un usuario de sus propias obligaciones.",
+      "stand-by actúa como intermediario técnico y aplica los medios razonables para garantizar la calidad de los perfiles. No se le puede exigir responsabilidad por daños indirectos ni por el incumplimiento por parte de un usuario de sus propias obligaciones.",
     ],
   },
   { title: "Modificación de las condiciones", body: ["Las condiciones pueden modificarse. Los usuarios son informados de cualquier modificación sustancial antes de su entrada en vigor."] },
@@ -131,13 +131,13 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
   {
     title: "Ámbito de aplicación",
     body: [
-      "Las presentes condiciones se aplican a toda reserva de un equipo de stand realizada por una empresa expositora en la plataforma standby. La confirmación de una reserva implica la aceptación sin reservas de las condiciones vigentes en esa fecha.",
+      "Las presentes condiciones se aplican a toda reserva de un equipo de stand realizada por una empresa expositora en la plataforma stand-by. La confirmación de una reserva implica la aceptación sin reservas de las condiciones vigentes en esa fecha.",
     ],
   },
   {
     title: "Reserva de un equipo",
     body: [
-      "La reserva indica el evento, los días (montaje incluido), los horarios, los puestos, los idiomas, el uniforme, el responsable in situ y el formato de entrega de los leads. Cada comercial seleccionado recibe una misión y la acepta; la reserva queda confirmada cuando se han aceptado todas las misiones. En caso contrario, standby propone un sustituto lo antes posible.",
+      "La reserva indica el evento, los días (montaje incluido), los horarios, los puestos, los idiomas, el uniforme, el responsable in situ y el formato de entrega de los leads. Cada comercial seleccionado recibe una misión y la acepta; la reserva queda confirmada cuando se han aceptado todas las misiones. En caso contrario, stand-by propone un sustituto lo antes posible.",
     ],
   },
   {
@@ -156,14 +156,14 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
   {
     title: "Renuncia de un comercial",
     body: [
-      "Si un comercial que ha aceptado su misión renuncia antes del evento, Standby propone de inmediato la misión a un perfil compatible, preferentemente con la misma tarifa por hora o una inferior, e informa a la empresa. Si no hay ningún sustituto disponible, el equipo Standby busca una solución; solo se facturan las horas realmente trabajadas.",
+      "Si un comercial que ha aceptado su misión renuncia antes del evento, Stand-By propone de inmediato la misión a un perfil compatible, preferentemente con la misma tarifa por hora o una inferior, e informa a la empresa. Si no hay ningún sustituto disponible, el equipo Stand-By busca una solución; solo se facturan las horas realmente trabajadas.",
     ],
   },
   {
     title: "Validación de las horas",
     body: [
       "Al finalizar el evento, la empresa valida o ajusta las horas trabajadas por cada comercial. Sin respuesta en un plazo de tres días, las horas declaradas se consideran validadas.",
-      "Cuando la empresa reconoce menos horas de las declaradas, el comercial dispone de 48 horas para aceptar el ajuste o impugnarlo; sin respuesta, se aplica el ajuste. En caso de impugnación, el equipo Standby arbitra a la vista de los elementos aportados por ambas partes y su decisión fija las horas facturadas.",
+      "Cuando la empresa reconoce menos horas de las declaradas, el comercial dispone de 48 horas para aceptar el ajuste o impugnarlo; sin respuesta, se aplica el ajuste. En caso de impugnación, el equipo Stand-By arbitra a la vista de los elementos aportados por ambas partes y su decisión fija las horas facturadas.",
       "Las horas validadas sirven de base para la facturación y el pago, que se abona cada lunes por la semana trabajada.",
     ],
   },
@@ -182,7 +182,7 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
 export const CONFIDENTIALITE: DocSection[] = [
   {
     title: "Responsable del tratamiento",
-    body: ["[Razón social], [dirección], es responsable del tratamiento de los datos recogidos en la plataforma standby. Delegado de protección de datos: [nombre o correo electrónico específico]."],
+    body: ["[Razón social], [dirección], es responsable del tratamiento de los datos recogidos en la plataforma stand-by. Delegado de protección de datos: [nombre o correo electrónico específico]."],
   },
   {
     title: "Datos recogidos",
@@ -207,19 +207,19 @@ export const CONFIDENTIALITE: DocSection[] = [
   {
     title: "Leads y tarjetas de visita",
     body: [
-      "Los contactos recogidos por los comerciales en un stand son datos de la empresa expositora. standby los trata por cuenta de esta, como encargado del tratamiento: control del formato, introducción de las tarjetas de visita (lectura automática y después verificación humana), entrega en la plantilla o el CRM de la empresa. La empresa sigue siendo responsable de informar a las personas afectadas.",
+      "Los contactos recogidos por los comerciales en un stand son datos de la empresa expositora. stand-by los trata por cuenta de esta, como encargado del tratamiento: control del formato, introducción de las tarjetas de visita (lectura automática y después verificación humana), entrega en la plantilla o el CRM de la empresa. La empresa sigue siendo responsable de informar a las personas afectadas.",
     ],
   },
   {
     title: "Destinatarios",
     body: [
-      "Los datos son accesibles para el personal autorizado de standby, para las empresas expositoras y los comerciales únicamente en relación con las misiones correspondientes, y para nuestros proveedores técnicos (alojamiento, base de datos, correo electrónico, lectura de tarjetas), de pago y de nóminas dentro de los límites de sus funciones. Nunca se venden.",
+      "Los datos son accesibles para el personal autorizado de stand-by, para las empresas expositoras y los comerciales únicamente en relación con las misiones correspondientes, y para nuestros proveedores técnicos (alojamiento, base de datos, correo electrónico, lectura de tarjetas), de pago y de nóminas dentro de los límites de sus funciones. Nunca se venden.",
     ],
   },
   {
     title: "Plazos de conservación",
     body: [
-      "Cuentas: durante la relación contractual y después [plazo], o hasta que el usuario las elimine. Documentos contables: 10 años, vinculados a una cuenta anonimizada en caso de eliminación. Leads: se eliminan automáticamente tras el plazo fijado por standby ([plazo, 365 días por defecto]). Rastreadores: 13 meses como máximo.",
+      "Cuentas: durante la relación contractual y después [plazo], o hasta que el usuario las elimine. Documentos contables: 10 años, vinculados a una cuenta anonimizada en caso de eliminación. Leads: se eliminan automáticamente tras el plazo fijado por stand-by ([plazo, 365 días por defecto]). Rastreadores: 13 meses como máximo.",
     ],
   },
   {
@@ -237,7 +237,7 @@ export const CONFIDENTIALITE: DocSection[] = [
 export const ACCESSIBILITE: DocSection[] = [
   {
     title: "Estado de conformidad",
-    body: ["El sitio standby es **parcialmente conforme** con el referencial francés de accesibilidad (RGAA), versión 4.1. Tasa de conformidad: [xx %, tras la auditoría]."],
+    body: ["El sitio stand-by es **parcialmente conforme** con el referencial francés de accesibilidad (RGAA), versión 4.1. Tasa de conformidad: [xx %, tras la auditoría]."],
   },
   { title: "Contenidos no accesibles", body: ["Las no conformidades y exenciones detectadas durante la auditoría se enumerarán aquí: [pendiente tras la auditoría]."] },
   {
@@ -263,7 +263,7 @@ export const FAQ: { theme: string; items: [string, string][] }[] = [
   {
     theme: "General",
     items: [
-      ["¿Qué es standby?", "Una plataforma que permite a las empresas reservar un equipo para su stand en una feria o un salón, y a los comerciales, azafatos/as, animadores e intérpretes encontrar misiones."],
+      ["¿Qué es stand-by?", "Una plataforma que permite a las empresas reservar un equipo para su stand en una feria o un salón, y a los comerciales, azafatos/as, animadores e intérpretes encontrar misiones."],
       ["¿Qué eventos se incluyen?", "Las ferias profesionales y los salones en Francia, con sus fechas de montaje, apertura y desmontaje."],
     ],
   },

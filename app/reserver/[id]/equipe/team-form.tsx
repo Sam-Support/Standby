@@ -22,7 +22,6 @@ type Props = {
   selectedRates: Partial<Record<RoleKey, number[]>>;
   serviceFeeBps: number;
   vatBps: number;
-  outfitSurchargeCents: number;
   aside: { event: AsideEvent; stand: string | null; days: number; minutesPerDay: number; startTime: string; endTime: string };
 };
 
@@ -51,7 +50,6 @@ export function TeamForm(p: Props) {
     billableMinutesPerDay: p.aside.minutesPerDay,
     serviceFeeBps: p.serviceFeeBps,
     vatBps: p.vatBps,
-    surchargeCents: outfit === "standby" ? p.outfitSurchargeCents : 0,
   });
 
   const row = (r: RoleKey) => {
@@ -123,7 +121,6 @@ export function TeamForm(p: Props) {
               [
                 ["exposant", t.outfits.exposant],
                 ["perso", t.outfits.perso],
-                ["standby", t.outfits.standby(String(p.outfitSurchargeCents / 100))],
               ] as [OutfitKey, string][]
             ).map(([v, l]) => (
               <label key={v}>

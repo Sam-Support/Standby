@@ -1,9 +1,9 @@
-# À faire — état au 5 novembre 2026
+# À faire — état au 12 novembre 2026
 
 Le produit est terminé côté code : réservation, espaces entreprise et commercial, administration, facturation
 et autofacturation, trois langues, e-mails Resend, version mobile revue, logos contrôlés. Les corrections de la
-revue de sécurité sont faites. Tout est testé : 102 tests unitaires, 62 tests de bout en bout sur le build de
-production, dont 5 sur téléphone.
+revue de sécurité sont faites. Tout est testé : 104 tests unitaires, 62 tests de bout en bout sur le build de
+production, dont 5 sur téléphone. L'hébergement est passé du VPS à **Vercel + Supabase** (ADR-003).
 
 Ce qui reste est surtout humain. Le détail pas à pas est dans [`06-MISE-EN-LIGNE.md`](06-MISE-EN-LIGNE.md) :
 cette liste dit **quoi**, **dans quel ordre** et **qui**.
@@ -12,33 +12,27 @@ Légende : 🧑 vous · ⚖️ avocat ou expert-comptable · 🤖 Claude peut le
 
 ---
 
-## 1. Faire entrer le code dans `main`
+## 1. Le code dans `main`
 
-Situation :
-- Six PR empilées sont ouvertes sur GitHub (#1 à #6, de `feat/m0-foundations` à `feat/factures-commerciaux`).
-- Deux branches n'existent qu'en local :
-  - `fix/recette` : corrections de la recette du 28 octobre ;
-  - `feat/i18n` : langues, Resend, sécurité, refonte, logos, documentation.
-
-- [ ] 🤖 Publier `fix/recette` et `feat/i18n` sur GitHub et ouvrir leurs PR, à la suite de la pile.
-- [ ] 🧑 Choisir comment fusionner. Recommandé pour une petite équipe : **une seule PR `feat/i18n` → `main`**, qui
-      contient tout l'historique (16 commits), puis fermer les PR intermédiaires #1 à #6. Autre possibilité :
-      fusionner la pile dans l'ordre, en reciblant chaque PR sur `main`.
-- [ ] 🧑 Relire, attendre la CI verte, fusionner. **La fusion déploie** dès que l'environnement GitHub `staging`
-      est configuré (étape 2).
+- [x] 5 novembre : PR #7 fusionnée (tout l'historique), PR #1 à #6 fermées.
+- [ ] 🧑 Relire et fusionner la PR du passage sur Vercel (`feat/vercel`) : CI verte, aperçu Vercel vérifié.
+      **Après elle, chaque fusion dans `main` met en production.**
 
 ## 2. Mettre en ligne (tutoriel, étapes 2 à 7)
 
+Déjà fait par 🤖 : les deux projets Supabase (production et `standby-staging`, Francfort) avec leurs buckets
+`private` et `public` ; le projet Vercel `standby-salons` relié au dépôt, avec `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un jeu par environnement).
+
 | | Tâche | Qui | Durée indicative |
 |---|---|---|---|
-| [ ] | DNS du site vers le VPS ; Docker, pare-feu, dossier `/opt/standby/staging` | 🧑 | 1 h |
-| [ ] | Secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` dans le `.env` du VPS | 🧑 | 10 min |
-| [ ] | Supabase (région UE) : base, clés, buckets `private` et `public`, sauvegardes | 🧑 | 30 min |
+| [ ] | Vercel : domaine `stand-by.fr` ajouté au projet, enregistrements DNS chez le registraire | 🧑 | 15 min, puis propagation DNS |
+| [ ] | Supabase : mot de passe de chaque base, chaînes *Transaction pooler* et *Session pooler*, clé secrète ; collés dans Vercel | 🧑 | 20 min |
 | [ ] | Resend : domaine d'envoi (Irlande), DNS DKIM, SPF puis DMARC, clé, webhook ([`05-EMAILS.md`](05-EMAILS.md)) | 🧑 | 30 min, puis propagation DNS |
 | [ ] | Stripe Connect **en mode test** : clé, webhook, SEPA et cartes | 🧑 | 1 h, plus la validation du compte |
 | [ ] | Facultatif : clé INSEE (SIRENE), application HubSpot, clé Anthropic (cartes de visite) | 🧑 | 15 min chacun |
-| [ ] | GitHub : environnement `staging`, variable `VPS_PATH`, secrets SSH et ghcr, premier déploiement | 🧑 (🤖 peut guider) | 30 min |
-| [ ] | Premier administrateur (`npm run admin:create`), contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
+| [ ] | Vercel : *Redeploy* une fois les variables posées ; `/api/health?db=1` répond, le Schedule tourne | 🧑 (🤖 peut vérifier) | 10 min |
+| [ ] | Premier administrateur après le premier déploiement : inscription (étape 1) avec votre mot de passe, puis promotion dans Supabase (tutoriel, étape 7 ; 🤖 peut faire la promotion) ; contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
 
 ## 3. Contenu, juridique, métier
 
@@ -65,10 +59,13 @@ Situation :
 
 ## 5. Sécurité et exploitation avant l'ouverture
 
-- [ ] 🧑 Double authentification sur GitHub, le registraire, l'hébergeur, Supabase, Stripe et Resend.
+- [ ] 🧑 Double authentification sur GitHub, le registraire, Vercel, Supabase, Stripe et Resend.
 - [ ] 🤖 Épingler les GitHub Actions par empreinte (SHA) au lieu de `@v4`.
+- [ ] 🧑 Protéger la branche `main` sur GitHub : CI verte obligatoire avant fusion (la fusion met en production).
 - [ ] 🧑 Supervision externe de `https://<domaine>/api/health?db=1`, avec alerte après deux échecs.
-- [ ] 🧑 (🤖 pour l'intégration) Suivi des erreurs : Sentry ou équivalent.
+- [ ] 🧑 (🤖 pour l'intégration) Suivi des erreurs : Sentry ou équivalent, via la place de marché Vercel.
+- [ ] ⚖️ Mentions légales : Vercel Inc. est une société américaine (fonctions exécutées à Francfort) ; faire
+      valider la formulation du transfert de données et le DPA Vercel.
 - [ ] 🧑 Test de restauration d'une sauvegarde Supabase.
 - [ ] 🧑 Test d'intrusion par un prestataire, avant d'accueillir de vraies pièces d'identité.
 - [ ] 🧑 DMARC : passer à `p=quarantine` au bout de 2 à 4 semaines sans échec, puis à `p=reject`.

@@ -2,10 +2,10 @@ import { defineMessages } from "../config";
 
 export const home = defineMessages({
   fr: {
-    title: "Standby · Staffez vos stands de salons et foires",
+    title: "Stand-By · Staffez vos stands de salons et foires",
     description:
       "Commerciaux, hôtes·ses, animateurs et interprètes vérifiés pour vos salons professionnels et vos foires. Brief, leads au format de votre CRM, validation des heures et paie gérées pour vous.",
-    deleted: "Votre compte est supprimé. Merci d’avoir utilisé standby.",
+    deleted: "Votre compte est supprimé. Merci d’avoir utilisé stand-by.",
     kicker: "Salons pros & foires · Paris · Lyon · Cannes · International",
     h1: { before: "Votre stand,", highlight: "staffé", after: "avant l’ouverture des portes." },
     lead: "Commerciaux, hôtes·ses, animateurs et interprètes vérifiés pour vos salons professionnels et vos foires. Composez votre équipe en trois minutes : contrats, badges, remontée des leads dans votre CRM et paie sont gérés pour vous.",
@@ -65,10 +65,10 @@ export const home = defineMessages({
     },
   },
   en: {
-    title: "Standby · Staff your trade show and fair booths",
+    title: "Stand-By · Staff your trade show and fair booths",
     description:
       "Vetted sales reps, hosts, event hosts and interpreters for your trade shows and fairs. Briefing, leads in your CRM format, hour approval and pay handled for you.",
-    deleted: "Your account has been deleted. Thank you for using standby.",
+    deleted: "Your account has been deleted. Thank you for using stand-by.",
     kicker: "Trade shows & fairs · Paris · Lyon · Cannes · International",
     h1: { before: "Your booth,", highlight: "staffed", after: "before the doors open." },
     lead: "Vetted sales reps, hosts, event hosts and interpreters for your trade shows and fairs. Build your team in three minutes: contracts, badges, leads sent to your CRM and pay are all handled for you.",
@@ -128,10 +128,10 @@ export const home = defineMessages({
     },
   },
   es: {
-    title: "Standby · Personal para sus stands en ferias y salones",
+    title: "Stand-By · Personal para sus stands en ferias y salones",
     description:
       "Comerciales, azafatas, animadores e intérpretes verificados para sus ferias profesionales y salones. Briefing, leads en el formato de su CRM, validación de horas y pagos gestionados por nosotros.",
-    deleted: "Su cuenta ha sido eliminada. Gracias por usar standby.",
+    deleted: "Su cuenta ha sido eliminada. Gracias por usar stand-by.",
     kicker: "Ferias profesionales y salones · París · Lyon · Cannes · Internacional",
     h1: { before: "Su stand,", highlight: "con equipo", after: "antes de abrir las puertas." },
     lead: "Comerciales, azafatas, animadores e intérpretes verificados para sus ferias profesionales y salones. Forme su equipo en tres minutos: contratos, acreditaciones, envío de leads a su CRM y pagos gestionados por nosotros.",

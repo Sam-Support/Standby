@@ -60,8 +60,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             </div>
           )}
           <p className="muted small">Mise en place du domaine et des enregistrements DNS : docs/05-EMAILS.md.</p>
-          <ActionForm action={sendTestEmailAction}>
-            <Submit className="clay s btn sm">M’envoyer un e-mail de test</Submit>
+          <ActionForm action={sendTestEmailAction} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+            <label className="field" style={{ flex: "1 1 220px" }}>
+              Destinataire (vide : votre adresse)
+              <input className="input" name="to" type="email" placeholder="adresse@exemple.fr" autoComplete="off" />
+            </label>
+            <Submit className="clay s btn sm">Envoyer un e-mail de test</Submit>
           </ActionForm>
         </section>
         <section className="clay panel">

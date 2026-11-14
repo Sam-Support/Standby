@@ -8,11 +8,14 @@ import { autoValidateHours } from "@/lib/services/hours";
 import { sendReminders } from "@/lib/services/reminders";
 
 /**
- * Tâches planifiées, appelées par le conteneur cron du VPS :
+ * Tâches planifiées, appelées toutes les 15 min par le Schedule Vercel (vercel.json) avec
+ * « Authorization: Bearer CRON_SECRET » :
  * statuts (début/fin d'événement, expiration à 48 h), rappels J-7 et J-2, validation automatique J+3,
  * virements dus, purge des données arrivées à échéance.
  */
-export async function POST(req: Request) {
+export const maxDuration = 300;
+
+async function run(req: Request) {
   const secret = process.env.CRON_SECRET;
   const given = (req.headers.get("authorization") ?? "").replace(/^Bearer /, "");
   if (!secret || given.length !== secret.length || !timingSafeEqual(Buffer.from(given), Buffer.from(secret))) {
@@ -27,3 +30,7 @@ export async function POST(req: Request) {
   const compliance = await checkCompliance(db);
   return Response.json({ statuses, reminders, validated, payouts, purged, compliance });
 }
+
+// GET pour le Schedule Vercel, POST pour un déclencheur externe ou une relance manuelle
+export const GET = run;
+export const POST = run;

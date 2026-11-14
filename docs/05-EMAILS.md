@@ -1,48 +1,55 @@
 # E-mails transactionnels (Resend)
 
-Standby envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, mot de passe, missions,
+Stand-By envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, mot de passe, missions,
 heures, factures, rappels J-7 et J-2, invitation HubSpot, messages du formulaire de contact. Sans
 `RESEND_API_KEY`, rien ne part : les e-mails sont simulés et listés dans `/admin/emails`.
 
 ## Mise en place sur le nouveau domaine
 
-Dans les exemples, `standby.fr` désigne votre domaine. Remplacez-le partout.
+Le domaine est `stand-by.fr`, géré chez **Nuxit** (anciennement PHPNET) : zone DNS sur `ns1.modns.fr`, boîtes e-mail chez eux
+(`mx.webmo.fr`). Resend envoie depuis le sous-domaine `notification.stand-by.fr` : la messagerie actuelle et
+sa règle SPF ne changent pas.
 
 1. **Compte Resend** : créez le compte (au nom de la société), puis activez la double authentification.
 2. **Domaine** (Domains → Add domain) :
-   - Ajoutez un sous-domaine d'envoi plutôt que le domaine principal, par exemple `notifications.standby.fr`.
+   - Ajoutez un sous-domaine d'envoi plutôt que le domaine principal, par exemple `notification.stand-by.fr`.
      Sa réputation reste ainsi séparée de vos boîtes de messagerie habituelles.
    - **Région : Ireland (eu-west-1)**, la plus proche des destinataires et en Union européenne. Elle ne se
      change plus ensuite : il faudrait supprimer puis recréer le domaine.
-3. **DNS** : chez le registraire ou l'hébergeur du domaine, ajoutez les enregistrements que Resend affiche
-   dans l'onglet *Records*, **en copiant exactement leurs valeurs** :
-   - DKIM : un enregistrement `TXT` (clé publique de signature) ;
-   - SPF et adresse de retour : un `MX` et un `TXT` sur le sous-domaine de retour (par défaut `send.…`) ;
-   - si vous passez par Cloudflare, laissez les éventuels `CNAME` en « DNS only » (nuage gris).
+3. **DNS** : dans l'espace client Nuxit, zone DNS du domaine `stand-by.fr`, ajoutez les enregistrements que
+   Resend affiche dans l'onglet *Records*, **en copiant exactement leurs valeurs** :
+   - DKIM : un `TXT` sur `resend._domainkey.notification` (clé publique de signature, `p=MIGf…`) ;
+   - SPF et adresse de retour : deux `CNAME`, sur `rsend.notification` et `send.notification` ;
+   - si l'interface ajoute le domaine d'elle-même au nom de l'enregistrement, saisissez seulement la partie
+     avant `.stand-by.fr` (par exemple `resend._domainkey.notification`) ;
+   - ne touchez pas au `TXT` SPF de `stand-by.fr` (`v=spf1 mx include:spf.webmo.fr ~all`) : il sert à la
+     messagerie PHPNET. Ceux de Resend vont sur le sous-domaine `notification`.
 
    Cliquez ensuite sur *Verify* (la propagation prend de quelques minutes à quelques heures).
-4. **DMARC**, une fois le domaine vérifié : ajoutez un `TXT` sur `_dmarc.standby.fr` :
+4. **DMARC** : déjà en place sur `stand-by.fr` (`v=DMARC1; p=none;`), elle couvre aussi le sous-domaine. Pour
+   recevoir les rapports, complétez plus tard le `TXT` de `_dmarc.stand-by.fr` ainsi :
 
    ```
-   v=DMARC1; p=none; rua=mailto:dmarc@standby.fr;
+   v=DMARC1; p=none; rua=mailto:dmarc@stand-by.fr;
    ```
 
-   Gardez `p=none` le temps de vérifier que tous vos envois (Standby, mais aussi votre messagerie
+   Gardez `p=none` le temps de vérifier que tous vos envois (Stand-By, mais aussi votre messagerie
    habituelle) passent DMARC. Passez ensuite à `p=quarantine`, puis à `p=reject`, en gardant `rua`.
 5. **Clé d'API** (API Keys → Create) : permission « Sending access », limitée au domaine vérifié.
 6. **Webhook** (Webhooks → Add endpoint) :
-   - URL : `https://standby.fr/api/resend/webhook` ;
+   - URL : `https://stand-by.fr/api/resend/webhook` ;
    - événements : `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
      `email.complained`, `email.suppressed`, `email.failed` ;
    - copiez le secret de signature (`whsec_…`).
-7. **Variables** dans le `.env` du VPS (droits 600), puis redémarrez le conteneur `app` :
+7. **Variables** dans Vercel (*Project → Settings → Environment Variables*, environnements *Production* et
+   *Preview*), puis *Redeploy*. `EMAIL_FROM` y est déjà ; `APP_URL` est inutile sur Vercel (l'adresse est déduite
+   du domaine du projet) :
 
    ```
-   APP_URL=https://standby.fr
    RESEND_API_KEY=re_…
-   EMAIL_FROM=Standby <notifications@notifications.standby.fr>
-   EMAIL_REPLY_TO=contact@standby.fr
-   SUPPORT_EMAIL=contact@standby.fr
+   EMAIL_FROM=Stand-By <notifications@notification.stand-by.fr>
+   EMAIL_REPLY_TO=contact@stand-by.fr
+   SUPPORT_EMAIL=contact@stand-by.fr
    RESEND_WEBHOOK_SECRET=whsec_…
    ```
 
@@ -52,9 +59,16 @@ Dans les exemples, `standby.fr` désigne votre domaine. Remplacez-le partout.
    - `SUPPORT_EMAIL` reçoit les messages du formulaire de contact : « Répondre » y écrit directement au
      visiteur.
 8. **Vérification** : dans `/admin/emails`, le bloc *Configuration* ne doit plus signaler de problème.
-   Le bouton « M'envoyer un e-mail de test » écrit à l'adresse de l'administrateur connecté. Le journal
+   Le bouton « Envoyer un e-mail de test » écrit à l'adresse de l'administrateur connecté, ou à celle du
+   champ *Destinataire* (pratique pour comparer Outlook et Gmail). Le journal
    doit afficher l'e-mail « remis » peu après. Ouvrez-le et vérifiez dans ses en-têtes qu'il passe
    `spf=pass`, `dkim=pass` et `dmarc=pass`.
+
+**Remis mais introuvable ?** « Delivered » chez Resend veut dire que le serveur du destinataire a accepté le
+message. Outlook.com / Hotmail filtre ensuite très sévèrement un domaine d'envoi neuf : regardez *Courrier
+indésirable* et l'onglet *Autres*, ajoutez `notifications@notification.stand-by.fr` aux *Expéditeurs approuvés*
+(Paramètres → Courrier → Courrier indésirable), et comparez avec un envoi vers Gmail. Si Gmail le reçoit, le
+domaine est bon : la réputation auprès de Microsoft se construit en quelques jours d'envois réguliers.
 
 ## Fonctionnement
 

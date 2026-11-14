@@ -23,8 +23,6 @@ export type QuoteInput = {
   billableMinutesPerDay: number;
   serviceFeeBps: number;
   vatBps: number;
-  /** Majoration horaire par personne (tenue Standby), en centimes */
-  surchargeCents?: number;
 };
 
 export type QuoteLine = {
@@ -51,7 +49,6 @@ export type Quote = {
 
 export function computeQuote(input: QuoteInput): Quote {
   const minutesPerPerson = input.days * input.billableMinutesPerDay;
-  const surcharge = input.surchargeCents ?? 0;
   const lines = input.positions
     .filter((p) => p.rates.length > 0)
     .map((p) => ({
@@ -59,7 +56,7 @@ export function computeQuote(input: QuoteInput): Quote {
       label: `${p.rates.length} × ${ROLES[p.role].short}`,
       qty: p.rates.length,
       minutesPerPerson,
-      totalCents: Math.round(p.rates.reduce((sum, r) => sum + (r + surcharge) * (minutesPerPerson / 60), 0)),
+      totalCents: Math.round(p.rates.reduce((sum, r) => sum + r * (minutesPerPerson / 60), 0)),
     }));
   const subtotalCents = lines.reduce((sum, l) => sum + l.totalCents, 0);
   const serviceFeeCents = Math.round((subtotalCents * input.serviceFeeBps) / 10000);

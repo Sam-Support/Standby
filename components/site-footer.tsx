@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { LogoMark } from "@/components/logo";
 import { common } from "@/lib/i18n/messages/common";
 import { getMessages } from "@/lib/i18n/server";
 
@@ -9,7 +10,8 @@ export async function SiteFooter() {
       <div className="cols">
         <div className="brand">
           <Link className="logo disp" href="/">
-            <i className="clay s" aria-hidden="true"></i>standby
+            <LogoMark />
+            stand-by
           </Link>
           <p>{t.tagline}</p>
         </div>
@@ -46,7 +48,7 @@ export async function SiteFooter() {
         </div>
       </div>
       <div className="bar">
-        <span>© {new Date().getFullYear()} Standby. {t.rights}</span>
+        <span>© {new Date().getFullYear()} Stand-By. {t.rights}</span>
         <nav aria-label={t.legalLinks}>
           <Link href="/mentions-legales">{t.notice}</Link>
           <Link href="/confidentialite">{t.privacyShort}</Link>

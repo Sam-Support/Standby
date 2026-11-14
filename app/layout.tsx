@@ -16,7 +16,7 @@ const jost = Jost({ subsets: ["latin"], weight: ["500", "600", "700"], variable:
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getMessages(home);
-  return { title: { default: t.title, template: "%s · Standby" }, description: t.description };
+  return { title: { default: t.title, template: "%s · Stand-By" }, description: t.description };
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

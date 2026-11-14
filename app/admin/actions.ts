@@ -266,14 +266,19 @@ export async function handleMessageAction(id: string): Promise<FormState> {
   return {};
 }
 
-/** E-mail de test à l'adresse de l'administrateur connecté (vérifie domaine, clé et expéditeur Resend). */
-export async function sendTestEmailAction(): Promise<FormState> {
+/**
+ * E-mail de test (vérifie domaine, clé et expéditeur Resend) : à l'administrateur connecté, ou à une autre adresse
+ * pour comparer les messageries (Outlook filtre souvent un domaine d'envoi neuf que Gmail accepte).
+ */
+export async function sendTestEmailAction(_: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
+    const to = str(fd, "to").toLowerCase() || admin.email;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { error: "Adresse e-mail invalide." };
     const res = await sendEmail(
       {
-        to: admin.email,
-        subject: "E-mail de test standby",
+        to,
+        subject: "E-mail de test stand-by",
         text: `Bonjour ${admin.firstName},\n\nCet e-mail confirme que l’envoi fonctionne depuis ${appUrl()}.`,
         link: { label: "Ouvrir le journal des e-mails", href: "/admin/emails" },
         category: "test",
@@ -282,7 +287,7 @@ export async function sendTestEmailAction(): Promise<FormState> {
     );
     revalidatePath("/admin/emails");
     if (res.status === "echec") return { error: `Échec de l’envoi : ${res.error}` };
-    return { ok: res.status === "envoye" ? `E-mail envoyé à ${admin.email} (Resend ${res.id}).` : `Resend n’est pas configuré : e-mail simulé, visible ci-dessous.` };
+    return { ok: res.status === "envoye" ? `E-mail envoyé à ${to} (Resend ${res.id}).` : `Resend n’est pas configuré : e-mail simulé, visible ci-dessous.` };
   } catch (e) {
     return fail(e);
   }

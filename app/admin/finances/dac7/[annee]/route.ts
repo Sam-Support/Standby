@@ -49,7 +49,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ annee: str
   return new Response(toCsv([header, ...lines]), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="standby-dac7-${annee}.csv"`,
+      "Content-Disposition": `attachment; filename="stand-by-dac7-${annee}.csv"`,
       "Cache-Control": "private, no-store",
     },
   });

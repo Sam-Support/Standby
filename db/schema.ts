@@ -24,6 +24,8 @@ export const leadMode = pgEnum("lead_mode", ["excel", "crm", "standard"]);
 export const freelancerStatus = pgEnum("freelancer_status", ["brouillon", "en_revue", "valide", "refuse"]);
 export const documentType = pgEnum("document_type", ["identite", "urssaf", "rib", "siret"]);
 export const reviewStatus = pgEnum("review_status", ["en_attente", "valide", "refuse"]);
+// « standby » (tenue louée par la plateforme) n'est plus proposée depuis la migration 0012 : valeur gardée dans le
+// type Postgres, qui ne permet pas d'en retirer une simplement
 export const outfitMode = pgEnum("outfit_mode", ["exposant", "perso", "standby"]);
 export const leadFrequency = pgEnum("lead_frequency", ["quotidien", "fin"]);
 export const bookingStatus = pgEnum("booking_status", [

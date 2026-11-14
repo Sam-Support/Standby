@@ -53,7 +53,7 @@ export const pages = defineMessages({
     },
     sitemap: {
       title: "Plan du site",
-      lead: "Toutes les pages de standby, par rubrique.",
+      lead: "Toutes les pages de stand-by, par rubrique.",
       sections: [
         ["Accueil", [["Page d’accueil", "/"]]],
         [
@@ -139,7 +139,7 @@ export const pages = defineMessages({
       privacy: { title: "Politique de confidentialité", intro: "Protection des données personnelles, conformément au RGPD et à la loi Informatique et Libertés. Dernière mise à jour : [date]" },
       accessibility: {
         title: "Déclaration d’accessibilité",
-        intro: "Établie le [date]. Standby s’engage à rendre son site accessible conformément à l’article 47 de la loi n° 2005-102 du 11 février 2005.",
+        intro: "Établie le [date]. Stand-By s’engage à rendre son site accessible conformément à l’article 47 de la loi n° 2005-102 du 11 février 2005.",
       },
       mandate: { title: "Mandat de facturation", version: (v: string) => `Version ${v}` },
     },
@@ -194,7 +194,7 @@ export const pages = defineMessages({
     },
     sitemap: {
       title: "Site map",
-      lead: "Every standby page, by section.",
+      lead: "Every stand-by page, by section.",
       sections: [
         ["Home", [["Home page", "/"]]],
         [
@@ -280,7 +280,7 @@ export const pages = defineMessages({
       privacy: { title: "Privacy policy", intro: "Protection of personal data, in accordance with the GDPR and the French Data Protection Act. Last updated: [date]" },
       accessibility: {
         title: "Accessibility statement",
-        intro: "Drawn up on [date]. Standby is committed to making its website accessible in accordance with article 47 of French law no. 2005-102 of 11 February 2005.",
+        intro: "Drawn up on [date]. Stand-By is committed to making its website accessible in accordance with article 47 of French law no. 2005-102 of 11 February 2005.",
       },
       mandate: { title: "Billing mandate", version: (v: string) => `Version ${v}` },
     },
@@ -335,7 +335,7 @@ export const pages = defineMessages({
     },
     sitemap: {
       title: "Mapa del sitio",
-      lead: "Todas las páginas de standby, por sección.",
+      lead: "Todas las páginas de stand-by, por sección.",
       sections: [
         ["Inicio", [["Página de inicio", "/"]]],
         [
@@ -421,7 +421,7 @@ export const pages = defineMessages({
       privacy: { title: "Política de privacidad", intro: "Protección de los datos personales, conforme al RGPD y a la ley francesa de protección de datos. Última actualización: [fecha]" },
       accessibility: {
         title: "Declaración de accesibilidad",
-        intro: "Establecida el [fecha]. Standby se compromete a que su sitio sea accesible conforme al artículo 47 de la ley francesa n.º 2005-102 de 11 de febrero de 2005.",
+        intro: "Establecida el [fecha]. Stand-By se compromete a que su sitio sea accesible conforme al artículo 47 de la ley francesa n.º 2005-102 de 11 de febrero de 2005.",
       },
       mandate: { title: "Mandato de facturación", version: (v: string) => `Versión ${v}` },
     },

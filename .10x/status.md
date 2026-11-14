@@ -1,7 +1,8 @@
 # État du projet — Standby Salons
 
-**Phase** : vérification terminée (revue qualité et sécurité du 30 octobre 2026). Reprise du projet par l'équipe
-10x : les décisions reconstituées à partir du code sont marquées [DISCOVERED] dans `decisions/`.
+**Phase** : livraison. Code fusionné dans `main` le 5 novembre 2026 ; passage de l'hébergement sur Vercel +
+Supabase le 12 novembre (ADR-003), en attente de fusion. Les décisions reconstituées à partir du code sont
+marquées [DISCOVERED] dans `decisions/`.
 
 | Chantier | État |
 |---|---|
@@ -13,11 +14,12 @@
 | Repasse graphique et mobile (accueil sans carrousel, en-tête compact, tableaux de bord) | fait (`b5d478b`) |
 | Logos des salons : dimensions contrôlées, sinon nom sur fond de couleur (migration 0010) | fait |
 | Tutoriel de mise en ligne (docs/06-MISE-EN-LIGNE.md) | fait |
-| PR vers main | à faire : branches `fix/recette` et `feat/i18n` à publier (docs/07-A-FAIRE.md) |
+| PR vers main | fait le 5 novembre : PR #7 fusionnée, PR #1 à #6 fermées |
+| Hébergement Vercel + Supabase : `vercel.json`, migrations à la construction, Schedule, projets Supabase production et staging avec buckets (ADR-003) | fait (branche `feat/vercel`, PR à fusionner) ; variables secrètes à poser dans Vercel par l'équipe |
 
 ## Barrières
 - tsc, eslint : propres
-- Vitest : 102 tests au vert
+- Vitest : 104 tests au vert
 - next build : réussi
 - Playwright : 62 tests au vert sur le build de production (dont 5 en 375 px)
 
