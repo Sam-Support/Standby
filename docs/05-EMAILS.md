@@ -6,7 +6,7 @@ heures, factures, rappels J-7 et J-2, invitation HubSpot, messages du formulaire
 
 ## Mise en place sur le nouveau domaine
 
-Le domaine est `stand-by.fr`, géré chez **PHPNET** : zone DNS sur `ns1.modns.fr`, boîtes e-mail chez eux
+Le domaine est `stand-by.fr`, géré chez **Nuxit** (anciennement PHPNET) : zone DNS sur `ns1.modns.fr`, boîtes e-mail chez eux
 (`mx.webmo.fr`). Resend envoie depuis le sous-domaine `notification.stand-by.fr` : la messagerie actuelle et
 sa règle SPF ne changent pas.
 
@@ -16,7 +16,7 @@ sa règle SPF ne changent pas.
      Sa réputation reste ainsi séparée de vos boîtes de messagerie habituelles.
    - **Région : Ireland (eu-west-1)**, la plus proche des destinataires et en Union européenne. Elle ne se
      change plus ensuite : il faudrait supprimer puis recréer le domaine.
-3. **DNS** : dans l'espace client PHPNET, zone DNS du domaine `stand-by.fr`, ajoutez les enregistrements que
+3. **DNS** : dans l'espace client Nuxit, zone DNS du domaine `stand-by.fr`, ajoutez les enregistrements que
    Resend affiche dans l'onglet *Records*, **en copiant exactement leurs valeurs** :
    - DKIM : un `TXT` sur `resend._domainkey.notification` (clé publique de signature, `p=MIGf…`) ;
    - SPF et adresse de retour : deux `CNAME`, sur `rsend.notification` et `send.notification` ;

@@ -12,7 +12,7 @@ Ce guide liste, dans l'ordre, ce qu'une personne doit faire : créer les comptes
 renseigner les secrets, compléter les textes juridiques, puis faire une dernière recette. Comptez une journée,
 hors délais de validation (DNS, Stripe, avocat).
 
-Le domaine est **`stand-by.fr`**, géré chez PHPNET (zone DNS et boîtes e-mail). Il sert aujourd'hui un site
+Le domaine est **`stand-by.fr`**, géré chez Nuxit (anciennement PHPNET : zone DNS et boîtes e-mail). Il sert aujourd'hui un site
 hébergé chez PHPNET : le faire pointer vers Vercel (étape 2) le remplace par l'application.
 
 > Cochez au fur et à mesure. Chaque étape indique **où** agir et **comment vérifier** qu'elle est faite.
@@ -49,9 +49,9 @@ par pull request). Chacun a ses propres variables et son propre projet Supabase 
    Vercel reconnaît Next.js et lit `vercel.json` (région Francfort, migrations à la construction, tâche planifiée).
    Laissez-le créer le projet ; le premier déploiement échouera tant que les variables de l'étape 6 ne sont pas
    renseignées, c'est attendu. Si Claude a déjà créé le projet, il apparaît dans votre tableau de bord.
-2. **Le domaine** : *Project → Settings → Domains*, ajoutez `stand-by.fr` et `www.stand-by.fr`. Vercel affiche les
-   enregistrements DNS à créer chez votre registraire (en général un `A` vers `76.76.21.21` pour `stand-by.fr`
-   et un `CNAME` vers `cname.vercel-dns.com` pour `www`). Le certificat HTTPS est obtenu seul.
+2. **Le domaine** : `stand-by.fr`, chez Nuxit, se branche sur Vercel en modifiant deux entrées de la zone DNS
+   Nuxit, sans toucher à la messagerie : pas à pas complet dans [`docs/09-DOMAINE.md`](09-DOMAINE.md). À faire après
+   le premier déploiement de production.
 3. **Protection des aperçus** : *Settings → Deployment Protection*, laissez *Vercel Authentication* activée
    sur les aperçus : seuls les membres connectés à Vercel voient les adresses de pull request.
 4. **Offre** : l'offre gratuite (Hobby) suffit pour démarrer : la tâche planifiée toutes les 15 min est
