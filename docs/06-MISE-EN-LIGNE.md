@@ -1,4 +1,4 @@
-# Mise en ligne de Standby : ce qu'il reste à faire à la main
+# Mise en ligne de Stand-By : ce qu'il reste à faire à la main
 
 Le code est prêt : parcours, espaces entreprise et commercial, administration, trois langues, e-mails, factures.
 La version mobile est revue. Les tests sont au vert : 102 tests unitaires et les tests de bout en bout, mobile
@@ -81,7 +81,7 @@ Si l'un d'eux est changé plus tard, tout le monde est déconnecté (et les jeto
 
 ## Étape 4 : la base et le stockage (Supabase)
 
-Deux projets existent déjà dans l'organisation Supabase « Standby », tous deux à **Francfort** (`eu-central-1`),
+Deux projets existent déjà dans l'organisation Supabase « Stand-By », tous deux à **Francfort** (`eu-central-1`),
 avec leurs buckets **`private`** (pièces d'identité, RIB, leads) et **`public`** (logos des salons) :
 
 | Projet Supabase | Référence | Sert à |
@@ -123,7 +123,7 @@ Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé 
 - [ ] DMARC `p=none` ajouté sur `_dmarc.stand-by.fr`.
 - [ ] Clé d'API limitée à l'envoi (*Sending access*, restreinte au domaine) dans Vercel : `RESEND_API_KEY`,
       environnements Production et Preview.
-- [ ] `EMAIL_FROM` (`Standby <notifications@notification.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
+- [ ] `EMAIL_FROM` (`Stand-By <notifications@notification.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
       dans Vercel ; puis, sur un aperçu, *Redeploy* et « Envoyer un e-mail de test » dans `/admin/emails`.
 - [ ] Après le premier déploiement de production : webhook vers `https://stand-by.fr/api/resend/webhook`, son
       secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas

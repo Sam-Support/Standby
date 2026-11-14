@@ -78,7 +78,7 @@ export async function templateColumns(db: Db, booking: typeof s.bookings.$inferS
     const [t] = await db.select().from(s.leadTemplates).where(eq(s.leadTemplates.id, booking.leadTemplateId));
     if (t) return { name: t.name, columns: t.columns };
   }
-  return { name: "Fiche standard Standby", columns: STANDARD_LEAD_COLUMNS };
+  return { name: "Fiche standard Stand-By", columns: STANDARD_LEAD_COLUMNS };
 }
 
 export async function uploadLeadFile(db: Db, assignmentId: string, freelancerUserId: string, file: { data: Buffer; name: string }) {
@@ -230,7 +230,7 @@ export async function pushBatchToCrm(db: Db, batchId: string) {
   }
 }
 
-/** Saisie manuelle d'une carte par l'équipe Standby. */
+/** Saisie manuelle d'une carte par l'équipe Stand-By. */
 export async function transcribeCard(db: Db, cardId: string, adminId: string, card: Omit<CardData, "lisible">) {
   const [row] = await db
     .select({ card: s.businessCards, batch: s.leadBatches, b: s.bookings, c: s.companies })

@@ -30,7 +30,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ annee: str
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="standby-factures-${annee}.csv"`,
+      "Content-Disposition": `attachment; filename="stand-by-factures-${annee}.csv"`,
       "Cache-Control": "private, no-store",
     },
   });

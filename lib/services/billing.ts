@@ -60,7 +60,6 @@ export async function finalizeBooking(db: Db, bookingId: string) {
   const [existing] = await db.select().from(s.invoices).where(eq(s.invoices.bookingId, b.id));
   if (existing) return;
   const pricing = await getPricing(db, b.confirmedAt ?? new Date());
-  const surcharge = b.outfit === "standby" ? pricing.outfitStandbyCents : 0;
   const asg = (await loadAssignments(db, b.id)).filter((a) => a.status === "acceptee");
   const minutes = await validatedMinutes(db, asg.map((a) => a.id));
 
@@ -68,7 +67,7 @@ export async function finalizeBooking(db: Db, bookingId: string) {
   for (const a of asg) {
     const m = minutes.get(a.id) ?? 0;
     const cur = byRole.get(a.role) ?? { qty: 0, minutes: 0, total: 0 };
-    byRole.set(a.role, { qty: cur.qty + 1, minutes: cur.minutes + m, total: cur.total + Math.round(((a.hourlyRateCents + surcharge) * m) / 60) });
+    byRole.set(a.role, { qty: cur.qty + 1, minutes: cur.minutes + m, total: cur.total + Math.round((a.hourlyRateCents * m) / 60) });
   }
   const lines: InvoiceLine[] = [...byRole].map(([role, v]) => ({
     label: `${v.qty} × ${isRoleKey(role) ? ROLES[role as RoleKey].short : role}`,

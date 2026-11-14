@@ -52,8 +52,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const canReview = ["validee", "payee"].includes(booking.status);
   const reviews = canReview ? await db.select().from(s.reviews).where(eq(s.reviews.bookingId, id)) : [];
   const credits = await creditNotesFor(db, row?.invoice ? [row.invoice.id] : []);
-  const tplName = company.leadMode === "crm" ? lf.crm(company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Standby" ? lf.standard : tpl.name;
-  const columnLabel = (c: string) => (tpl.name === "Fiche standard Standby" ? dl.leadColumn(c) : c);
+  const tplName = company.leadMode === "crm" ? lf.crm(company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Stand-By" ? lf.standard : tpl.name;
+  const columnLabel = (c: string) => (tpl.name === "Fiche standard Stand-By" ? dl.leadColumn(c) : c);
 
   return (
     <>

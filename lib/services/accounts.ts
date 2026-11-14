@@ -445,7 +445,7 @@ function checkBilling(f: typeof s.freelancers.$inferSelect, input: BillingInput)
   const vatNumber = vatRegime === "assujetti" ? input.vatNumber.replace(/\s/g, "").toUpperCase() : null;
   if (vatNumber !== null && !VAT_NUMBER.test(vatNumber)) throw new AccountError("Numéro de TVA intracommunautaire invalide : FR suivi de 11 caractères.");
   if (!f.billingMandateAcceptedAt && !input.acceptMandate) {
-    throw new AccountError("Acceptez le mandat de facturation : Standby émet vos factures à votre place après chaque mission.");
+    throw new AccountError("Acceptez le mandat de facturation : Stand-By émet vos factures à votre place après chaque mission.");
   }
   return { billingAddress: address, vatRegime, vatNumber, accepting: !f.billingMandateAcceptedAt };
 }
@@ -492,7 +492,7 @@ export async function freelancerStatusStep(
   }
 }
 
-/** Validation ou refus d'un document par l'équipe Standby (date de délivrance corrigeable pour l'URSSAF). */
+/** Validation ou refus d'un document par l'équipe Stand-By (date de délivrance corrigeable pour l'URSSAF). */
 export async function reviewDocument(
   db: Db,
   docId: string,

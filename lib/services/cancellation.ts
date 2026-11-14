@@ -23,10 +23,9 @@ export async function cancellationTerms(db: Db, b: Booking, today = todayIso()):
   const pricing = await getPricing(db, b.confirmedAt ?? new Date());
   const { bps, label } = b.status === "brouillon" ? { bps: 0, label: "réservation non envoyée" } : cancellationRate(daysBefore, pricing.cancellation);
   const minutes = b.days.length * billableMinutesPerDay(b.startTime, b.endTime);
-  const surcharge = b.outfit === "standby" ? pricing.outfitStandbyCents : 0;
   const accepted = (await loadAssignments(db, b.id)).filter((a) => a.status === "acceptee");
   const share = (cents: number) => Math.round((cents * bps) / 10000);
-  const subtotalCents = accepted.reduce((n, a) => n + share(((a.hourlyRateCents + surcharge) * minutes) / 60), 0);
+  const subtotalCents = accepted.reduce((n, a) => n + share((a.hourlyRateCents * minutes) / 60), 0);
   const serviceFeeCents = Math.round((subtotalCents * pricing.serviceFeeBps) / 10000);
   const totalHtCents = subtotalCents + serviceFeeCents;
   const vatCents = Math.round((totalHtCents * pricing.vatBps) / 10000);

@@ -99,11 +99,10 @@ export const COMPANY_SIZES = ["1–9 salariés", "10–49 salariés", "50–249 
 export const OUTFITS = {
   exposant: "Prêtée par l’exposant",
   perso: "Tenue perso noir & blanc",
-  standby: "Tenue Standby",
 } as const;
 export type OutfitKey = keyof typeof OUTFITS;
 
-// Fiche standard Standby : 12 colonnes
+// Fiche standard Stand-By : 12 colonnes
 export const STANDARD_LEAD_COLUMNS = [
   "Nom",
   "Prénom",
@@ -166,7 +165,6 @@ export const PRICING_DEFAULTS: Record<string, { value: number; label: string; un
   service_fee_bps: { value: 1200, label: "Frais de service exposant", unit: "bps" },
   freelancer_commission_bps: { value: 0, label: "Commission prélevée sur les commerciaux", unit: "bps" },
   vat_bps: { value: 2000, label: "TVA", unit: "bps" },
-  outfit_standby_cents: { value: 300, label: "Majoration tenue Standby (par heure et par personne)", unit: "cents" },
   "floor:commercial": { value: 2700, label: "Tarif plancher · Commercial·e de stand", unit: "cents" },
   "floor:accueil": { value: 1900, label: "Tarif plancher · Hôte·sse d’accueil", unit: "cents" },
   "floor:interprete": { value: 3400, label: "Tarif plancher · Interprète", unit: "cents" },

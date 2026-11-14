@@ -37,12 +37,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         kind={d.event.kind}
         initialQty={initialQty}
         initialLanguages={d.booking.languages}
-        initialOutfit={d.booking.outfit as OutfitKey}
+        initialOutfit={(d.booking.outfit === "perso" ? "perso" : "exposant") as OutfitKey}
         floors={d.pricing.floors}
         selectedRates={selectedRates}
         serviceFeeBps={d.pricing.serviceFeeBps}
         vatBps={d.pricing.vatBps}
-        outfitSurchargeCents={d.pricing.outfitStandbyCents}
         aside={{
           event: d.event,
           stand: d.booking.stand,

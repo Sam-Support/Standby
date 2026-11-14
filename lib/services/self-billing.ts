@@ -9,7 +9,7 @@ import type { CancellationRecord } from "./billing";
 import { BookingError } from "./booking";
 
 /**
- * Autofacturation (art. 289 I-2 du CGI) : Standby émet, au nom et pour le compte du commercial et en vertu de son
+ * Autofacturation (art. 289 I-2 du CGI) : Stand-By émet, au nom et pour le compte du commercial et en vertu de son
  * mandat de facturation, une facture par virement (mission ou indemnité d'annulation). Numérotation propre à chaque
  * commercial, coordonnées figées à l'émission. À faire valider par l'expert-comptable.
  */

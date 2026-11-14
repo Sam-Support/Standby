@@ -116,7 +116,7 @@ const EXACT: Record<string, Tr> = {
   "Total d’heures invalide.": { en: "Invalid total hours.", es: "Total de horas no válido." },
   "Les heures se déclarent pendant ou après l’événement.": { en: "Hours are declared during or after the event.", es: "Las horas se declaran durante o después del evento." },
   "Les heures ne sont pas encore à valider.": { en: "The hours are not ready for approval yet.", es: "Las horas todavía no están listas para validar." },
-  "Ces heures attendent la réponse du commercial ou l’arbitrage de l’équipe Standby.": { en: "These hours are awaiting the freelancer’s answer or a decision by the Standby team.", es: "Estas horas esperan la respuesta del comercial o el arbitraje del equipo Standby." },
+  "Ces heures attendent la réponse du commercial ou l’arbitrage de l’équipe Stand-By.": { en: "These hours are awaiting the freelancer’s answer or a decision by the Stand-By team.", es: "Estas horas esperan la respuesta del comercial o el arbitraje del equipo Stand-By." },
   "Aucun ajustement n’attend votre réponse.": { en: "No adjustment is awaiting your answer.", es: "Ningún ajuste espera su respuesta." },
   "Indiquez ce qui est à corriger.": { en: "Say what needs correcting.", es: "Indique lo que hay que corregir." },
   "Expliquez ce qui ne va pas : horaires réels, pauses, consignes reçues sur place…": { en: "Explain what is wrong: actual hours, breaks, instructions received on site…", es: "Explique qué no es correcto: horario real, pausas, instrucciones recibidas in situ…" },
@@ -124,7 +124,7 @@ const EXACT: Record<string, Tr> = {
   "Heures validées.": { en: "Hours approved.", es: "Horas validadas." },
   "Ajustement envoyé : le commercial a 48 h pour l’accepter ou le contester.": { en: "Adjustment sent: the freelancer has 48 h to accept or dispute it.", es: "Ajuste enviado: el comercial tiene 48 h para aceptarlo o impugnarlo." },
   "Ajustement accepté : la paie part après la facturation de l’exposant.": { en: "Adjustment accepted: payment is sent once the exhibitor has been invoiced.", es: "Ajuste aceptado: el pago se envía tras la facturación al expositor." },
-  "Contestation envoyée : l’équipe Standby arbitre et vous tient informé·e.": { en: "Dispute sent: the Standby team will decide and keep you informed.", es: "Impugnación enviada: el equipo Standby arbitrará y le mantendrá informado/a." },
+  "Contestation envoyée : l’équipe Stand-By arbitre et vous tient informé·e.": { en: "Dispute sent: the Stand-By team will decide and keep you informed.", es: "Impugnación enviada: el equipo Stand-By arbitrará y le mantendrá informado/a." },
   "Choisissez une note de 1 à 5.": { en: "Choose a rating from 1 to 5.", es: "Elija una nota de 1 a 5." },
   "Vous avez déjà noté cette personne pour cet événement.": { en: "You have already rated this person for this event.", es: "Ya ha valorado a esta persona para este evento." },
   "Vous pourrez noter l’équipe une fois les heures validées.": { en: "You can rate the team once the hours are approved.", es: "Podrá valorar al equipo cuando se validen las horas." },
@@ -138,19 +138,19 @@ const EXACT: Record<string, Tr> = {
   "Seule une mission acceptée peut faire l’objet d’un désistement.": { en: "Only an accepted assignment can be withdrawn from.", es: "Solo puede renunciar a una misión aceptada." },
   "Cochez la case pour confirmer votre désistement.": { en: "Tick the box to confirm your withdrawal.", es: "Marque la casilla para confirmar su renuncia." },
   "Expliquez en quelques mots la raison de votre désistement.": { en: "Explain in a few words why you are withdrawing.", es: "Explique en pocas palabras el motivo de su renuncia." },
-  "L’événement a commencé : appelez l’équipe Standby pour signaler votre absence.": { en: "The event has started: call the Standby team to report your absence.", es: "El evento ha comenzado: llame al equipo Standby para comunicar su ausencia." },
+  "L’événement a commencé : appelez l’équipe Stand-By pour signaler votre absence.": { en: "The event has started: call the Stand-By team to report your absence.", es: "El evento ha comenzado: llame al equipo Stand-By para comunicar su ausencia." },
   "Désistement enregistré : un remplaçant a reçu la mission et l’exposant est prévenu.": { en: "Withdrawal recorded: a replacement has received the assignment and the exhibitor has been notified.", es: "Renuncia registrada: un sustituto ha recibido la misión y se ha avisado al expositor." },
-  "Désistement enregistré. Aucun remplaçant n’est libre pour l’instant : l’équipe Standby prend le relais auprès de l’exposant.": {
-    en: "Withdrawal recorded. No replacement is available right now: the Standby team is taking over with the exhibitor.",
-    es: "Renuncia registrada. No hay ningún sustituto disponible por ahora: el equipo Standby se encarga de hablar con el expositor.",
+  "Désistement enregistré. Aucun remplaçant n’est libre pour l’instant : l’équipe Stand-By prend le relais auprès de l’exposant.": {
+    en: "Withdrawal recorded. No replacement is available right now: the Stand-By team is taking over with the exhibitor.",
+    es: "Renuncia registrada. No hay ningún sustituto disponible por ahora: el equipo Stand-By se encarga de hablar con el expositor.",
   },
 
   // profil commercial et documents
   "Choisissez au moins une langue.": { en: "Choose at least one language.", es: "Elija al menos un idioma." },
   "Choisissez au moins une spécialité.": { en: "Choose at least one specialty.", es: "Elija al menos una especialidad." },
-  "Acceptez le mandat de facturation : Standby émet vos factures à votre place après chaque mission.": {
-    en: "Accept the billing mandate: Standby issues your invoices on your behalf after each assignment.",
-    es: "Acepte el mandato de facturación: Standby emite sus facturas en su nombre después de cada misión.",
+  "Acceptez le mandat de facturation : Stand-By émet vos factures à votre place après chaque mission.": {
+    en: "Accept the billing mandate: Stand-By issues your invoices on your behalf after each assignment.",
+    es: "Acepte el mandato de facturación: Stand-By emite sus facturas en su nombre después de cada misión.",
   },
   "Indiquez la date de délivrance de l’attestation URSSAF.": { en: "Enter the issue date of the URSSAF certificate.", es: "Indique la fecha de expedición del certificado URSSAF." },
   "Indiquez la date de délivrance de l’attestation pour la valider.": { en: "Enter the certificate issue date to approve it.", es: "Indique la fecha de expedición del certificado para validarlo." },

@@ -3,7 +3,7 @@ import type { Lang } from "../config";
 import { domainLabels } from "./domain";
 
 // Notifications et e-mails envoyés aux exposants et aux commerciaux, dans la langue de leur compte
-// (profiles.locale). Les messages destinés à l'équipe Standby restent en français.
+// (profiles.locale). Les messages destinés à l'équipe Stand-By restent en français.
 
 type F = ReturnType<typeof fmt>;
 type DL = ReturnType<typeof domainLabels>;
@@ -13,8 +13,8 @@ type Sched = { event: string; city: string; startsOn: string; endsOn: string; st
 const s = (n: number) => (n > 1 ? "s" : "");
 
 const fr = (f: F, dl: DL) => ({
-  open: "Ouvrir standby",
-  footer: "Standby · salons professionnels et foires",
+  open: "Ouvrir stand-by",
+  footer: "Stand-By · salons professionnels et foires",
   newMission: (p: { event: string | null; role: string; days: number; rateCents: number }): Text => ({
     title: `Nouvelle mission : ${p.event ?? "salon"}`,
     body: `${dl.role(p.role).label} · ${p.days} jour(s) · ${f.hourly(p.rateCents)}. Acceptez ou refusez la mission depuis votre espace.`,
@@ -29,7 +29,7 @@ const fr = (f: F, dl: DL) => ({
     body:
       p.score !== null
         ? `${p.first} n’est pas disponible. Un remplaçant noté ${p.score} % compatible a reçu la mission.`
-        : `${p.first} n’est pas disponible et aucun remplaçant n’est libre pour l’instant : l’équipe Standby vous recontacte.`,
+        : `${p.first} n’est pas disponible et aucun remplaçant n’est libre pour l’instant : l’équipe Stand-By vous recontacte.`,
   }),
   missionOffered: (p: { role: string; days: number }): Text => ({
     title: "Nouvelle mission proposée",
@@ -45,7 +45,7 @@ const fr = (f: F, dl: DL) => ({
     body:
       p.score !== null
         ? `${p.first} ${p.last} ne pourra pas être présent·e. Un remplaçant compatible à ${p.score} %${p.rateCents ? ` (${f.hourly(p.rateCents)})` : ""} a reçu la mission : une notification vous attend dès son acceptation.`
-        : `${p.first} ${p.last} ne pourra pas être présent·e et aucun profil n’est libre pour l’instant : l’équipe Standby cherche une solution et vous recontacte.`,
+        : `${p.first} ${p.last} ne pourra pas être présent·e et aucun profil n’est libre pour l’instant : l’équipe Stand-By cherche une solution et vous recontacte.`,
   }),
   documentToFix: (p: { doc: string; comment: string | null }): Text => ({
     title: "Un document est à corriger",
@@ -102,12 +102,12 @@ const fr = (f: F, dl: DL) => ({
   }),
   hoursDisputed: (p: { first: string; ref: string; declared: number; retained: number; motive: string }): Text => ({
     title: `${p.first} conteste l’ajustement de ses heures (${p.ref})`,
-    body: `${f.hoursLabel(p.declared)} déclarées, ${f.hoursLabel(p.retained)} retenues. Motif : « ${p.motive} ». L’équipe Standby arbitre avec vous deux ; la facture est émise après l’arbitrage.`,
+    body: `${f.hoursLabel(p.declared)} déclarées, ${f.hoursLabel(p.retained)} retenues. Motif : « ${p.motive} ». L’équipe Stand-By arbitre avec vous deux ; la facture est émise après l’arbitrage.`,
   }),
   leadsReceived: (p: { leads: number; first: string; ref: string; pendingCards: number }): Text => ({
     title: p.leads ? `${p.leads} lead(s) reçus de ${p.first}` : `Cartes de visite reçues de ${p.first}`,
     body: `Réservation ${p.ref} : ${p.leads ? "les leads sont disponibles dans votre espace, au format de votre template." : ""}${
-      p.pendingCards ? ` ${p.pendingCards} carte(s) de visite en cours de saisie par l’équipe Standby (sous 24 h).` : ""
+      p.pendingCards ? ` ${p.pendingCards} carte(s) de visite en cours de saisie par l’équipe Stand-By (sous 24 h).` : ""
     }`.trim(),
   }),
   teamIn: (p: Sched & { left: number; accepted: number; waiting: number }): Text => ({
@@ -131,36 +131,36 @@ const fr = (f: F, dl: DL) => ({
   newReview: (p: { rating: number; ref: string }): Text => ({ title: "Nouvel avis reçu", body: `Un exposant vous a attribué ${p.rating}/5 pour la mission ${p.ref}.` }),
   // e-mails de compte
   verifyEmail: (p: { first: string }) => ({
-    subject: "Confirmez votre adresse e-mail standby",
+    subject: "Confirmez votre adresse e-mail stand-by",
     text: `Bonjour ${p.first},\n\nConfirmez votre adresse pour pouvoir réserver une équipe ou accepter des missions. Ce lien est valable 48 heures.`,
     link: "Confirmer mon adresse",
   }),
   resetPassword: () => ({
-    subject: "Réinitialiser votre mot de passe standby",
+    subject: "Réinitialiser votre mot de passe stand-by",
     text: "Vous avez demandé à réinitialiser votre mot de passe. Ce lien est valable une heure.",
     link: "Choisir un nouveau mot de passe",
   }),
   passwordChanged: (p: { first: string }) => ({
-    subject: "Votre mot de passe standby a été modifié",
+    subject: "Votre mot de passe stand-by a été modifié",
     text: `Bonjour ${p.first},\n\nLe mot de passe de votre compte vient d’être modifié et vos autres appareils ont été déconnectés. Si vous n’êtes pas à l’origine de ce changement, réinitialisez-le immédiatement et contactez-nous.`,
     link: "Réinitialiser mon mot de passe",
   }),
   confirmNewEmail: (p: { first: string; old: string }) => ({
-    subject: "Confirmez votre nouvelle adresse standby",
-    text: `Bonjour ${p.first},\n\nConfirmez cette adresse pour vous connecter à standby avec elle, à la place de ${p.old}. Ce lien est valable 24 heures.`,
+    subject: "Confirmez votre nouvelle adresse stand-by",
+    text: `Bonjour ${p.first},\n\nConfirmez cette adresse pour vous connecter à stand-by avec elle, à la place de ${p.old}. Ce lien est valable 24 heures.`,
     link: "Confirmer ma nouvelle adresse",
   }),
   emailChangeRequested: (p: { first: string; to: string }) => ({
     subject: "Changement d’adresse e-mail demandé",
-    text: `Bonjour ${p.first},\n\nUn changement d’adresse vers ${p.to} a été demandé depuis votre compte standby. Votre adresse actuelle reste valable tant que la nouvelle n’est pas confirmée. Si vous n’êtes pas à l’origine de cette demande, changez votre mot de passe et contactez-nous.`,
+    text: `Bonjour ${p.first},\n\nUn changement d’adresse vers ${p.to} a été demandé depuis votre compte stand-by. Votre adresse actuelle reste valable tant que la nouvelle n’est pas confirmée. Si vous n’êtes pas à l’origine de cette demande, changez votre mot de passe et contactez-nous.`,
   }),
   emailChanged: (p: { first: string; to: string }) => ({
     subject: "Adresse e-mail modifiée",
-    text: `Bonjour ${p.first},\n\nVotre compte standby utilise désormais l’adresse ${p.to}. Si vous n’êtes pas à l’origine de ce changement, contactez-nous immédiatement.`,
+    text: `Bonjour ${p.first},\n\nVotre compte stand-by utilise désormais l’adresse ${p.to}. Si vous n’êtes pas à l’origine de ce changement, contactez-nous immédiatement.`,
   }),
   hubspotRequest: (p: { company: string }) => ({
-    subject: `${p.company} vous demande de connecter HubSpot à standby`,
-    text: `${p.company} utilise standby pour staffer ses salons. Les leads collectés sur le stand peuvent être créés directement dans HubSpot.\n\nL’accès demandé est limité à la création et la lecture de contacts. Ce lien est valable 7 jours.`,
+    subject: `${p.company} vous demande de connecter HubSpot à stand-by`,
+    text: `${p.company} utilise stand-by pour staffer ses salons. Les leads collectés sur le stand peuvent être créés directement dans HubSpot.\n\nL’accès demandé est limité à la création et la lecture de contacts. Ce lien est valable 7 jours.`,
     link: "Connecter HubSpot",
   }),
 });
@@ -173,8 +173,8 @@ const when = {
 };
 
 const en = (f: F, dl: DL): Notices => ({
-  open: "Open standby",
-  footer: "Standby · trade shows and fairs",
+  open: "Open stand-by",
+  footer: "Stand-By · trade shows and fairs",
   newMission: (p) => ({
     title: `New assignment: ${p.event ?? "trade show"}`,
     body: `${dl.role(p.role).label} · ${p.days} day(s) · ${f.hourly(p.rateCents)}. Accept or decline the assignment from your dashboard.`,
@@ -186,7 +186,7 @@ const en = (f: F, dl: DL): Notices => ({
     body:
       p.score !== null
         ? `${p.first} is not available. A replacement with a ${p.score}% match has received the assignment.`
-        : `${p.first} is not available and no replacement is free right now: the Standby team will get back to you.`,
+        : `${p.first} is not available and no replacement is free right now: the Stand-By team will get back to you.`,
   }),
   missionOffered: (p) => ({ title: "New assignment offered", body: `${dl.role(p.role).label} · ${p.days} day(s). Answer within 48 h from your dashboard.` }),
   hoursToValidate: (p) => ({
@@ -199,7 +199,7 @@ const en = (f: F, dl: DL): Notices => ({
     body:
       p.score !== null
         ? `${p.first} ${p.last} will not be able to attend. A replacement with a ${p.score}% match${p.rateCents ? ` (${f.hourly(p.rateCents)})` : ""} has received the assignment: you will be notified as soon as they accept.`
-        : `${p.first} ${p.last} will not be able to attend and no profile is free right now: the Standby team is looking for a solution and will get back to you.`,
+        : `${p.first} ${p.last} will not be able to attend and no profile is free right now: the Stand-By team is looking for a solution and will get back to you.`,
   }),
   documentToFix: (p) => ({
     title: "A document needs correcting",
@@ -253,12 +253,12 @@ const en = (f: F, dl: DL): Notices => ({
   }),
   hoursDisputed: (p) => ({
     title: `${p.first} disputes the adjustment of their hours (${p.ref})`,
-    body: `${f.hoursLabel(p.declared)} declared, ${f.hoursLabel(p.retained)} accepted. Reason: “${p.motive}”. The Standby team will decide with both of you; the invoice is issued after the decision.`,
+    body: `${f.hoursLabel(p.declared)} declared, ${f.hoursLabel(p.retained)} accepted. Reason: “${p.motive}”. The Stand-By team will decide with both of you; the invoice is issued after the decision.`,
   }),
   leadsReceived: (p) => ({
     title: p.leads ? `${p.leads} lead(s) received from ${p.first}` : `Business cards received from ${p.first}`,
     body: `Booking ${p.ref}: ${p.leads ? "the leads are available in your dashboard, in your template format." : ""}${
-      p.pendingCards ? ` ${p.pendingCards} business card(s) being entered by the Standby team (within 24 h).` : ""
+      p.pendingCards ? ` ${p.pendingCards} business card(s) being entered by the Stand-By team (within 24 h).` : ""
     }`.trim(),
   }),
   teamIn: (p) => ({
@@ -281,43 +281,43 @@ const en = (f: F, dl: DL): Notices => ({
   }),
   newReview: (p) => ({ title: "New review received", body: `An exhibitor gave you ${p.rating}/5 for assignment ${p.ref}.` }),
   verifyEmail: (p) => ({
-    subject: "Confirm your standby e-mail address",
+    subject: "Confirm your stand-by e-mail address",
     text: `Hello ${p.first},\n\nConfirm your address so you can book a team or accept assignments. This link is valid for 48 hours.`,
     link: "Confirm my address",
   }),
   resetPassword: () => ({
-    subject: "Reset your standby password",
+    subject: "Reset your stand-by password",
     text: "You asked to reset your password. This link is valid for one hour.",
     link: "Choose a new password",
   }),
   passwordChanged: (p) => ({
-    subject: "Your standby password has been changed",
+    subject: "Your stand-by password has been changed",
     text: `Hello ${p.first},\n\nYour account password has just been changed and your other devices have been logged out. If you did not make this change, reset it immediately and contact us.`,
     link: "Reset my password",
   }),
   confirmNewEmail: (p) => ({
-    subject: "Confirm your new standby address",
-    text: `Hello ${p.first},\n\nConfirm this address to log in to standby with it, instead of ${p.old}. This link is valid for 24 hours.`,
+    subject: "Confirm your new stand-by address",
+    text: `Hello ${p.first},\n\nConfirm this address to log in to stand-by with it, instead of ${p.old}. This link is valid for 24 hours.`,
     link: "Confirm my new address",
   }),
   emailChangeRequested: (p) => ({
     subject: "E-mail address change requested",
-    text: `Hello ${p.first},\n\nA change of address to ${p.to} was requested from your standby account. Your current address remains valid until the new one is confirmed. If you did not make this request, change your password and contact us.`,
+    text: `Hello ${p.first},\n\nA change of address to ${p.to} was requested from your stand-by account. Your current address remains valid until the new one is confirmed. If you did not make this request, change your password and contact us.`,
   }),
   emailChanged: (p) => ({
     subject: "E-mail address changed",
-    text: `Hello ${p.first},\n\nYour standby account now uses the address ${p.to}. If you did not make this change, contact us immediately.`,
+    text: `Hello ${p.first},\n\nYour stand-by account now uses the address ${p.to}. If you did not make this change, contact us immediately.`,
   }),
   hubspotRequest: (p) => ({
-    subject: `${p.company} asks you to connect HubSpot to standby`,
-    text: `${p.company} uses standby to staff its trade show booths. The leads collected on the booth can be created directly in HubSpot.\n\nThe access requested is limited to creating and reading contacts. This link is valid for 7 days.`,
+    subject: `${p.company} asks you to connect HubSpot to stand-by`,
+    text: `${p.company} uses stand-by to staff its trade show booths. The leads collected on the booth can be created directly in HubSpot.\n\nThe access requested is limited to creating and reading contacts. This link is valid for 7 days.`,
     link: "Connect HubSpot",
   }),
 });
 
 const es = (f: F, dl: DL): Notices => ({
-  open: "Abrir standby",
-  footer: "Standby · ferias profesionales y salones",
+  open: "Abrir stand-by",
+  footer: "Stand-By · ferias profesionales y salones",
   newMission: (p) => ({
     title: `Nueva misión: ${p.event ?? "feria"}`,
     body: `${dl.role(p.role).label} · ${p.days} día(s) · ${f.hourly(p.rateCents)}. Acepte o rechace la misión desde su espacio.`,
@@ -329,7 +329,7 @@ const es = (f: F, dl: DL): Notices => ({
     body:
       p.score !== null
         ? `${p.first} no está disponible. Un sustituto con un ${p.score} % de compatibilidad ha recibido la misión.`
-        : `${p.first} no está disponible y no hay ningún sustituto libre por ahora: el equipo Standby se pondrá en contacto con usted.`,
+        : `${p.first} no está disponible y no hay ningún sustituto libre por ahora: el equipo Stand-By se pondrá en contacto con usted.`,
   }),
   missionOffered: (p) => ({ title: "Nueva misión propuesta", body: `${dl.role(p.role).label} · ${p.days} día(s). Responda en 48 h desde su espacio.` }),
   hoursToValidate: (p) => ({
@@ -342,7 +342,7 @@ const es = (f: F, dl: DL): Notices => ({
     body:
       p.score !== null
         ? `${p.first} ${p.last} no podrá asistir. Un sustituto compatible al ${p.score} %${p.rateCents ? ` (${f.hourly(p.rateCents)})` : ""} ha recibido la misión: le avisaremos en cuanto la acepte.`
-        : `${p.first} ${p.last} no podrá asistir y no hay ningún perfil libre por ahora: el equipo Standby busca una solución y se pondrá en contacto con usted.`,
+        : `${p.first} ${p.last} no podrá asistir y no hay ningún perfil libre por ahora: el equipo Stand-By busca una solución y se pondrá en contacto con usted.`,
   }),
   documentToFix: (p) => ({
     title: "Hay un documento por corregir",
@@ -396,12 +396,12 @@ const es = (f: F, dl: DL): Notices => ({
   }),
   hoursDisputed: (p) => ({
     title: `${p.first} impugna el ajuste de sus horas (${p.ref})`,
-    body: `${f.hoursLabel(p.declared)} declaradas, ${f.hoursLabel(p.retained)} reconocidas. Motivo: «${p.motive}». El equipo Standby arbitra con ustedes; la factura se emite tras el arbitraje.`,
+    body: `${f.hoursLabel(p.declared)} declaradas, ${f.hoursLabel(p.retained)} reconocidas. Motivo: «${p.motive}». El equipo Stand-By arbitra con ustedes; la factura se emite tras el arbitraje.`,
   }),
   leadsReceived: (p) => ({
     title: p.leads ? `${p.leads} lead(s) recibidos de ${p.first}` : `Tarjetas de visita recibidas de ${p.first}`,
     body: `Reserva ${p.ref}: ${p.leads ? "los leads están disponibles en su espacio, en el formato de su plantilla." : ""}${
-      p.pendingCards ? ` ${p.pendingCards} tarjeta(s) de visita en introducción por el equipo Standby (en 24 h).` : ""
+      p.pendingCards ? ` ${p.pendingCards} tarjeta(s) de visita en introducción por el equipo Stand-By (en 24 h).` : ""
     }`.trim(),
   }),
   teamIn: (p) => ({
@@ -424,36 +424,36 @@ const es = (f: F, dl: DL): Notices => ({
   }),
   newReview: (p) => ({ title: "Nueva valoración recibida", body: `Un expositor le ha dado ${p.rating}/5 por la misión ${p.ref}.` }),
   verifyEmail: (p) => ({
-    subject: "Confirme su correo electrónico de standby",
+    subject: "Confirme su correo electrónico de stand-by",
     text: `Hola, ${p.first}:\n\nConfirme su dirección para poder reservar un equipo o aceptar misiones. Este enlace es válido durante 48 horas.`,
     link: "Confirmar mi dirección",
   }),
   resetPassword: () => ({
-    subject: "Restablecer su contraseña de standby",
+    subject: "Restablecer su contraseña de stand-by",
     text: "Ha solicitado restablecer su contraseña. Este enlace es válido durante una hora.",
     link: "Elegir una nueva contraseña",
   }),
   passwordChanged: (p) => ({
-    subject: "Su contraseña de standby ha cambiado",
+    subject: "Su contraseña de stand-by ha cambiado",
     text: `Hola, ${p.first}:\n\nLa contraseña de su cuenta acaba de cambiarse y se ha cerrado la sesión en sus otros dispositivos. Si no ha sido usted, restablézcala de inmediato y contáctenos.`,
     link: "Restablecer mi contraseña",
   }),
   confirmNewEmail: (p) => ({
-    subject: "Confirme su nueva dirección de standby",
-    text: `Hola, ${p.first}:\n\nConfirme esta dirección para iniciar sesión en standby con ella, en lugar de ${p.old}. Este enlace es válido durante 24 horas.`,
+    subject: "Confirme su nueva dirección de stand-by",
+    text: `Hola, ${p.first}:\n\nConfirme esta dirección para iniciar sesión en stand-by con ella, en lugar de ${p.old}. Este enlace es válido durante 24 horas.`,
     link: "Confirmar mi nueva dirección",
   }),
   emailChangeRequested: (p) => ({
     subject: "Cambio de correo electrónico solicitado",
-    text: `Hola, ${p.first}:\n\nSe ha solicitado desde su cuenta de standby un cambio de dirección a ${p.to}. Su dirección actual sigue siendo válida hasta que se confirme la nueva. Si no ha sido usted, cambie su contraseña y contáctenos.`,
+    text: `Hola, ${p.first}:\n\nSe ha solicitado desde su cuenta de stand-by un cambio de dirección a ${p.to}. Su dirección actual sigue siendo válida hasta que se confirme la nueva. Si no ha sido usted, cambie su contraseña y contáctenos.`,
   }),
   emailChanged: (p) => ({
     subject: "Correo electrónico modificado",
-    text: `Hola, ${p.first}:\n\nSu cuenta de standby utiliza ahora la dirección ${p.to}. Si no ha sido usted, contáctenos de inmediato.`,
+    text: `Hola, ${p.first}:\n\nSu cuenta de stand-by utiliza ahora la dirección ${p.to}. Si no ha sido usted, contáctenos de inmediato.`,
   }),
   hubspotRequest: (p) => ({
-    subject: `${p.company} le pide conectar HubSpot a standby`,
-    text: `${p.company} utiliza standby para dotar de personal sus stands. Los leads recogidos en el stand pueden crearse directamente en HubSpot.\n\nEl acceso solicitado se limita a crear y leer contactos. Este enlace es válido durante 7 días.`,
+    subject: `${p.company} le pide conectar HubSpot a stand-by`,
+    text: `${p.company} utiliza stand-by para dotar de personal sus stands. Los leads recogidos en el stand pueden crearse directamente en HubSpot.\n\nEl acceso solicitado se limita a crear y leer contactos. Este enlace es válido durante 7 días.`,
     link: "Conectar HubSpot",
   }),
 });

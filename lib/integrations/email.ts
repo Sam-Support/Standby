@@ -19,7 +19,7 @@ export const appUrl = () => {
 };
 export const resendEnabled = () => Boolean(process.env.RESEND_API_KEY);
 
-const PLACEHOLDER_FROM = "Standby <notifications@standby.example>";
+const PLACEHOLDER_FROM = "Stand-By <notifications@standby.example>";
 
 /** Réglages et points à corriger avant d'envoyer pour de vrai (affichés dans /admin/emails). */
 export function emailConfig() {
@@ -116,7 +116,7 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, Math.min(ms, 5000
 function renderHtml(msg: EmailMessage, href: string | null, lang: Lang) {
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(msg.subject)}</title></head>
 <body style="margin:0;padding:24px;background:#F6F5F2"><div style="font-family:Arial,sans-serif;color:#1B2150;max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;line-height:1.55">
-<p style="font-size:22px;font-weight:700;margin:0 0 16px">standby</p>
+<p style="font-size:22px;font-weight:700;margin:0 0 16px">stand-by</p>
 ${msg.text
   .split("\n\n")
   .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)

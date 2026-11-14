@@ -1,6 +1,6 @@
 # Paiements (Stripe Connect)
 
-Standby encaisse les exposants et paie les commerciaux par **Stripe Connect**. Sans `STRIPE_SECRET_KEY`, rien ne
+Stand-By encaisse les exposants et paie les commerciaux par **Stripe Connect**. Sans `STRIPE_SECRET_KEY`, rien ne
 part : paiements et virements sont simulés (marqués réussis sans appel à Stripe).
 
 ## Comment le site utilise Stripe
@@ -40,7 +40,7 @@ réglages ci-dessous sont à faire **une fois en test, puis une fois en producti
 
 Puis, dans *Settings → Connect* :
 
-- **Image de marque** (*Branding* / *Onboarding interface*) : nom **Standby**, icône (le logo), couleur
+- **Image de marque** (*Branding* / *Onboarding interface*) : nom **Stand-By**, icône (le logo), couleur
   `#4D58EE`. Stripe l'affiche aux commerciaux pendant leur inscription : sans elle, le formulaire peut refuser de
   s'ouvrir.
 - **Coordonnées de la plateforme** : URL du site (`https://stand-by.fr`), adresse e-mail du support

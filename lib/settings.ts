@@ -8,7 +8,6 @@ export type Pricing = {
   serviceFeeBps: number;
   freelancerCommissionBps: number;
   vatBps: number;
-  outfitStandbyCents: number;
   floors: Record<RoleKey, number>;
   cancellation: CancellationPolicy;
   leadsRetentionDays: number;
@@ -33,7 +32,6 @@ export async function getPricing(db: Db, at = new Date()): Promise<Pricing> {
     serviceFeeBps: raw.service_fee_bps,
     freelancerCommissionBps: raw.freelancer_commission_bps,
     vatBps: raw.vat_bps,
-    outfitStandbyCents: raw.outfit_standby_cents,
     floors: {
       commercial: raw["floor:commercial"],
       accueil: raw["floor:accueil"],

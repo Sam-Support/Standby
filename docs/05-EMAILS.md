@@ -1,6 +1,6 @@
 # E-mails transactionnels (Resend)
 
-Standby envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, mot de passe, missions,
+Stand-By envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, mot de passe, missions,
 heures, factures, rappels J-7 et J-2, invitation HubSpot, messages du formulaire de contact. Sans
 `RESEND_API_KEY`, rien ne part : les e-mails sont simulés et listés dans `/admin/emails`.
 
@@ -33,7 +33,7 @@ sa règle SPF ne changent pas.
    v=DMARC1; p=none; rua=mailto:dmarc@stand-by.fr;
    ```
 
-   Gardez `p=none` le temps de vérifier que tous vos envois (Standby, mais aussi votre messagerie
+   Gardez `p=none` le temps de vérifier que tous vos envois (Stand-By, mais aussi votre messagerie
    habituelle) passent DMARC. Passez ensuite à `p=quarantine`, puis à `p=reject`, en gardant `rua`.
 5. **Clé d'API** (API Keys → Create) : permission « Sending access », limitée au domaine vérifié.
 6. **Webhook** (Webhooks → Add endpoint) :
@@ -47,7 +47,7 @@ sa règle SPF ne changent pas.
 
    ```
    RESEND_API_KEY=re_…
-   EMAIL_FROM=Standby <notifications@notification.stand-by.fr>
+   EMAIL_FROM=Stand-By <notifications@notification.stand-by.fr>
    EMAIL_REPLY_TO=contact@stand-by.fr
    SUPPORT_EMAIL=contact@stand-by.fr
    RESEND_WEBHOOK_SECRET=whsec_…

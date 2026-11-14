@@ -44,7 +44,7 @@ describe("signature des webhooks", () => {
 describe("envoi par Resend", () => {
   it("journalise l'envoi avec une clé d'idempotence, sans garder le lien en base", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("EMAIL_FROM", "Standby <notifications@exemple.fr>");
+    vi.stubEnv("EMAIL_FROM", "Stand-By <notifications@exemple.fr>");
     vi.stubEnv("SUPPORT_EMAIL", "support@exemple.fr");
     const fetchMock = vi.fn(async () => Response.json({ id: "resend-1" }));
     vi.stubGlobal("fetch", fetchMock);
@@ -52,7 +52,7 @@ describe("envoi par Resend", () => {
     expect(res).toEqual({ status: "envoye", id: "resend-1" });
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(String(init.body));
-    expect(body.from).toBe("Standby <notifications@exemple.fr>");
+    expect(body.from).toBe("Stand-By <notifications@exemple.fr>");
     expect(body.reply_to).toBe("support@exemple.fr");
     expect(body.tags).toEqual([{ name: "category", value: "compte" }]);
     expect(body.text).toMatch(/reinitialiser\/secret/);

@@ -38,7 +38,7 @@ export default async function Page({ params }: { params: Promise<{ annee: string
       <article className="invoice clay">
         <div className="row-between" style={{ alignItems: "flex-start" }}>
           <div>
-            <p className="logo disp">standby</p>
+            <p className="logo disp">stand-by</p>
             <p className="small" style={{ marginTop: 8 }}>
               <b>{user.firstName} {user.lastName}</b>
               <br />

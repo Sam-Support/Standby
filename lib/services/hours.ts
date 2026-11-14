@@ -53,7 +53,7 @@ const total = (sheets: { minutesDeclared: number; minutesValidated: number | nul
 /**
  * L'exposant valide (ou ajuste) le total d'heures d'une personne.
  * Revu à la baisse, le total attend l'accord du commercial (48 h, contestation possible) ;
- * l'arbitrage de l'équipe Standby (`final`) est définitif.
+ * l'arbitrage de l'équipe Stand-By (`final`) est définitif.
  */
 export async function validateAssignmentHours(
   db: Db,
@@ -68,7 +68,7 @@ export async function validateAssignmentHours(
   if (row.b.status !== "heures_a_valider") throw new BookingError("Les heures ne sont pas encore à valider.");
   let sheets = await db.select().from(s.timesheets).where(eq(s.timesheets.assignmentId, assignmentId));
   if (!opts.final && sheets.some((t) => t.status === "ajuste" || t.status === "conteste")) {
-    throw new BookingError("Ces heures attendent la réponse du commercial ou l’arbitrage de l’équipe Standby.");
+    throw new BookingError("Ces heures attendent la réponse du commercial ou l’arbitrage de l’équipe Stand-By.");
   }
   if (sheets.length === 0) {
     // rien de déclaré : on part des heures prévues à la réservation
@@ -113,7 +113,7 @@ export async function validateAssignmentHours(
   return { adjusted: reduced };
 }
 
-/** Réponse du commercial à un ajustement : accord (heures retenues) ou contestation (arbitrage par l'équipe Standby). */
+/** Réponse du commercial à un ajustement : accord (heures retenues) ou contestation (arbitrage par l'équipe Stand-By). */
 export async function respondToAdjustment(db: Db, assignmentId: string, freelancerUserId: string, accept: boolean, reason = "") {
   const row = await loadMission(db, assignmentId);
   if (!row || row.f.userId !== freelancerUserId) throw new BookingError("Mission introuvable.");
@@ -165,7 +165,7 @@ async function maybeFinalize(db: Db, bookingId: string) {
  * Tâche planifiée :
  * - ajustement sans réponse du commercial depuis 48 h : retenu ;
  * - sans réponse de l'exposant 3 jours après l'événement : les heures déclarées sont validées.
- * Les heures contestées attendent l'arbitrage de l'équipe Standby.
+ * Les heures contestées attendent l'arbitrage de l'équipe Stand-By.
  */
 export async function autoValidateHours(db: Db, today = todayIso(), now = new Date()) {
   let n = 0;
@@ -189,7 +189,7 @@ export async function autoValidateHours(db: Db, today = todayIso(), now = new Da
     let changed = false;
     for (const a of asg) {
       const sheets = await db.select().from(s.timesheets).where(eq(s.timesheets.assignmentId, a.id));
-      if (sheets.length === 0) continue; // sans déclaration : arbitrage manuel par l'équipe Standby
+      if (sheets.length === 0) continue; // sans déclaration : arbitrage manuel par l'équipe Stand-By
       for (const t of sheets.filter((x) => x.status === "declare")) {
         await db.update(s.timesheets).set({ status: "valide", minutesValidated: t.minutesDeclared }).where(eq(s.timesheets.id, t.id));
         changed = true;

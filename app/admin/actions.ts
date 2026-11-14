@@ -278,7 +278,7 @@ export async function sendTestEmailAction(_: FormState, fd: FormData): Promise<F
     const res = await sendEmail(
       {
         to,
-        subject: "E-mail de test standby",
+        subject: "E-mail de test stand-by",
         text: `Bonjour ${admin.firstName},\n\nCet e-mail confirme que l’envoi fonctionne depuis ${appUrl()}.`,
         link: { label: "Ouvrir le journal des e-mails", href: "/admin/emails" },
         category: "test",

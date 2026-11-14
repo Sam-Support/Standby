@@ -51,7 +51,7 @@ export async function SiteNav() {
   return (
     <nav className="clay nav" aria-label={t.label}>
       <Link className="logo disp" href="/">
-        <i className="clay s" aria-hidden="true"></i>standby
+        <i className="clay s" aria-hidden="true"></i>stand-by
       </Link>
       <NavTabs admin={user?.role === "admin"} />
       <div className="navright">

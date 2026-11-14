@@ -28,7 +28,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const t = m.sent;
   const f = await getFmt();
   const referentName = d.referent?.name ?? d.booking.referentOtherName ?? t.yourReferent;
-  const tplName = d.company.leadMode === "crm" ? m.leadFormats.crm(d.company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Standby" ? m.leadFormats.standard : tpl.name;
+  const tplName = d.company.leadMode === "crm" ? m.leadFormats.crm(d.company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Stand-By" ? m.leadFormats.standard : tpl.name;
   const timeline = [t.timeline.today, t.timeline.badges, t.timeline.briefing(referentName), t.timeline.leads(d.booking.leadFrequency === "quotidien", tplName), t.timeline.monday];
   const needsPayment = stripeEnabled() && !d.company.stripePaymentMethodId;
 

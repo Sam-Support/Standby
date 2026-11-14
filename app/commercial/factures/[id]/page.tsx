@@ -84,7 +84,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <Bi fr={F.client} tr={T?.client} lang={lang} inline />
           </span>
           <p className="small">
-            <span className="todo">[raison sociale de l’éditeur de standby]</span> · <span className="todo">[adresse]</span>
+            <span className="todo">[raison sociale de l’éditeur de stand-by]</span> · <span className="todo">[adresse]</span>
             <br />
             SIRET <span className="todo">[14 chiffres]</span> · TVA <span className="todo">[numéro]</span>
           </p>

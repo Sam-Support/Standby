@@ -21,7 +21,7 @@ export async function seedEssentials(db: Db) {
   }
   const standard = await db.select({ id: s.leadTemplates.id }).from(s.leadTemplates).where(isNull(s.leadTemplates.companyId));
   if (standard.length === 0) {
-    await db.insert(s.leadTemplates).values({ name: "Fiche standard Standby", columns: STANDARD_LEAD_COLUMNS });
+    await db.insert(s.leadTemplates).values({ name: "Fiche standard Stand-By", columns: STANDARD_LEAD_COLUMNS });
   }
 }
 
@@ -127,7 +127,7 @@ async function seedDemo(db: Db) {
     return userId;
   };
 
-  await user("admin@standby.test", "admin", "Équipe", "Standby");
+  await user("admin@standby.test", "admin", "Équipe", "Stand-By");
 
   // Entreprise de démonstration
   const claire = await user("claire@maison-lumen.test", "exposant", "Claire", "Dubois", "06 12 34 56 78");

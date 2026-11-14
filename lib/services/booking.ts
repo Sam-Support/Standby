@@ -150,7 +150,6 @@ export function quoteFor(
     billableMinutesPerDay: billableMinutesPerDay(booking.startTime, booking.endTime),
     serviceFeeBps: pricing.serviceFeeBps,
     vatBps: pricing.vatBps,
-    surchargeCents: booking.outfit === "standby" ? pricing.outfitStandbyCents : 0,
   });
   return { quote, estimated };
 }
@@ -188,7 +187,7 @@ export async function saveEventStep(
 export async function saveTeamStep(
   db: Db,
   b: Booking,
-  input: { positions: Partial<Record<RoleKey, number>>; languages: string[]; outfit: "exposant" | "perso" | "standby" },
+  input: { positions: Partial<Record<RoleKey, number>>; languages: string[]; outfit: "exposant" | "perso" },
 ) {
   assertDraft(b);
   const entries = Object.entries(input.positions).filter(([role, qty]) => isRoleKey(role) && (qty ?? 0) > 0) as [RoleKey, number][];
@@ -532,12 +531,12 @@ export async function advanceBookings(db: Db, today = todayIso(), now = new Date
   return changed;
 }
 
-/** Le désistement reste possible jusqu'à la veille du premier jour ; ensuite, seule l'équipe Standby peut réorganiser. */
+/** Le désistement reste possible jusqu'à la veille du premier jour ; ensuite, seule l'équipe Stand-By peut réorganiser. */
 export const WITHDRAWABLE = ["envoyee", "partielle", "confirmee"];
 
 /**
- * Désistement d'un commercial qui avait accepté : un remplaçant reçoit la mission, l'exposant et l'équipe Standby
- * sont prévenus. Le motif n'est transmis qu'à l'équipe Standby.
+ * Désistement d'un commercial qui avait accepté : un remplaçant reçoit la mission, l'exposant et l'équipe Stand-By
+ * sont prévenus. Le motif n'est transmis qu'à l'équipe Stand-By.
  */
 export async function withdrawFromMission(db: Db, assignmentId: string, freelancerUserId: string, reason: string, today = todayIso()) {
   const [row] = await db
@@ -550,7 +549,7 @@ export async function withdrawFromMission(db: Db, assignmentId: string, freelanc
   if (row.a.status !== "acceptee") throw new BookingError("Seule une mission acceptée peut faire l’objet d’un désistement.");
   const first = [...row.b.days].sort()[0];
   if (!WITHDRAWABLE.includes(row.b.status) || !first || first <= today) {
-    throw new BookingError("L’événement a commencé : appelez l’équipe Standby pour signaler votre absence.");
+    throw new BookingError("L’événement a commencé : appelez l’équipe Stand-By pour signaler votre absence.");
   }
   const motive = reason.trim();
   if (motive.length < 10) throw new BookingError("Expliquez en quelques mots la raison de votre désistement.");

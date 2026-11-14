@@ -7,7 +7,7 @@ export const MENTIONS: DocSection[] = [
   {
     title: "Publisher",
     body: [
-      "The standby website is published by [company name], [legal form] with a share capital of €[amount], registered with the [city] Trade and Companies Register under number [number].",
+      "The stand-by website is published by [company name], [legal form] with a share capital of €[amount], registered with the [city] Trade and Companies Register under number [number].",
       ["Registered office: [full address]", "SIRET: [14 digits]", "EU VAT number: [number]", "Contact: [e-mail address] · [phone]"],
     ],
   },
@@ -16,7 +16,7 @@ export const MENTIONS: DocSection[] = [
   {
     title: "Intellectual property",
     body: [
-      "All elements of the website (structure, texts, graphics, interface, standby logo) are protected by intellectual property law. Any full or partial reproduction, representation or adaptation without the publisher’s prior written consent is prohibited.",
+      "All elements of the website (structure, texts, graphics, interface, stand-by logo) are protected by intellectual property law. Any full or partial reproduction, representation or adaptation without the publisher’s prior written consent is prohibited.",
     ],
   },
   {
@@ -36,7 +36,7 @@ export const MANDAT_FACTURATION: DocSection[] = [
   {
     title: "Parties and purpose",
     body: [
-      "This mandate is entered into between the independent sales rep, host, event host or interpreter registered on standby (the “principal”) and [publisher’s company name], publisher of standby (the “agent”).",
+      "This mandate is entered into between the independent sales rep, host, event host or interpreter registered on stand-by (the “principal”) and [publisher’s company name], publisher of stand-by (the “agent”).",
       "The principal instructs the agent to draw up and issue, in the principal’s name and on the principal’s behalf, the invoices for assignments carried out through the platform and for the cancellation compensation paid to the principal. The agent is the recipient and payer of these invoices.",
     ],
   },
@@ -78,7 +78,7 @@ export const CGU: DocSection[] = [
   {
     title: "Purpose",
     body: [
-      "These terms govern the use of the standby platform, which connects exhibiting companies with independent sales reps, hosts, event hosts and interpreters to staff booths at trade shows and fairs.",
+      "These terms govern the use of the stand-by platform, which connects exhibiting companies with independent sales reps, hosts, event hosts and interpreters to staff booths at trade shows and fairs.",
     ],
   },
   {
@@ -103,7 +103,7 @@ export const CGU: DocSection[] = [
     body: [
       [
         "Respect the dates, hours and briefs agreed for each assignment; if unable to attend, withdraw from the assignment as early as possible, and no later than the day before the first day (a withdrawal counts as a refusal in the acceptance rate).",
-        "Not bypass the platform to invoice or pay for an assignment found through standby. Freelancers’ invoices are drawn up by standby under the {billing mandate|/mandat-facturation} accepted at sign-up.",
+        "Not bypass the platform to invoice or pay for an assignment found through stand-by. Freelancers’ invoices are drawn up by stand-by under the {billing mandate|/mandat-facturation} accepted at sign-up.",
         "Not publish any unlawful or misleading content, or content that infringes the rights of third parties.",
       ],
     ],
@@ -117,7 +117,7 @@ export const CGU: DocSection[] = [
   {
     title: "Liability",
     body: [
-      "standby acts as a technical intermediary and takes reasonable steps to ensure the quality of profiles. It cannot be held liable for indirect damage or for a user’s failure to meet their own obligations.",
+      "stand-by acts as a technical intermediary and takes reasonable steps to ensure the quality of profiles. It cannot be held liable for indirect damage or for a user’s failure to meet their own obligations.",
     ],
   },
   { title: "Changes to the terms", body: ["These terms may be amended. Users are informed of any substantial change before it takes effect."] },
@@ -131,13 +131,13 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
   {
     title: "Scope",
     body: [
-      "These terms apply to any booking of a booth team made by an exhibiting company on the standby platform. Confirming a booking constitutes unreserved acceptance of the terms in force on that date.",
+      "These terms apply to any booking of a booth team made by an exhibiting company on the stand-by platform. Confirming a booking constitutes unreserved acceptance of the terms in force on that date.",
     ],
   },
   {
     title: "Booking a team",
     body: [
-      "The booking specifies the event, the days (including set-up), the hours, the roles, the languages, the outfit, the on-site contact and the lead delivery format. Each selected freelancer receives an assignment and accepts it; the booking is confirmed once all assignments have been accepted. Otherwise, standby proposes a replacement as soon as possible.",
+      "The booking specifies the event, the days (including set-up), the hours, the roles, the languages, the outfit, the on-site contact and the lead delivery format. Each selected freelancer receives an assignment and accepts it; the booking is confirmed once all assignments have been accepted. Otherwise, stand-by proposes a replacement as soon as possible.",
     ],
   },
   {
@@ -156,14 +156,14 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
   {
     title: "Withdrawal of a freelancer",
     body: [
-      "If a freelancer who has accepted an assignment withdraws before the event, Standby immediately offers the assignment to a compatible profile, preferably at the same or a lower hourly rate, and informs the company. If no replacement is available, the Standby team looks for a solution; only the hours actually worked are invoiced.",
+      "If a freelancer who has accepted an assignment withdraws before the event, Stand-By immediately offers the assignment to a compatible profile, preferably at the same or a lower hourly rate, and informs the company. If no replacement is available, the Stand-By team looks for a solution; only the hours actually worked are invoiced.",
     ],
   },
   {
     title: "Approval of hours",
     body: [
       "After the event, the company approves or adjusts the hours worked by each freelancer. Without an answer within three days, the declared hours are deemed approved.",
-      "When the company accepts fewer hours than declared, the freelancer has 48 hours to accept the adjustment or dispute it; without an answer, the adjustment applies. In the event of a dispute, the Standby team decides on the basis of both parties’ evidence and its decision sets the hours invoiced.",
+      "When the company accepts fewer hours than declared, the freelancer has 48 hours to accept the adjustment or dispute it; without an answer, the adjustment applies. In the event of a dispute, the Stand-By team decides on the basis of both parties’ evidence and its decision sets the hours invoiced.",
       "Approved hours are the basis for invoicing and pay, which is paid every Monday for the week worked.",
     ],
   },
@@ -182,7 +182,7 @@ export const cgv = (feePct: string, cancellation: string[]): DocSection[] => [
 export const CONFIDENTIALITE: DocSection[] = [
   {
     title: "Data controller",
-    body: ["[Company name], [address], is the controller of the data collected on the standby platform. Data protection officer: [name or dedicated e-mail address]."],
+    body: ["[Company name], [address], is the controller of the data collected on the stand-by platform. Data protection officer: [name or dedicated e-mail address]."],
   },
   {
     title: "Data collected",
@@ -207,19 +207,19 @@ export const CONFIDENTIALITE: DocSection[] = [
   {
     title: "Leads and business cards",
     body: [
-      "Contacts collected by freelancers on a booth are the exhibiting company’s data. standby processes them on the company’s behalf, as a processor: format check, entry of business cards (automatic reading then human check), delivery in the company’s template or CRM. The company remains responsible for informing the people concerned.",
+      "Contacts collected by freelancers on a booth are the exhibiting company’s data. stand-by processes them on the company’s behalf, as a processor: format check, entry of business cards (automatic reading then human check), delivery in the company’s template or CRM. The company remains responsible for informing the people concerned.",
     ],
   },
   {
     title: "Recipients",
     body: [
-      "Data is accessible to authorised standby staff, to exhibiting companies and freelancers for the assignments concerned only, and to our technical (hosting, database, e-mail, card reading), payment and payroll providers within the limits of their tasks. It is never sold.",
+      "Data is accessible to authorised stand-by staff, to exhibiting companies and freelancers for the assignments concerned only, and to our technical (hosting, database, e-mail, card reading), payment and payroll providers within the limits of their tasks. It is never sold.",
     ],
   },
   {
     title: "Retention periods",
     body: [
-      "Accounts: for the duration of the contractual relationship and then [period], or until deleted by the user. Accounting records: 10 years, linked to an anonymised account in the event of deletion. Leads: deleted automatically after the period set by standby ([period, 365 days by default]). Trackers: 13 months maximum.",
+      "Accounts: for the duration of the contractual relationship and then [period], or until deleted by the user. Accounting records: 10 years, linked to an anonymised account in the event of deletion. Leads: deleted automatically after the period set by stand-by ([period, 365 days by default]). Trackers: 13 months maximum.",
     ],
   },
   {
@@ -237,7 +237,7 @@ export const CONFIDENTIALITE: DocSection[] = [
 export const ACCESSIBILITE: DocSection[] = [
   {
     title: "Compliance status",
-    body: ["The standby website is **partially compliant** with the French accessibility standard (RGAA), version 4.1. Compliance rate: [xx %, after audit]."],
+    body: ["The stand-by website is **partially compliant** with the French accessibility standard (RGAA), version 4.1. Compliance rate: [xx %, after audit]."],
   },
   { title: "Non-accessible content", body: ["The non-compliances and exemptions identified during the audit will be listed here: [to be completed after audit]."] },
   {
@@ -263,7 +263,7 @@ export const FAQ: { theme: string; items: [string, string][] }[] = [
   {
     theme: "General",
     items: [
-      ["What is standby?", "A platform that lets companies book a team for their booth at a trade show or fair, and lets sales reps, hosts, event hosts and interpreters find assignments."],
+      ["What is stand-by?", "A platform that lets companies book a team for their booth at a trade show or fair, and lets sales reps, hosts, event hosts and interpreters find assignments."],
       ["Which events are covered?", "Trade shows and fairs in France, with their set-up, opening and dismantling dates."],
     ],
   },

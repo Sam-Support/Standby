@@ -87,7 +87,7 @@ describe("désistement après acceptation", () => {
     expect((await loadAssignments(db, b.id)).find((x) => x.id === a.id)?.status).toBe("desistee");
   });
 
-  it("alerte l'équipe Standby quand aucun remplaçant n'est libre", async () => {
+  it("alerte l'équipe Stand-By quand aucun remplaçant n'est libre", async () => {
     const reload = await acceptedBooking();
     const b = await reload();
     const a = (await loadAssignments(db, b.id)).find((x) => x.role === "accueil")!;
@@ -215,7 +215,7 @@ describe("mot de passe et adresse e-mail", () => {
     expect(await changePassword(db, p, "ancien-mdp-123", "nouveau-mdp-456")).toBe(1);
     expect(await login(db, p.email, "ancien-mdp-123")).toBeNull();
     expect((await login(db, p.email, "nouveau-mdp-456"))?.sessionVersion).toBe(1);
-    const [alert] = await db.select().from(s.emailOutbox).where(and(eq(s.emailOutbox.to, p.email), eq(s.emailOutbox.subject, "Votre mot de passe standby a été modifié")));
+    const [alert] = await db.select().from(s.emailOutbox).where(and(eq(s.emailOutbox.to, p.email), eq(s.emailOutbox.subject, "Votre mot de passe stand-by a été modifié")));
     expect(alert).toBeDefined();
 
     // une réinitialisation ferme aussi les sessions
