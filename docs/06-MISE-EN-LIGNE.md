@@ -125,7 +125,7 @@ Le pas à pas complet est dans [`docs/05-EMAILS.md`](05-EMAILS.md). En résumé 
       environnements Production et Preview.
 - [ ] `EMAIL_FROM` (`Stand-By <notifications@notification.stand-by.fr>`), `EMAIL_REPLY_TO` et `SUPPORT_EMAIL`
       dans Vercel ; puis, sur un aperçu, *Redeploy* et « Envoyer un e-mail de test » dans `/admin/emails`.
-- [ ] Après le premier déploiement de production : webhook vers `https://stand-by.fr/api/resend/webhook`, son
+- [ ] Après le premier déploiement de production : webhook vers `https://www.stand-by.fr/api/resend/webhook`, son
       secret dans `RESEND_WEBHOOK_SECRET` (Production). Sans lui, les e-mails partent mais leur remise n'est pas
       suivie.
 
@@ -143,7 +143,7 @@ recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
 3. **Clé** : *Developers → API keys*, clé secrète de test `sk_test_…`, à coller dans Vercel sous
    `STRIPE_SECRET_KEY`, environnements **Production et Preview** (la clé de test partout jusqu'à la recette).
 4. **Webhooks**, une fois le site déployé à son adresse publique : *Workbench → Webhooks → Create an event
-   destination*, **deux fois**, avec la même adresse `https://stand-by.fr/api/stripe/webhook`, le format
+   destination*, **deux fois**, avec la même adresse `https://www.stand-by.fr/api/stripe/webhook`, le format
    **Snapshot** et la version d'API **`endive` la plus récente** proposée (par exemple `2026-10-28.endive` ; le code utilise `2026-09-30.endive`, de la même famille, donc compatible) :
    - *Events from* : **Your account**, événements `checkout.session.completed`, `payment_intent.succeeded`,
      `payment_intent.payment_failed`, `refund.updated`, `refund.failed` ; son secret `whsec_…` dans
@@ -160,7 +160,7 @@ recette (étape 9) : bouton *Test mode* en haut du tableau de bord Stripe.
 - **SIRENE** : `INSEE_API_KEY` (portail-api.insee.fr, application « Simple »). Sans elle, la vérification
   des SIRET passe par l'API publique Recherche d'entreprises.
 - **HubSpot** (leads envoyés directement dans le CRM des exposants) : application publique avec la redirection
-  `https://stand-by.fr/api/crm/hubspot/callback` et les portées `crm.objects.contacts.write` et `.read`.
+  `https://www.stand-by.fr/api/crm/hubspot/callback` et les portées `crm.objects.contacts.write` et `.read`.
   Renseignez `HUBSPOT_CLIENT_ID` et `HUBSPOT_CLIENT_SECRET`.
 - **Lecture automatique des cartes de visite** : `ANTHROPIC_API_KEY`. Sans elle, les cartes sont saisies à la
   main depuis l'admin.
@@ -175,7 +175,7 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 
 | Variable | Production | Preview |
 |---|---|---|
-| `APP_URL` | `https://stand-by.fr` | laissez vide : l'adresse de l'aperçu est déduite |
+| `APP_URL` | `https://www.stand-by.fr` | laissez vide : l'adresse de l'aperçu est déduite |
 | `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` | déjà en place (étape 3) | déjà en place, autres valeurs |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | déjà en place | déjà en place |
 | `DATABASE_URL`, `DATABASE_URL_DIRECT`, `SUPABASE_SERVICE_ROLE_KEY` | **à coller** : projet Supabase de production | **à coller** : projet `standby-staging` |
@@ -186,7 +186,7 @@ distincts (étape 3). Cochez *Sensitive* pour les secrets.
 Puis *Deployments → ⋯ sur le dernier déploiement → Redeploy*. La construction applique les migrations, puis met
 la version en ligne. Les suivantes partiront seules à chaque fusion dans `main`.
 
-**Vérification** : `https://stand-by.fr` s'ouvre en HTTPS, `https://stand-by.fr/api/health?db=1` répond
+**Vérification** : `https://stand-by.fr` s'ouvre en HTTPS, `https://www.stand-by.fr/api/health?db=1` répond
 `{"ok":true,…,"db":"ok"}`, et l'onglet *Schedules* du projet montre `taches-planifiees` toutes les 15 min.
 
 **Retour arrière** : *Deployments*, choisissez le déploiement précédent, *⋯ → Instant Rollback* (ou *Promote to
@@ -297,7 +297,7 @@ supprimez les comptes et données de test depuis l'admin ou Supabase.
 - [ ] **Protection de `main`** : dans GitHub, *Settings → Branches*, exigez la CI verte (`check` et `e2e`) avant
       toute fusion, puisque la fusion met en production.
 - [ ] **Supervision** : un service externe (UptimeRobot, Better Stack…) qui appelle
-      `https://stand-by.fr/api/health?db=1` toutes les minutes et vous alerte après deux échecs.
+      `https://www.stand-by.fr/api/health?db=1` toutes les minutes et vous alerte après deux échecs.
 - [ ] **Suivi des erreurs** : Sentry ou équivalent, recommandé ; l'intégration Vercel de Sentry s'installe depuis
       la place de marché Vercel. À défaut, les journaux d'exécution sont dans Vercel (*Project → Logs*).
 - [ ] **Vercel Firewall** : en cas de trafic anormal, *Project → Firewall → Attack Challenge Mode* bloque les

@@ -37,7 +37,7 @@ sa règle SPF ne changent pas.
    habituelle) passent DMARC. Passez ensuite à `p=quarantine`, puis à `p=reject`, en gardant `rua`.
 5. **Clé d'API** (API Keys → Create) : permission « Sending access », limitée au domaine vérifié.
 6. **Webhook** (Webhooks → Add endpoint) :
-   - URL : `https://stand-by.fr/api/resend/webhook` ;
+   - URL : `https://www.stand-by.fr/api/resend/webhook` ;
    - événements : `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
      `email.complained`, `email.suppressed`, `email.failed` ;
    - copiez le secret de signature (`whsec_…`).

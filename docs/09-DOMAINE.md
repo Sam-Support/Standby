@@ -56,6 +56,9 @@ enregistrements.
 1. Vercel → projet **standby-salons** → *Settings* → *Domains* → *Add Domain*.
 2. Saisissez **`stand-by.fr`**. Vercel propose d'ajouter aussi `www.stand-by.fr` avec une redirection : acceptez
    l'option **« redirect `www.stand-by.fr` to `stand-by.fr` »** (le site répond sur `stand-by.fr`, `www` y renvoie).
+   *Choix retenu à la mise en ligne : l'inverse, `www.stand-by.fr` est le domaine principal et `stand-by.fr` y renvoie
+   (308). Les deux marchent ; ce qui compte est que les webhooks (Stripe, Resend), le retour OAuth HubSpot et
+   `APP_URL` visent le domaine principal, car Stripe et HubSpot ne suivent pas les redirections.*
 3. Les deux domaines apparaissent avec la mention *Invalid Configuration* : c'est normal, le DNS n'est pas encore
    modifié. Cliquez sur chacun : Vercel affiche **la valeur exacte à mettre chez Nuxit** :
    - pour `stand-by.fr` : un enregistrement **A** et son adresse IP ;
