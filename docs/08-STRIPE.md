@@ -40,7 +40,7 @@ réglages ci-dessous sont à faire **une fois en test, puis une fois en producti
 
 Puis, dans *Settings → Connect* :
 
-- **Image de marque** (*Branding* / *Onboarding interface*) : nom **Stand-By**, icône (le logo), couleur
+- **Image de marque** (*Branding* / *Onboarding interface*) : nom **Stand-By**, icône `public/brand/stand-by-app-icon-512.png`, couleur
   `#4D58EE`. Stripe l'affiche aux commerciaux pendant leur inscription : sans elle, le formulaire peut refuser de
   s'ouvrir.
 - **Coordonnées de la plateforme** : URL du site (`https://stand-by.fr`), adresse e-mail du support

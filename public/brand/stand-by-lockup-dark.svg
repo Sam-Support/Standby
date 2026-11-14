@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100">
+  <defs>
+    <style>
+      .wordmark { font-family: Jost, Futura, "Futura PT", "Century Gothic", "Trebuchet MS", system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+    </style>
+  </defs>
+  <circle cx="36" cy="30" r="12.5" fill="#ffcd4a"/>
+  <rect x="4" y="48.5" width="64" height="27" rx="9" fill="#ffffff"/>
+  <text x="86" y="68" font-size="56" fill="#ffffff" class="wordmark">stand-by</text>
+</svg>

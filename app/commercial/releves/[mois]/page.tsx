@@ -7,6 +7,7 @@ import { freelancer as messages } from "@/lib/i18n/messages/freelancer";
 import { invoiceDocs, translateInvoiceText } from "@/lib/i18n/messages/invoice";
 import { getFmt, getMessages } from "@/lib/i18n/server";
 import { payoutMonth, selfBillsFor, totals } from "@/lib/services/self-billing";
+import { LogoMark } from "@/components/logo";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "@/app/entreprise/factures/[id]/print";
 
@@ -34,7 +35,10 @@ export default async function Page({ params }: { params: Promise<{ mois: string 
       <article className="invoice clay">
         <div className="row-between" style={{ alignItems: "flex-start" }}>
           <div>
-            <p className="logo disp">stand-by</p>
+            <p className="logo disp">
+              <LogoMark />
+              stand-by
+            </p>
             <p className="small" style={{ marginTop: 8 }}>
               <b>{user.firstName} {user.lastName}</b>
               <br />

@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { LogoMark } from "@/components/logo";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { logoutAction } from "@/app/connexion/actions";
@@ -51,7 +52,8 @@ export async function SiteNav() {
   return (
     <nav className="clay nav" aria-label={t.label}>
       <Link className="logo disp" href="/">
-        <i className="clay s" aria-hidden="true"></i>stand-by
+        <LogoMark />
+        stand-by
       </Link>
       <NavTabs admin={user?.role === "admin"} />
       <div className="navright">

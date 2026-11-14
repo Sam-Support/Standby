@@ -10,6 +10,7 @@ import { invoiceDocs, translateInvoiceText } from "@/lib/i18n/messages/invoice";
 import { getLang } from "@/lib/i18n/server";
 import { assertInvoiceAccess, invoiceClient, type InvoiceClient, type InvoiceLine } from "@/lib/services/billing";
 import { creditNotesFor } from "@/lib/services/credit-notes";
+import { LogoMark } from "@/components/logo";
 import { formatSiret } from "@/lib/siret";
 import { PrintButton } from "./print";
 
@@ -53,7 +54,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <article className="invoice clay">
         <div className="row-between" style={{ alignItems: "flex-start" }}>
           <div>
-            <p className="logo disp">stand-by</p>
+            <p className="logo disp">
+              <LogoMark />
+              stand-by
+            </p>
             <p className="small" style={{ marginTop: 8 }}>
               <span className="todo">[raison sociale]</span> · <span className="todo">[adresse]</span>
               <br />
