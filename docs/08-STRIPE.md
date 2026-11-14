@@ -76,7 +76,7 @@ endpoint*, puis l'adresse. Sur la page de la destination, *Reveal secret* donne 
 
 **Quelle adresse ?**
 
-- **Production** (après la fusion de la PR, quand le site est en ligne) : `https://stand-by.fr/api/stripe/webhook`
+- **Production** (après la fusion de la PR, quand le site est en ligne) : `https://www.stand-by.fr/api/stripe/webhook`
   (ou l'adresse `….vercel.app` de production tant que le domaine n'est pas branché). Secrets dans l'environnement
   **Production**.
 - **Aperçu, pour tester avant la mise en production** : les aperçus sont protégés par Vercel, Stripe serait
@@ -88,8 +88,15 @@ endpoint*, puis l'adresse. Sur la page de la destination, *Reveal secret* donne 
 Le site ignore de lui-même les événements de l'autre mode (un événement réel avec une clé de test, et
 inversement) : Stripe envoie les deux aux destinations *Connected accounts* de production.
 
-**Vérification** : sur la page de chaque destination, *Send test event* (ou le prochain vrai événement) doit
-répondre `200`. Une réponse `400` signifie un secret erroné, `404` qu'il manque la clé ou les secrets.
+**Vérification** (mode test, *Workbench → Shell*) :
+
+- *Paiements* : `stripe trigger payment_intent.succeeded` crée un paiement de test ;
+- *Commerciaux* : `stripe accounts update acct_… -d "metadata[test]=webhook"` sur un compte connecté de test.
+
+Puis *Workbench → Webhooks →* la destination *→ Event deliveries* : l'événement doit être *Delivered*, code `200`.
+Ces événements ne portent aucune référence Stand-By : le site les accuse réception sans rien modifier.
+Une réponse `400` signifie un secret erroné (le corriger dans Vercel, puis *Redeploy*), `404` qu'il manque la clé ou
+les secrets, `3xx` une adresse sans `www`. Après correction, *Resend* sur l'événement le renvoie.
 
 ## 6. Tester le parcours complet
 
@@ -128,7 +135,7 @@ Après la recette :
 2. Refaire en mode production les étapes 2 et 3 (Connect, image de marque, moyens de paiement).
 3. Clé secrète **`sk_live_…`** dans Vercel (`STRIPE_SECRET_KEY`, environnement **Production** seulement ; garder
    la clé de test pour **Preview**).
-4. Deux **nouvelles** destinations en mode production vers `https://stand-by.fr/api/stripe/webhook` : les secrets du
+4. Deux **nouvelles** destinations en mode production vers `https://www.stand-by.fr/api/stripe/webhook` : les secrets du
    mode test ne valent pas en production.
 5. *Redeploy* de la production, puis un vrai petit paiement de contrôle, remboursé ensuite par un avoir.
 6. Supprimer les comptes et données de test (tutoriel, étape 9).
