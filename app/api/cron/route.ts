@@ -6,12 +6,13 @@ import { runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { autoValidateHours } from "@/lib/services/hours";
 import { sendReminders } from "@/lib/services/reminders";
+import { sendSignupReminders } from "@/lib/services/signup-reminders";
 
 /**
  * Tâches planifiées, appelées toutes les 15 min par le Schedule Vercel (vercel.json) avec
  * « Authorization: Bearer CRON_SECRET » :
  * statuts (début/fin d'événement, expiration à 48 h), rappels J-7 et J-2, validation automatique J+3,
- * virements dus, purge des données arrivées à échéance.
+ * virements dus, purge des données arrivées à échéance, relances des inscriptions arrêtées en route (J+1, J+3, J+7).
  */
 export const maxDuration = 300;
 
@@ -28,7 +29,8 @@ async function run(req: Request) {
   const payouts = await runPayouts(db);
   const purged = await purgeExpiredData(db);
   const compliance = await checkCompliance(db);
-  return Response.json({ statuses, reminders, validated, payouts, purged, compliance });
+  const signups = await sendSignupReminders(db);
+  return Response.json({ statuses, reminders, validated, payouts, purged, compliance, signups });
 }
 
 // GET pour le Schedule Vercel, POST pour un déclencheur externe ou une relance manuelle

@@ -72,6 +72,9 @@ export const profiles = pgTable("profiles", {
   emailUndeliverableReason: text("email_undeliverable_reason"),
   // incrémentée à chaque changement de mot de passe : les sessions ouvertes avant sont refusées
   sessionVersion: integer("session_version").notNull().default(0),
+  // relances d'une inscription arrêtée en route ou d'une adresse non confirmée (lib/services/signup-reminders.ts)
+  signupRemindersSent: integer("signup_reminders_sent").notNull().default(0),
+  signupRemindedAt: timestamp("signup_reminded_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 

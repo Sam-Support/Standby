@@ -270,8 +270,12 @@ export async function companyIdentity(
 
 /** Confirmation manuelle de l'identité d'une entreprise (nom SIRENE différent, mais vérifié par l'équipe). */
 export async function confirmCompanySiret(db: Db, adminId: string, companyId: string) {
+  const [c] = await db.select({ ownerId: s.companies.ownerId, siretVerified: s.companies.siretVerified }).from(s.companies).where(eq(s.companies.id, companyId));
+  if (!c) throw new AccountError("Entreprise introuvable.");
   await db.update(s.companies).set({ siretVerified: true }).where(eq(s.companies.id, companyId));
   await audit(db, adminId, "company.siret_confirm", "company", companyId);
+  // fin de « vérification en cours » : l'exposant est prévenu
+  if (!c.siretVerified) await notify(db, c.ownerId, { t: (n) => n.companyVerified(), link: "/entreprise" });
 }
 
 function cleanUrl(v: string) {
@@ -344,6 +348,11 @@ export async function companyLeadFormat(
     .update(s.companies)
     .set({ leadMode: input.mode, crmProvider: input.mode === "crm" ? "HubSpot" : null, crmAdminEmail: input.mode === "crm" ? input.crmAdminEmail!.trim() : null, onboardingStep: 5 })
     .where(eq(s.companies.id, company.id));
+  // dernière étape de l'inscription (pas une simple modification du format des leads) : e-mail de bienvenue,
+  // qui dit aussi si l'identité de l'entreprise est encore en cours de vérification
+  if (company.onboardingStep <= 4) {
+    await notify(db, company.ownerId, { t: (n) => n.companyCreated({ company: company.name, verified: company.siretVerified }), link: "/entreprise" });
+  }
 }
 
 // ——— Commercial·e ———
@@ -489,6 +498,8 @@ export async function freelancerStatusStep(
     for (const a of admins) {
       await notify(db, a.id, { title: "Nouveau profil à vérifier", body: "Un commercial a transmis ses documents.", link: "/admin/inscrits", email: false });
     }
+    // accusé de réception : le dossier est complet et en cours de vérification (une seule fois par passage en revue)
+    if (f.status !== "en_revue") await notify(db, f.userId, { t: (n) => n.profileSubmitted(), link: "/commercial" });
   }
 }
 

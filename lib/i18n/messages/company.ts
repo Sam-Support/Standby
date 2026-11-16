@@ -10,6 +10,7 @@ export const company = defineMessages({
     choose: "Choisir",
     dash: {
       welcome: "Compte créé. Vous pouvez réserver votre première équipe.",
+      verifying: "Vérification de votre entreprise en cours : notre équipe confirme son identité à partir du SIRET et vous préviendra par e-mail. Cela ne vous empêche pas de réserver.",
       emailConfirmed: "Adresse e-mail confirmée.",
       crmOk: "HubSpot est connecté : les prochains leads y seront créés directement.",
       crmError: "La connexion HubSpot a échoué. Réessayez ou contactez-nous.",
@@ -161,6 +162,7 @@ export const company = defineMessages({
     choose: "Choose",
     dash: {
       welcome: "Account created. You can book your first team.",
+      verifying: "Your company is being verified: our team is confirming its identity from the SIRET and will tell you by e-mail. This does not stop you from booking.",
       emailConfirmed: "E-mail address confirmed.",
       crmOk: "HubSpot is connected: the next leads will be created there directly.",
       crmError: "The HubSpot connection failed. Try again or contact us.",
@@ -312,6 +314,7 @@ export const company = defineMessages({
     choose: "Elegir",
     dash: {
       welcome: "Cuenta creada. Ya puede reservar su primer equipo.",
+      verifying: "Verificación de su empresa en curso: nuestro equipo confirma su identidad a partir del SIRET y le avisará por correo. Esto no le impide reservar.",
       emailConfirmed: "Correo electrónico confirmado.",
       crmOk: "HubSpot está conectado: los próximos leads se crearán directamente allí.",
       crmError: "La conexión con HubSpot ha fallado. Vuelva a intentarlo o contáctenos.",

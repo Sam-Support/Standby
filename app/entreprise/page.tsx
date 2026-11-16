@@ -54,6 +54,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     <>
       {bienvenue && <p className="note ok">{t.welcome}</p>}
       {email === "confirme" && <p className="note ok">{t.emailConfirmed}</p>}
+      {!company.siretVerified && <p className="note info">{t.verifying}</p>}
       {crm === "ok" && <p className="note ok">{t.crmOk}</p>}
       {crm === "erreur" && <p className="note err">{t.crmError}</p>}
       <div className="head">

@@ -98,10 +98,10 @@ nav.clay.nav { position: sticky; top: 14px; z-index: 30; }
 html { scroll-padding-top: 104px; } /* ancres (#avis, #leads…) visibles sous la barre collante */
 .logo { display: flex; align-items: center; gap: 9px; font-size: 26px; color: var(--ink); text-decoration: none; }
 .logo .logo-mark { width: 30px; height: 30px; flex: none; }
-.tabs { margin-left: auto; display: flex; gap: 2px; padding: 5px; border-radius: 14px; }
+.tabs { margin-left: auto; display: flex; gap: 2px; padding: 5px; border-radius: 14px; min-width: 0; overflow-x: auto; }
 .tab { padding: 10px 15px; border-radius: 14px; font: 700 14px/1 var(--sans); color: var(--muted); text-decoration: none; white-space: nowrap; }
 .tab.on { --c: var(--primary); color: #fff; }
-.navright { display: flex; gap: 8px; align-items: center; }
+.navright { display: flex; gap: 8px; align-items: center; flex: none; }
 .bell { position: relative; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--ink); text-decoration: none; }
 .bell b { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger); color: #fff; font: 800 11px/18px var(--sans); text-align: center; padding: 0 4px; }
 
@@ -193,6 +193,12 @@ label:has(> input:focus-visible), .chip:has(input:focus-visible), .rcard:has(inp
 dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .note { font-size: 14px; padding: 10px 14px; border-radius: 14px; background: #ffebc2; color: #8a5200; font-weight: 600; }
 .note.info { background: #dcdfff; color: var(--link); }
+/* profil en cours de vérification (espace commercial) : titre, explication, état de chaque document */
+.note.review { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; }
+.note.review strong { font: 800 16px/1.25 var(--sans); }
+.note.review p { font-weight: 500; }
+.note.review ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.note.review li { display: flex; align-items: center; gap: 8px; }
 .note.ok { background: #d3f2e3; color: var(--ok); }
 /* confirmations des formulaires (components/flash.tsx), sous la barre de navigation */
 .flash { position: fixed; top: 92px; left: 16px; right: 16px; z-index: 40; max-width: 640px; margin: 0 auto; pointer-events: none; }
@@ -389,6 +395,19 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .invoice { box-shadow: none; padding: 0; }
 }
 
+/* en-tête sur tablette : initiales à la place du nom du compte (gardé pour les lecteurs d'écran), puis onglets sur
+   une deuxième ligne. Sans cela, un compte connecté débordait de l'écran entre 760 et 1 070 px. */
+@media (max-width: 1100px) {
+  .acct .full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .acct .short { display: inline; }
+  .navright .btn.acct { width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 13px; }
+}
+@media (max-width: 960px) {
+  html { scroll-padding-top: 132px; }
+  .nav { flex-wrap: wrap; gap: 10px 8px; }
+  .tabs { order: 3; width: 100%; margin-left: 0; }
+  .navright { margin-left: auto; }
+}
 @media (max-width: 900px) {
   .foot .cols { grid-template-columns: 1fr 1fr; }
   .aside { position: static; max-width: none; }
@@ -400,7 +419,7 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .nav { flex-wrap: wrap; gap: 10px 8px; padding: 10px 10px 10px 16px; }
   .logo { font-size: 22px; }
   .logo .logo-mark { width: 26px; height: 26px; }
-  .tabs { order: 3; width: 100%; margin-left: 0; overflow-x: auto; mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .tabs { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
   .tab { padding: 9px 13px; font-size: 13px; }
   .navright { margin-left: auto; gap: 6px; }
   .navright .btn { padding: 10px 12px; font-size: 13px; }
@@ -470,11 +489,7 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .cookiebar { left: 8px; right: 8px; bottom: 8px; }
 }
 @media (max-width: 520px) {
-  /* en-tête sur une ligne : initiales à la place du nom, déconnexion depuis l'espace ou « Mon compte » */
-  /* nom complet gardé pour les lecteurs d'écran, initiales affichées */
-  .acct .full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-  .acct .short { display: inline; }
-  .navright .btn.acct { width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 13px; }
+  /* en-tête sur une ligne : déconnexion depuis l'espace ou « Mon compte » */
   .nav-logout { display: none !important; }
   .langs a { padding: 7px 5px; }
 }

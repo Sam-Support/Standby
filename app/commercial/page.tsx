@@ -3,10 +3,12 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { AssignmentStatus, Avatar, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
 import { todayIso } from "@/lib/format";
-import { getDb } from "@/db";
+import { eq } from "drizzle-orm";
+import { getDb, schema as s } from "@/db";
 import { domainLabels } from "@/lib/i18n/messages/domain";
 import { freelancer as messages } from "@/lib/i18n/messages/freelancer";
 import { getFmt, getMessages, sayParts } from "@/lib/i18n/server";
+import { REQUIRED_DOCUMENTS } from "@/lib/services/compliance";
 import { freelancerEarnings, freelancerMissions } from "@/lib/services/freelancer-views";
 import { logoutAction } from "../connexion/actions";
 import { respond, stripeSetupAction } from "./actions";
@@ -27,14 +29,43 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   const accepted = missions.filter((m) => m.a.status === "acceptee" && !["payee", "annulee"].includes(m.b.status));
   const past = missions.filter((m) => m.a.status !== "proposee" && !accepted.includes(m)).slice(0, 10);
   const max = Math.max(...earn.byWeek, 1);
+  // profil en revue : état de chaque document obligatoire
+  const docs = f.status === "en_revue" ? await db.select().from(s.freelancerDocuments).where(eq(s.freelancerDocuments.freelancerId, f.id)) : [];
   const t = (await getMessages(messages)).dash;
   const fm = await getFmt();
   const dl = domainLabels(fm.lang);
 
   return (
     <>
-      {bienvenue && <p className="note ok">{t.welcome}</p>}
+      {bienvenue && f.status === "valide" && <p className="note ok">{t.welcome}</p>}
       {email === "confirme" && <p className="note ok">{t.emailConfirmed}</p>}
+      {/* affiché à chaque visite tant que l'équipe n'a pas statué, pas seulement après l'inscription */}
+      {f.status === "en_revue" && (
+        <section className="note info review" aria-labelledby="review-title">
+          <strong id="review-title">{t.review.title}</strong>
+          <p>{t.review.lead}</p>
+          <ul>
+            {REQUIRED_DOCUMENTS.map((k) => {
+              const d = docs.find((x) => x.type === k);
+              return (
+                <li key={k}>
+                  {dl.document(k)}{" "}
+                  <Status tone={d?.status === "valide" ? "ok" : !d || d.status === "refuse" ? "warn" : "info"}>
+                    {!d ? t.review.missing : d.status === "valide" ? t.review.valid : d.status === "refuse" ? t.review.fix(d.comment) : t.review.received}
+                  </Status>
+                </li>
+              );
+            })}
+          </ul>
+          <Link href="/commercial/profil">{t.review.docs}</Link>
+        </section>
+      )}
+      {f.status === "refuse" && (
+        <p className="note err">
+          {t.refusedNote}
+          <Link href="/commercial/profil">{t.review.docs}</Link> · <Link href="/contact">{t.contact}</Link>
+        </p>
+      )}
       {f.blockedReason && (
         <p className="note err">
           {t.blocked(await sayParts(f.blockedReason))}

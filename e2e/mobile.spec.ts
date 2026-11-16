@@ -39,6 +39,20 @@ test.describe("téléphone", () => {
     await ctx.close();
   });
 
+  test("tablette : l'en-tête d'un compte connecté tient dans l'écran", async ({ browser }) => {
+    for (const width of [768, 820, 961, 1000, 1101]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 }, locale: "fr-FR" });
+      const page = await ctx.newPage();
+      await dismissCookies(page);
+      await login(page, ACCOUNTS.admin);
+      // l'espagnol a les libellés les plus longs (« Administración »)
+      await page.goto("/es");
+      await expect(page.getByRole("navigation").first()).toBeVisible();
+      await noHorizontalScroll(page);
+      await ctx.close();
+    }
+  });
+
   test("menu de langue compact", async ({ page }) => {
     await dismissCookies(page);
     await page.goto("/contact");

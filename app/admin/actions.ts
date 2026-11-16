@@ -18,6 +18,7 @@ import { transcribeCard } from "@/lib/services/leads";
 import { checkCompliance } from "@/lib/services/compliance";
 import { purgeExpiredData } from "@/lib/services/privacy";
 import { sendReminders } from "@/lib/services/reminders";
+import { sendSignupReminders } from "@/lib/services/signup-reminders";
 import { deleteReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 import { appUrl, sendEmail } from "@/lib/integrations/email";
@@ -230,9 +231,10 @@ export async function runJobsAction(): Promise<FormState> {
     const p = await runPayouts(db);
     const purged = await purgeExpiredData(db);
     const c = await checkCompliance(db);
+    const signups = await sendSignupReminders(db);
     revalidatePath("/admin", "layout");
     return {
-      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s), ${c.reminders} relance(s) URSSAF, ${c.rechecked} SIRET recontrôlé(s).`,
+      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s), ${c.reminders} relance(s) URSSAF, ${c.rechecked} SIRET recontrôlé(s), ${signups} relance(s) d’inscription.`,
     };
   } catch (e) {
     return fail(e);
