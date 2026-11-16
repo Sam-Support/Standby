@@ -1,8 +1,8 @@
-# À faire — état au 14 novembre 2026
+# À faire — état au 16 novembre 2026
 
 Le produit est terminé côté code : réservation, espaces entreprise et commercial, administration, facturation
 et autofacturation, trois langues, e-mails Resend, version mobile revue, logos contrôlés. Les corrections de la
-revue de sécurité sont faites. Tout est testé : 104 tests unitaires, 62 tests de bout en bout sur le build de
+revue de sécurité sont faites. Tout est testé : 114 tests unitaires, 65 tests de bout en bout sur le build de
 production, dont 5 sur téléphone. L'hébergement est passé du VPS à **Vercel + Supabase** (ADR-003).
 
 **Le site est en ligne sur https://www.stand-by.fr** (`stand-by.fr` y renvoie), avec Stripe en mode test : on
@@ -48,7 +48,12 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
 - [ ] ⚖️ Mandat d'autofacturation, mentions des autofactures, TVA des indemnités d'annulation.
 - [ ] ⚖️ DAC7 : obligations de déclaration de la plateforme (voir aussi le point 6).
 - [ ] 🧑 Tarification dans `/admin/tarification` : frais de service, commission, tarifs plancher, barème
-      d'annulation.
+      d'annulation. Le simulateur et les arguments chiffrés de la page d'accueil reprennent ces valeurs.
+- [ ] 🧑 « Notre top commercial » : choisir le profil à l'honneur dans `/admin/inscrits` (« Tous les commerciaux »,
+      bouton « Mettre à l'honneur »). Un seul à la fois ; la section de l'accueil reste masquée tant qu'aucun n'est
+      choisi. Le commercial reçoit une notification.
+- [ ] ⚖️ Politique de confidentialité : mentionner l'affichage public du commercial à l'honneur (prénom, initiale
+      du nom, ville, poste, spécialités, langues, note, nombre de salons) et le retrait sur simple demande.
 - [ ] 🧑 Calendrier réel des salons : import CSV dans `/admin/salons`, dates vérifiées, logos uniquement avec
       l'accord écrit de l'organisateur.
 

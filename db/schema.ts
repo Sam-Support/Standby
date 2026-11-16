@@ -214,6 +214,8 @@ export const freelancers = pgTable("freelancers", {
   missionsCount: integer("missions_count").notNull().default(0),
   acceptRateBps: integer("accept_rate_bps").notNull().default(10000),
   avatarColor: text("avatar_color").notNull().default("#82C9FF"),
+  // « Notre top commercial » sur la page d'accueil : un seul profil à la fois, choisi dans l'admin
+  featuredSince: timestamp("featured_since", { withTimezone: true }),
   onboardingStep: integer("onboarding_step").notNull().default(1),
   createdAt: createdAt(),
 });

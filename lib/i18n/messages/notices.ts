@@ -78,6 +78,10 @@ const fr = (f: F, dl: DL) => ({
     title: "Votre profil est validé",
     body: "Vos documents sont vérifiés : votre profil est visible des exposants et vous recevrez vos premières missions.",
   }),
+  featuredOnHome: (): Text => ({
+    title: "Vous êtes notre top commercial",
+    body: "Bravo : l’équipe Stand-By vous met à l’honneur sur la page d’accueil. Y figurent votre prénom, l’initiale de votre nom, votre ville, votre poste, vos spécialités, vos langues, votre note et votre nombre de salons. Si vous préférez ne pas y apparaître, écrivez-nous depuis la page Contact : nous vous retirons aussitôt.",
+  }),
   urssafExpired: (p: { validUntil: string }): Text => ({
     title: "Attestation URSSAF expirée : profil suspendu",
     body: `Votre attestation a expiré le ${f.longDate(p.validUntil)}. Vous ne recevez plus de missions tant qu’une attestation à jour n’est pas validée. Téléchargez-la sur urssaf.fr puis déposez-la dans votre profil.`,
@@ -229,6 +233,10 @@ const en = (f: F, dl: DL): Notices => ({
     title: "Your profile is approved",
     body: "Your documents have been checked: your profile is visible to exhibitors and you will receive your first assignments.",
   }),
+  featuredOnHome: () => ({
+    title: "You are our top sales rep",
+    body: "Congratulations: the Stand-By team is featuring you on the home page. It shows your first name, the initial of your last name, your city, role, specialties, languages, rating and number of shows. If you would rather not appear there, write to us from the Contact page and we will remove you straight away.",
+  }),
   urssafExpired: (p) => ({
     title: "URSSAF certificate expired: profile suspended",
     body: `Your certificate expired on ${f.longDate(p.validUntil)}. You will not receive assignments until an up-to-date certificate is approved. Download it from urssaf.fr and upload it to your profile.`,
@@ -371,6 +379,10 @@ const es = (f: F, dl: DL): Notices => ({
   profileValidated: () => ({
     title: "Su perfil está validado",
     body: "Sus documentos están verificados: su perfil es visible para los expositores y recibirá sus primeras misiones.",
+  }),
+  featuredOnHome: () => ({
+    title: "Usted es nuestro comercial destacado",
+    body: "Enhorabuena: el equipo de Stand-By le destaca en la página de inicio. Aparecen su nombre, la inicial de su apellido, su ciudad, su puesto, sus especialidades, sus idiomas, su valoración y su número de ferias. Si prefiere no aparecer, escríbanos desde la página Contacto y le retiraremos de inmediato.",
   }),
   urssafExpired: (p) => ({
     title: "Certificado URSSAF caducado: perfil suspendido",

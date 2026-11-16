@@ -3,7 +3,7 @@
 import Link from "@/components/link";
 import { useState } from "react";
 import { ActionForm, Submit } from "@/components/action-form";
-import { BookingAside, type AsideEvent } from "@/components/booking";
+import { BookingAside, RoleQtyRow, type AsideEvent } from "@/components/booking";
 import type { FormState } from "@/lib/action";
 import { useFmt, useMessages } from "@/components/i18n";
 import { LANGUAGES, ROLES, ROLE_KEYS, type OutfitKey, type RoleKey } from "@/lib/domain";
@@ -52,30 +52,9 @@ export function TeamForm(p: Props) {
     vatBps: p.vatBps,
   });
 
-  const row = (r: RoleKey) => {
-    const n = qty[r] ?? 0;
-    return (
-      <div key={r} className={`row${n === 0 ? " off" : ""}`}>
-        <span className="clay s" style={{ ["--c" as string]: ROLES[r].color, width: 36, height: 36, borderRadius: "50%", flex: "none" }} aria-hidden="true"></span>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 180 }}>
-          <b id={`l-${r}`}>{dl.role(r).label}</b>
-          <span className="muted small">
-            {t.from(f.hourly(p.floors[r]))} · {dl.role(r).desc}
-          </span>
-        </div>
-        <button type="button" className="clay s qb" disabled={n === 0} onClick={() => setQty({ ...qty, [r]: n - 1 })} aria-label={t.remove(dl.role(r).label)}>
-          −
-        </button>
-        <span className="disp" style={{ fontSize: 22, minWidth: 28, textAlign: "center" }} aria-live="polite" aria-labelledby={`l-${r}`}>
-          {n}
-        </span>
-        <button type="button" className="clay s qb" disabled={n >= 20} onClick={() => setQty({ ...qty, [r]: n + 1 })} aria-label={t.add(dl.role(r).label)}>
-          +
-        </button>
-        <input type="hidden" name={`qty_${r}`} value={n} />
-      </div>
-    );
-  };
+  const row = (r: RoleKey) => (
+    <RoleQtyRow key={r} role={r} qty={qty[r] ?? 0} floorCents={p.floors[r]} name={`qty_${r}`} onChange={(n) => setQty({ ...qty, [r]: n })} />
+  );
 
   const main = ROLE_KEYS.filter((r) => !ROLES[r].rare);
   const rare = ROLE_KEYS.filter((r) => ROLES[r].rare);

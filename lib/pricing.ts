@@ -1,14 +1,23 @@
-import { ROLES, type RoleKey } from "./domain";
+import { ROLES, ROLE_KEYS, type RoleKey } from "./domain";
 
-/** Minutes facturées par jour : amplitude, moins une heure de pause au-delà de 6 h. */
-export function billableMinutesPerDay(start: string, end: string): number {
+function amplitudeMinutes(start: string, end: string): number {
   const toMin = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + (m || 0);
   };
   const amplitude = toMin(end) - toMin(start);
-  if (!Number.isFinite(amplitude) || amplitude <= 0) return 0;
-  return amplitude > 360 ? amplitude - 60 : amplitude;
+  return Number.isFinite(amplitude) && amplitude > 0 ? amplitude : 0;
+}
+
+/** Une heure de pause est déduite au-delà de 6 h d'amplitude. */
+export function hasBreak(start: string, end: string): boolean {
+  return amplitudeMinutes(start, end) > 360;
+}
+
+/** Minutes facturées par jour : amplitude, moins une heure de pause au-delà de 6 h. */
+export function billableMinutesPerDay(start: string, end: string): number {
+  const amplitude = amplitudeMinutes(start, end);
+  return hasBreak(start, end) ? amplitude - 60 : amplitude;
 }
 
 export type QuotePosition = {
@@ -77,7 +86,33 @@ export function computeQuote(input: QuoteInput): Quote {
   };
 }
 
-/** Montant versé à un commercial pour ses minutes validées, commission déduite. */
+export type SimulationInput = {
+  /** Nombre de personnes par poste */
+  qty: Partial<Record<RoleKey, number>>;
+  days: number;
+  startTime: string;
+  endTime: string;
+  /** Tarifs planchers en vigueur, en centimes par heure */
+  floors: Record<RoleKey, number>;
+  serviceFeeBps: number;
+  vatBps: number;
+};
+
+/**
+ * Estimation « à partir de » du simulateur public : chaque personne au tarif plancher de son poste, avec le
+ * même calcul que le devis d'une réservation (pause déduite, frais de service, TVA).
+ */
+export function simulateQuote(input: SimulationInput): Quote {
+  const people = (r: RoleKey) => Math.max(0, Math.floor(input.qty[r] ?? 0));
+  return computeQuote({
+    positions: ROLE_KEYS.filter((r) => people(r) > 0).map((r) => ({ role: r, rates: Array<number>(people(r)).fill(input.floors[r]) })),
+    days: Math.max(0, Math.floor(input.days)),
+    billableMinutesPerDay: billableMinutesPerDay(input.startTime, input.endTime),
+    serviceFeeBps: input.serviceFeeBps,
+    vatBps: input.vatBps,
+  });
+}
+
 /**
  * Paie d'un commercial à partir du HT de sa prestation : TVA ajoutée s'il y est assujetti (`vatBps` > 0),
  * commission plateforme retenue sur le HT. Le net est le montant viré.

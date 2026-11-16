@@ -289,9 +289,35 @@ details.more[open] > summary::after { transform: rotate(225deg); }
 .salon-body { padding: 0 8px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .salon-body h3 { font: 800 18px/1.25 var(--sans); }
 .salon > .btn { margin: 6px 8px 0; }
+.hero-more { align-self: flex-start; font: 700 15px/1.2 var(--sans); color: var(--link); text-underline-offset: 4px; }
+/* simulateur de coût (components/cost-simulator.tsx) */
+.sim { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.sim-form { flex: 999 1 520px; min-width: 0; border-radius: 24px; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+.sim-when { display: grid; grid-template-columns: minmax(250px, 1.5fr) repeat(2, minmax(130px, 1fr)); gap: 12px; align-items: end; }
+.sim-when .row { min-height: 54px; }
+.sim-when .row b { white-space: nowrap; }
+.sim-result { flex: 1 1 300px; max-width: 380px; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px; }
+.sim-lines { margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.sim-lines div { display: flex; justify-content: space-between; gap: 12px; }
+.sim-lines dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.sim-lines div:last-child { padding-top: 8px; border-top: 1px solid rgba(52, 58, 112, 0.14); }
+/* « Notre top commercial » : un profil choisi dans l'admin */
+.topcard { --c: #e7e9ff; border-radius: 24px; padding: 32px; display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; }
+.topcard-id { flex: 1 1 300px; display: flex; gap: 18px; align-items: center; min-width: 0; }
+.topcard-id > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.topcard-id h3 { font-size: 30px; line-height: 1.1; }
+.topcard-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 14px 28px; }
+.topcard-facts li { display: flex; flex-direction: column; gap: 2px; }
+.topcard-facts b { font-size: 34px; line-height: 1.05; white-space: nowrap; }
+.topcard-tags { flex: 1 1 300px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; min-width: 0; }
+.topcard-tags > div { display: flex; flex-direction: column; gap: 8px; }
+/* réassurance : les deux cartes partagent leurs lignes (étiquette, titre, arguments, bouton), les boutons sont donc
+   à la même hauteur et de même largeur */
 .audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 22px; }
-.audience { border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+/* sans sous-grille (anciens navigateurs) : la liste prend la place restante, le bouton reste en bas */
+.audience { border-radius: 24px; padding: 32px; display: grid; grid-template-rows: auto auto 1fr auto; grid-template-rows: subgrid; grid-row: span 4; gap: 16px; }
 .audience h3 { font-size: 30px; line-height: 1.1; }
+.audience .btn { align-self: end; text-align: center; }
 /* visuel d'un salon : logo aux bonnes dimensions, sinon nom sur la couleur de l'événement (components/event-art.tsx) */
 .eart { border-radius: 16px; overflow: hidden; display: grid; place-items: center; min-height: 56px; }
 .eart.logo { background: #fff; box-shadow: inset 0 0 0 1px rgba(52, 58, 112, 0.1); }
@@ -407,7 +433,17 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .audiences { gap: 14px; }
   .audience { padding: 22px; gap: 14px; }
   .audience h3 { font-size: 24px; }
-  .audience .btn { width: 100%; }
+  .sim { gap: 14px; }
+  .sim-form { padding: 18px; }
+  .sim-when { grid-template-columns: 1fr 1fr; }
+  .sim-when .row { grid-column: 1 / -1; }
+  .sim-result { max-width: none; position: static; padding: 20px; }
+  .sim-result .btn { width: 100%; }
+  .topcard { padding: 22px; gap: 20px; }
+  .topcard-id, .topcard-tags { flex-basis: 100%; }
+  .topcard-id h3 { font-size: 24px; }
+  .topcard-facts b { font-size: 28px; }
+  .topcard-tags .btn { width: 100%; }
   /* tableaux de bord */
   .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .kpi { padding: 14px 12px; gap: 6px; border-radius: 18px; }

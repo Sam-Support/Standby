@@ -1,9 +1,59 @@
 "use client";
 
 import Link from "@/components/link";
+import { ROLES, type RoleKey } from "@/lib/domain";
 import { booking } from "@/lib/i18n/messages/booking";
+import { domainLabels } from "@/lib/i18n/messages/domain";
 import type { Quote } from "@/lib/pricing";
 import { useFmt, useMessages } from "./i18n";
+
+/**
+ * Compteur d'un poste (« 2 × Commercial·e de stand ») : formulaire d'équipe de la réservation et simulateur de
+ * la page d'accueil. `name` ajoute le champ caché envoyé avec le formulaire.
+ */
+export function RoleQtyRow({
+  role,
+  qty,
+  floorCents,
+  onChange,
+  name,
+  max = 20,
+  idPrefix = "l",
+}: {
+  role: RoleKey;
+  qty: number;
+  floorCents: number;
+  onChange: (qty: number) => void;
+  name?: string;
+  max?: number;
+  idPrefix?: string;
+}) {
+  const t = useMessages(booking).team;
+  const f = useFmt();
+  const label = domainLabels(f.lang).role(role);
+  const id = `${idPrefix}-${role}`;
+  return (
+    <div className={`row${qty === 0 ? " off" : ""}`}>
+      <span className="clay s" style={{ ["--c" as string]: ROLES[role].color, width: 36, height: 36, borderRadius: "50%", flex: "none" }} aria-hidden="true"></span>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 180 }}>
+        <b id={id}>{label.label}</b>
+        <span className="muted small">
+          {t.from(f.hourly(floorCents))} · {label.desc}
+        </span>
+      </div>
+      <button type="button" className="clay s qb" disabled={qty === 0} onClick={() => onChange(qty - 1)} aria-label={t.remove(label.label)}>
+        −
+      </button>
+      <span className="disp" style={{ fontSize: 22, minWidth: 28, textAlign: "center" }} aria-live="polite" aria-labelledby={id}>
+        {qty}
+      </span>
+      <button type="button" className="clay s qb" disabled={qty >= max} onClick={() => onChange(qty + 1)} aria-label={t.add(label.label)}>
+        +
+      </button>
+      {name && <input type="hidden" name={name} value={qty} />}
+    </div>
+  );
+}
 
 const STEPS = ["evenement", "equipe", "brief", "profils", "recap"] as const;
 

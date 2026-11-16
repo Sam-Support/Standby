@@ -8,7 +8,7 @@ import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { confirmCompanySiret, reviewDocument } from "@/lib/services/accounts";
-import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setPricing } from "@/lib/services/admin";
+import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setFeaturedFreelancer, setPricing } from "@/lib/services/admin";
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { cancelBooking } from "@/lib/services/cancellation";
@@ -130,6 +130,19 @@ export async function freelancerStatusAction(freelancerId: string, status: "vali
   }
   revalidatePath("/admin", "layout");
   return {};
+}
+
+/** « Notre top commercial » de la page d'accueil : un seul profil à la fois. */
+export async function featureFreelancerAction(freelancerId: string, featured: boolean): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await setFeaturedFreelancer(await getDb(), admin.id, freelancerId, featured);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath("/");
+  return { ok: featured ? "Profil mis à l’honneur sur la page d’accueil. Le commercial est prévenu." : "Profil retiré de la page d’accueil." };
 }
 
 export async function adminValidateHours(assignmentId: string, companyId: string, _: FormState, fd: FormData): Promise<FormState> {

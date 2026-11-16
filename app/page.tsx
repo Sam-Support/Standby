@@ -1,12 +1,15 @@
 import Link from "@/components/link";
 import { getDb } from "@/db";
+import { CostSimulator } from "@/components/cost-simulator";
 import { EventArt } from "@/components/event-art";
 import { EventCarousel } from "@/components/event-carousel";
+import { Avatar } from "@/components/ui";
 import { daysUntil, eventDayCount } from "@/lib/format";
 import { domainLabels } from "@/lib/i18n/messages/domain";
 import { home } from "@/lib/i18n/messages/home";
 import { getFmt, getMessages } from "@/lib/i18n/server";
-import { platformStats, upcomingEvents } from "@/lib/queries";
+import { featuredFreelancer, platformStats, upcomingEvents } from "@/lib/queries";
+import { getPricing } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const events = await upcomingEvents(db, { limit: 6 });
   const salons = (await upcomingEvents(db, { kind: "salon", limit: 3 })).filter((e) => daysUntil(e.startsOn) >= 0);
   const stats = await platformStats(db);
+  const pricing = await getPricing(db);
+  const top = await featuredFreelancer(db);
   const t = await getMessages(home);
   const f = await getFmt();
   const dl = domainLabels(f.lang);
@@ -47,6 +52,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               {t.ctaFreelancer}
             </Link>
           </div>
+          <a className="hero-more" href="#simulateur">
+            {t.ctaEstimate} <span aria-hidden="true">↓</span>
+          </a>
           <dl className="hero-stats">
             <div>
               <dt className="muted small">{t.statProfiles}</dt>
@@ -94,6 +102,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         </ol>
       </section>
 
+      <section className="section" id="simulateur" aria-labelledby="sim-title">
+        <div className="section-head">
+          <div>
+            <span className="lab">{t.eyebrows.simulator}</span>
+            <h2 className="big" id="sim-title">{t.simulator.title}</h2>
+          </div>
+          <p className="muted">{t.simulator.lead}</p>
+        </div>
+        <CostSimulator floors={pricing.floors} serviceFeeBps={pricing.serviceFeeBps} vatBps={pricing.vatBps} />
+      </section>
+
       <section className="section" aria-labelledby="agenda-title">
         <div className="section-head">
           <div>
@@ -132,6 +151,74 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         </div>
       </section>
 
+      {/* un seul profil, choisi dans /admin/inscrits ; rien tant qu'aucun n'est choisi */}
+      {top && (
+        <section className="section" aria-labelledby="top-title">
+          <div className="section-head">
+            <div>
+              <span className="lab">{t.eyebrows.top}</span>
+              <h2 className="big" id="top-title">{t.top.title}</h2>
+            </div>
+            <p className="muted">{t.top.lead}</p>
+          </div>
+          <article className="clay topcard">
+            <div className="topcard-id">
+              <Avatar first={top.firstName} last={top.lastInitial} color={top.avatarColor} size={88} />
+              <div>
+                <h3 className="disp">
+                  {top.firstName}
+                  {top.lastInitial ? ` ${top.lastInitial}.` : ""}
+                </h3>
+                <p className="muted">{[top.role ? dl.role(top.role).label : null, top.city].filter(Boolean).join(" · ")}</p>
+                <span className="pill">{t.top.verified}</span>
+              </div>
+            </div>
+            <ul className="topcard-facts">
+              {top.ratingX10 > 0 && top.ratingsCount > 0 && (
+                <li>
+                  <b className="disp">
+                    <span aria-hidden="true">★ </span>
+                    {f.rating(top.ratingX10)}
+                  </b>
+                  <span className="muted small">{t.top.ratingOn(top.ratingsCount)}</span>
+                </li>
+              )}
+              {top.missionsCount > 0 && (
+                <li>
+                  <b className="disp">{top.missionsCount.toLocaleString(f.locale)}</b>
+                  <span className="muted small">{t.top.missions(top.missionsCount)}</span>
+                </li>
+              )}
+            </ul>
+            <div className="topcard-tags">
+              {top.specialties.length > 0 && (
+                <div>
+                  <span className="lab">{t.top.specialties}</span>
+                  <div className="inline" style={{ gap: 6 }}>
+                    {top.specialties.slice(0, 3).map((sp) => (
+                      <span key={sp} className="tag">{dl.specialty(sp)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {top.languages.length > 0 && (
+                <div>
+                  <span className="lab">{t.top.languages}</span>
+                  <div className="inline" style={{ gap: 6 }}>
+                    {top.languages.map((l) => (
+                      <span key={l} className="tag">{dl.language(l)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Link className="clay btn" href="/reserver/nouveau" prefetch={false}>
+                {t.top.cta}
+              </Link>
+            </div>
+          </article>
+        </section>
+      )}
+
       <section className="section" aria-label={t.eyebrows.who}>
         <span className="lab">{t.eyebrows.who}</span>
         <div className="audiences">
@@ -139,7 +226,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             <span className="lab">{t.companies.label}</span>
             <h3 className="disp">{t.companies.title}</h3>
             <ul className="ticks">
-              {t.companies.ticks.map((tick) => (
+              {t.companies.ticks({ fee: f.percent(pricing.serviceFeeBps), freeDays: pricing.cancellation.freeDays }).map((tick) => (
                 <li key={tick}>
                   <i className="clay s" aria-hidden="true"></i>
                   {tick}
@@ -154,7 +241,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             <span className="lab">{t.freelancers.label}</span>
             <h3 className="disp">{t.freelancers.title}</h3>
             <ul className="ticks">
-              {t.freelancers.ticks.map((tick) => (
+              {t.freelancers
+                .ticks({ floor: f.hourly(pricing.floors.commercial), commission: pricing.freelancerCommissionBps > 0 ? f.percent(pricing.freelancerCommissionBps) : null })
+                .map((tick) => (
                 <li key={tick}>
                   <i className="clay s" style={{ ["--c" as string]: "#1C8755" }} aria-hidden="true"></i>
                   {tick}
