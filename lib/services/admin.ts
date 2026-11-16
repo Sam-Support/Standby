@@ -1,9 +1,9 @@
-import { and, count, countDistinct, eq, gte, inArray, sql, sum } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, inArray, isNotNull, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { imageSize } from "@/lib/logo";
-import { audit } from "@/lib/notify";
+import { audit, notify } from "@/lib/notify";
 import { putFile } from "@/lib/storage";
 
 export class AdminError extends Error {}
@@ -224,6 +224,38 @@ export async function dashboardStats(db: Db) {
     pendingPayoutsCents: Number(pendingPayouts.amount ?? 0),
     upcomingEvents: upcoming.n,
   };
+}
+
+/**
+ * Met un commercial à l'honneur sur la page d'accueil (« Notre top commercial »), ou l'en retire. Un seul profil
+ * à la fois : le précédent est remplacé. Le commercial est prévenu, car son prénom et l'initiale de son nom
+ * deviennent publics.
+ */
+export async function setFeaturedFreelancer(db: Db, adminId: string, freelancerId: string, featured: boolean) {
+  const [f] = await db
+    .select({
+      id: s.freelancers.id,
+      userId: s.freelancers.userId,
+      status: s.freelancers.status,
+      blockedReason: s.freelancers.blockedReason,
+      featuredSince: s.freelancers.featuredSince,
+    })
+    .from(s.freelancers)
+    .where(eq(s.freelancers.id, freelancerId));
+  if (!f) throw new AdminError("Commercial introuvable.");
+  if (!featured) {
+    await db.update(s.freelancers).set({ featuredSince: null }).where(eq(s.freelancers.id, f.id));
+    await audit(db, adminId, "freelancer.unfeatured", "freelancer", f.id);
+    return;
+  }
+  if (f.status !== "valide" || f.blockedReason) throw new AdminError("Seul un profil validé et actif peut être mis à l’honneur.");
+  if (f.featuredSince) return;
+  await db.transaction(async (tx) => {
+    await tx.update(s.freelancers).set({ featuredSince: null }).where(isNotNull(s.freelancers.featuredSince));
+    await tx.update(s.freelancers).set({ featuredSince: new Date() }).where(eq(s.freelancers.id, f.id));
+  });
+  await audit(db, adminId, "freelancer.featured", "freelancer", f.id);
+  await notify(db, f.userId, { t: (n) => n.featuredOnHome(), link: "/" });
 }
 
 export async function markMessageHandled(db: Db, adminId: string, id: string) {

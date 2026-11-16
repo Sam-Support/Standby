@@ -7,6 +7,7 @@ import { useFmt, useMessages } from "@/components/i18n";
 import { eventDayCount, listDays } from "@/lib/format";
 import { booking } from "@/lib/i18n/messages/booking";
 import { domainLabels } from "@/lib/i18n/messages/domain";
+import { billableMinutesPerDay, hasBreak } from "@/lib/pricing";
 import type { EventCard } from "@/lib/queries";
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -42,14 +43,8 @@ export function EventPicker({
     const e = events.find((x) => x.id === id)!;
     setDays(listDays(e.startsOn, e.endsOn));
   };
-  const minutes = (() => {
-    const [a, b] = [startTime, endTime].map((t) => {
-      const [h, m] = t.split(":").map(Number);
-      return h * 60 + (m || 0);
-    });
-    const amp = b - a;
-    return amp > 360 ? amp - 60 : Math.max(amp, 0);
-  })();
+  // même règle que le devis : une heure de pause déduite au-delà de 6 h d'amplitude
+  const minutes = billableMinutesPerDay(startTime, endTime);
 
   return (
     <>
@@ -156,7 +151,7 @@ export function EventPicker({
             </label>
           </div>
           <p className="muted small">
-            {t.billed(`${f.timeLabel(startTime)} – ${f.timeLabel(endTime)}`, f.hoursLabel(minutes), minutes > 300)}
+            {t.billed(`${f.timeLabel(startTime)} – ${f.timeLabel(endTime)}`, f.hoursLabel(minutes), hasBreak(startTime, endTime))}
           </p>
         </>
       )}

@@ -1,7 +1,8 @@
 # E-mails transactionnels (Resend)
 
-Stand-By envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, mot de passe, missions,
-heures, factures, rappels J-7 et J-2, invitation HubSpot, messages du formulaire de contact. Sans
+Stand-By envoie ses e-mails par [Resend](https://resend.com) : confirmation d'adresse, suivi de l'inscription
+(dossier reçu, relances), mot de passe, missions, heures, factures, rappels J-7 et J-2, invitation HubSpot,
+messages du formulaire de contact. Sans
 `RESEND_API_KEY`, rien ne part : les e-mails sont simulés et listés dans `/admin/emails`.
 
 ## Mise en place sur le nouveau domaine
@@ -69,6 +70,26 @@ message. Outlook.com / Hotmail filtre ensuite très sévèrement un domaine d'en
 indésirable* et l'onglet *Autres*, ajoutez `notifications@notification.stand-by.fr` aux *Expéditeurs approuvés*
 (Paramètres → Courrier → Courrier indésirable), et comparez avec un envoi vers Gmail. Si Gmail le reçoit, le
 domaine est bon : la réputation auprès de Microsoft se construit en quelques jours d'envois réguliers.
+
+## Suivi de l'inscription
+
+| Moment | E-mail | Destinataire |
+|---|---|---|
+| Création du compte (étape 1) | « Confirmez votre adresse e-mail », lien valable 48 h | exposant, commercial |
+| Dernière étape du commercial | « Dossier reçu : votre profil est en cours de vérification » | commercial |
+| Profil validé, ou document refusé | « Votre profil est validé » / « Un document est à corriger » | commercial |
+| Dernière étape de l'exposant | « Bienvenue sur Stand-By » ; précise si l'identité (SIRET) est encore en cours de vérification | exposant |
+| Identité confirmée dans `/admin/inscrits` | « Votre entreprise est vérifiée » | exposant |
+| Inscription arrêtée avant la dernière étape | « Votre inscription n'est pas terminée », lien pour se reconnecter et reprendre | exposant, commercial |
+| Inscription terminée, adresse jamais confirmée | « Rappel : confirmez votre adresse e-mail », nouveau lien | exposant, commercial |
+
+Les deux dernières lignes sont des **relances automatiques** (`lib/services/signup-reminders.ts`, lancées par les
+tâches planifiées) : 1, 3 puis 7 jours après la création du compte, trois au plus, jamais vers une adresse en
+échec, plus rien après 14 jours. Les délais se règlent dans `SIGNUP_REMINDER_DAYS`.
+
+Dans l'espace, l'état reste affiché tant que l'équipe n'a pas statué : encadré « Profil en cours de vérification »
+avec l'état de chaque document pour le commercial, bandeau « Vérification de votre entreprise en cours » pour
+l'exposant.
 
 ## Fonctionnement
 

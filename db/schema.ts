@@ -72,6 +72,9 @@ export const profiles = pgTable("profiles", {
   emailUndeliverableReason: text("email_undeliverable_reason"),
   // incrémentée à chaque changement de mot de passe : les sessions ouvertes avant sont refusées
   sessionVersion: integer("session_version").notNull().default(0),
+  // relances d'une inscription arrêtée en route ou d'une adresse non confirmée (lib/services/signup-reminders.ts)
+  signupRemindersSent: integer("signup_reminders_sent").notNull().default(0),
+  signupRemindedAt: timestamp("signup_reminded_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 
@@ -214,6 +217,8 @@ export const freelancers = pgTable("freelancers", {
   missionsCount: integer("missions_count").notNull().default(0),
   acceptRateBps: integer("accept_rate_bps").notNull().default(10000),
   avatarColor: text("avatar_color").notNull().default("#82C9FF"),
+  // « Notre top commercial » sur la page d'accueil : un seul profil à la fois, choisi dans l'admin
+  featuredSince: timestamp("featured_since", { withTimezone: true }),
   onboardingStep: integer("onboarding_step").notNull().default(1),
   createdAt: createdAt(),
 });

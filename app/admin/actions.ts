@@ -8,7 +8,7 @@ import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { confirmCompanySiret, reviewDocument } from "@/lib/services/accounts";
-import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setPricing } from "@/lib/services/admin";
+import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setFeaturedFreelancer, setPricing } from "@/lib/services/admin";
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { cancelBooking } from "@/lib/services/cancellation";
@@ -18,6 +18,7 @@ import { transcribeCard } from "@/lib/services/leads";
 import { checkCompliance } from "@/lib/services/compliance";
 import { purgeExpiredData } from "@/lib/services/privacy";
 import { sendReminders } from "@/lib/services/reminders";
+import { sendSignupReminders } from "@/lib/services/signup-reminders";
 import { deleteReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 import { appUrl, sendEmail } from "@/lib/integrations/email";
@@ -132,6 +133,19 @@ export async function freelancerStatusAction(freelancerId: string, status: "vali
   return {};
 }
 
+/** « Notre top commercial » de la page d'accueil : un seul profil à la fois. */
+export async function featureFreelancerAction(freelancerId: string, featured: boolean): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await setFeaturedFreelancer(await getDb(), admin.id, freelancerId, featured);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath("/");
+  return { ok: featured ? "Profil mis à l’honneur sur la page d’accueil. Le commercial est prévenu." : "Profil retiré de la page d’accueil." };
+}
+
 export async function adminValidateHours(assignmentId: string, companyId: string, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
@@ -217,9 +231,10 @@ export async function runJobsAction(): Promise<FormState> {
     const p = await runPayouts(db);
     const purged = await purgeExpiredData(db);
     const c = await checkCompliance(db);
+    const signups = await sendSignupReminders(db);
     revalidatePath("/admin", "layout");
     return {
-      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s), ${c.reminders} relance(s) URSSAF, ${c.rechecked} SIRET recontrôlé(s).`,
+      ok: `Tâches exécutées : ${a} changement(s) de statut, ${r} rappel(s), ${h} validation(s) automatique(s), ${p} virement(s), ${purged.leads} lead(s) purgé(s), ${c.reminders} relance(s) URSSAF, ${c.rechecked} SIRET recontrôlé(s), ${signups} relance(s) d’inscription.`,
     };
   } catch (e) {
     return fail(e);

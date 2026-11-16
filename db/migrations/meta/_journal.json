@@ -92,6 +92,20 @@
       "when": 1794652121355,
       "tag": "0012_tenue_louee_retiree",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794835689998,
+      "tag": "0013_commercial_a_l_honneur",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794844885625,
+      "tag": "0014_relances_inscription",
+      "breakpoints": true
     }
   ]
 }

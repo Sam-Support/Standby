@@ -12,6 +12,7 @@ export type SiretResult = { found: boolean; name?: string; active?: boolean; sou
 
 const TIMEOUT_MS = 4000;
 const inseeBase = () => (process.env.INSEE_SIRENE_URL ?? "https://api.insee.fr/api-sirene/3.11").replace(/\/$/, "");
+const rechercheBase = () => (process.env.RECHERCHE_ENTREPRISES_URL ?? "https://recherche-entreprises.api.gouv.fr").replace(/\/$/, "");
 
 export async function lookupSiret(siret: string): Promise<SiretResult | null> {
   const v = normalizeSiret(siret);
@@ -86,7 +87,7 @@ export function parseRechercheEntreprises(siret: string, body: RechercheResponse
 
 async function lookupRechercheEntreprises(siret: string): Promise<SiretResult | null> {
   try {
-    const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${siret}&page=1&per_page=1`, {
+    const res = await fetch(`${rechercheBase()}/search?q=${siret}&page=1&per_page=1`, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Accept: "application/json" },
     });

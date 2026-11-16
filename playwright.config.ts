@@ -32,6 +32,9 @@ export default defineConfig({
       CRON_SECRET: "e2e",
       AUTH_SECRET: "e2e-secret-de-test-uniquement-pour-playwright",
       DEMO_DATES_SLIDE: "1", // le calendrier de démo suit la date du jour (db/seed.ts)
+      // SIRENE hors ligne : les inscriptions de test ne dépendent pas d'une API publique (SIRET « à vérifier »)
+      INSEE_API_KEY: "",
+      RECHERCHE_ENTREPRISES_URL: "http://127.0.0.1:9",
     },
   },
 });

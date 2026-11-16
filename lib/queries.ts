@@ -1,6 +1,7 @@
-import { and, asc, avg, count, eq, gte, inArray, max, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gte, inArray, isNotNull, isNull, max, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
+import { isRoleKey, type RoleKey } from "./domain";
 import { listDays, todayIso } from "./format";
 import { daysOverlap } from "./matching";
 import { fileUrl } from "./storage";
@@ -73,4 +74,47 @@ export async function platformStats(db: Db) {
     ratingX10: r.n > 0 ? Math.round(Number(r.rating) * 10) : Math.round(Number(f.rating ?? 0)),
     verifiedOn: v.verified,
   };
+}
+
+export type FeaturedFreelancer = {
+  firstName: string;
+  /** Initiale du nom : le nom complet ne quitte jamais le serveur */
+  lastInitial: string;
+  city: string;
+  role: RoleKey | null;
+  specialties: string[];
+  languages: string[];
+  ratingX10: number;
+  ratingsCount: number;
+  missionsCount: number;
+  avatarColor: string;
+};
+
+/**
+ * « Notre top commercial » de la page d'accueil : le profil choisi dans l'admin, s'il est toujours validé et
+ * actif. Page publique : seuls le prénom et l'initiale du nom sont renvoyés.
+ */
+export async function featuredFreelancer(db: Db): Promise<FeaturedFreelancer | null> {
+  const [row] = await db
+    .select({
+      firstName: s.profiles.firstName,
+      lastName: s.profiles.lastName,
+      city: s.freelancers.city,
+      roles: s.freelancers.roles,
+      specialties: s.freelancers.specialties,
+      languages: s.freelancers.languages,
+      ratingX10: s.freelancers.ratingX10,
+      ratingsCount: s.freelancers.ratingsCount,
+      missionsCount: s.freelancers.missionsCount,
+      avatarColor: s.freelancers.avatarColor,
+    })
+    .from(s.freelancers)
+    .innerJoin(s.profiles, eq(s.profiles.id, s.freelancers.userId))
+    .where(and(isNotNull(s.freelancers.featuredSince), eq(s.freelancers.status, "valide"), isNull(s.freelancers.blockedReason)))
+    .orderBy(desc(s.freelancers.featuredSince))
+    .limit(1);
+  if (!row) return null;
+  const { lastName, roles, ...rest } = row;
+  const main = roles[0];
+  return { ...rest, lastInitial: (Array.from(lastName.trim())[0] ?? "").toUpperCase(), role: main && isRoleKey(main) ? main : null };
 }

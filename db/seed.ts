@@ -197,6 +197,8 @@ async function seedDemo(db: Db) {
         ratingsCount: Math.max(3, Math.round(f.missions / 3)),
         missionsCount: f.missions,
         avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+        // « Notre top commercial » de la page d'accueil : le premier profil de la démonstration
+        featuredSince: i === 0 ? new Date() : null,
         onboardingStep: 5,
       })
       .returning();

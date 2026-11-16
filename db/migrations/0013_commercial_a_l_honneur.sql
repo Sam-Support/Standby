@@ -1,0 +1,1 @@
+ALTER TABLE "freelancers" ADD COLUMN "featured_since" timestamp with time zone;

@@ -7,7 +7,7 @@ import { addDays, hourly, longDate, todayIso } from "@/lib/format";
 import { SIRET_LABELS, siretNameMatches } from "@/lib/services/compliance";
 import { formatSiret } from "@/lib/siret";
 import { fileUrl } from "@/lib/storage";
-import { confirmCompanyAction, freelancerStatusAction, reviewDocAction } from "../actions";
+import { confirmCompanyAction, featureFreelancerAction, freelancerStatusAction, reviewDocAction } from "../actions";
 import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Inscrits à vérifier" };
@@ -43,7 +43,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
     <>
       <PageHead label="Administration" title="Inscrits">
         Le SIRET est contrôlé dans SIRENE à l’inscription puis tous les 30 jours ; la pièce d’identité et le RIB sont validés automatiquement quand
-        Stripe les a vérifiés. Il reste à contrôler l’attestation URSSAF (code de sécurité sur urssaf.fr) et sa date de délivrance.
+        Stripe les a vérifiés. Il reste à contrôler l’attestation URSSAF (code de sécurité sur urssaf.fr) et sa date de délivrance. Dans « Tous
+        les commerciaux », « Mettre à l’honneur » affiche un profil validé sur la page d’accueil (un seul à la fois, prénom et initiale du nom).
       </PageHead>
       <div className="inline">
         <a className={`clay s btn xs ${tous ? "ghost" : ""}`} href="/admin/inscrits">À vérifier</a>
@@ -92,6 +93,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
               </div>
               <span className="inline">
                 <Status tone={f.status === "valide" ? "ok" : f.status === "refuse" ? "warn" : "info"}>{f.status.replace("_", " ")}</Status>
+                {f.featuredSince && <Status tone="info">à l’honneur sur l’accueil</Status>}
+                {f.status === "valide" && !f.blockedReason && (
+                  <ActionForm action={featureFreelancerAction.bind(null, f.id, !f.featuredSince)}>
+                    <Submit className="clay s btn xs ghost" pending="…">
+                      {f.featuredSince ? "Retirer de l’accueil" : "Mettre à l’honneur"}
+                    </Submit>
+                  </ActionForm>
+                )}
                 {f.status !== "valide" && (
                   <ActionForm action={freelancerStatusAction.bind(null, f.id, "valide")}>
                     <Submit className="clay s btn xs ok">Valider le profil</Submit>

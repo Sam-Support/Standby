@@ -78,6 +78,24 @@ const fr = (f: F, dl: DL) => ({
     title: "Votre profil est validé",
     body: "Vos documents sont vérifiés : votre profil est visible des exposants et vous recevrez vos premières missions.",
   }),
+  profileSubmitted: (): Text => ({
+    title: "Dossier reçu : votre profil est en cours de vérification",
+    body: "Merci, votre inscription est complète. Notre équipe vérifie vos documents (pièce d’identité, attestation URSSAF, RIB). Vous recevrez un e-mail dès que votre profil est validé, ou si un document est à corriger. Vous pouvez suivre l’avancement depuis votre espace.",
+  }),
+  companyCreated: (p: { company: string; verified: boolean }): Text => ({
+    title: `Bienvenue sur Stand-By, ${p.company}`,
+    body: p.verified
+      ? "Votre compte entreprise est créé et votre SIRET est vérifié. Vous pouvez réserver votre première équipe."
+      : "Votre compte entreprise est créé. Notre équipe vérifie l’identité de votre entreprise à partir de son SIRET : vous serez prévenu par e-mail. Cela ne vous empêche pas de préparer votre première réservation.",
+  }),
+  companyVerified: (): Text => ({
+    title: "Votre entreprise est vérifiée",
+    body: "Notre équipe a confirmé l’identité de votre entreprise à partir de son SIRET. Vous n’avez rien d’autre à faire.",
+  }),
+  featuredOnHome: (): Text => ({
+    title: "Vous êtes notre top commercial",
+    body: "Bravo : l’équipe Stand-By vous met à l’honneur sur la page d’accueil. Y figurent votre prénom, l’initiale de votre nom, votre ville, votre poste, vos spécialités, vos langues, votre note et votre nombre de salons. Si vous préférez ne pas y apparaître, écrivez-nous depuis la page Contact : nous vous retirons aussitôt.",
+  }),
   urssafExpired: (p: { validUntil: string }): Text => ({
     title: "Attestation URSSAF expirée : profil suspendu",
     body: `Votre attestation a expiré le ${f.longDate(p.validUntil)}. Vous ne recevez plus de missions tant qu’une attestation à jour n’est pas validée. Téléchargez-la sur urssaf.fr puis déposez-la dans votre profil.`,
@@ -133,6 +151,22 @@ const fr = (f: F, dl: DL) => ({
   verifyEmail: (p: { first: string }) => ({
     subject: "Confirmez votre adresse e-mail stand-by",
     text: `Bonjour ${p.first},\n\nConfirmez votre adresse pour pouvoir réserver une équipe ou accepter des missions. Ce lien est valable 48 heures.`,
+    link: "Confirmer mon adresse",
+  }),
+  signupResume: (p: { first: string; role: "exposant" | "commercial"; left: number; last: boolean }) => ({
+    subject: "Votre inscription Stand-By n’est pas terminée",
+    text: `Bonjour ${p.first},\n\nVotre inscription s’est arrêtée en cours de route : il vous reste ${p.left} étape${s(p.left)} sur 4 avant de pouvoir ${
+      p.role === "commercial" ? "recevoir vos premières missions" : "réserver votre équipe"
+    }. Ce que vous avez déjà saisi est conservé : connectez-vous pour reprendre là où vous vous êtes arrêté.${
+      p.last ? "\n\nC’est notre dernier rappel. Votre compte reste disponible si vous souhaitez revenir plus tard." : ""
+    }`,
+    link: "Reprendre mon inscription",
+  }),
+  verifyReminder: (p: { first: string; last: boolean }) => ({
+    subject: "Rappel : confirmez votre adresse e-mail Stand-By",
+    text: `Bonjour ${p.first},\n\nVotre adresse e-mail n’est pas encore confirmée. Sans cette confirmation, vous ne pouvez ni réserver une équipe ni accepter de mission. Ce nouveau lien est valable 48 heures.${
+      p.last ? "\n\nC’est notre dernier rappel. Vous pourrez toujours demander un nouveau lien depuis votre espace." : ""
+    }`,
     link: "Confirmer mon adresse",
   }),
   resetPassword: () => ({
@@ -229,6 +263,24 @@ const en = (f: F, dl: DL): Notices => ({
     title: "Your profile is approved",
     body: "Your documents have been checked: your profile is visible to exhibitors and you will receive your first assignments.",
   }),
+  profileSubmitted: () => ({
+    title: "Application received: your profile is being checked",
+    body: "Thank you, your registration is complete. Our team is checking your documents (ID, URSSAF certificate, bank details). You will get an e-mail as soon as your profile is approved, or if a document needs fixing. You can follow progress from your dashboard.",
+  }),
+  companyCreated: (p) => ({
+    title: `Welcome to Stand-By, ${p.company}`,
+    body: p.verified
+      ? "Your company account is created and your SIRET is verified. You can book your first team."
+      : "Your company account is created. Our team is checking your company’s identity from its SIRET: you will be told by e-mail. This does not stop you from preparing your first booking.",
+  }),
+  companyVerified: () => ({
+    title: "Your company is verified",
+    body: "Our team has confirmed your company’s identity from its SIRET. There is nothing else for you to do.",
+  }),
+  featuredOnHome: () => ({
+    title: "You are our top sales rep",
+    body: "Congratulations: the Stand-By team is featuring you on the home page. It shows your first name, the initial of your last name, your city, role, specialties, languages, rating and number of shows. If you would rather not appear there, write to us from the Contact page and we will remove you straight away.",
+  }),
   urssafExpired: (p) => ({
     title: "URSSAF certificate expired: profile suspended",
     body: `Your certificate expired on ${f.longDate(p.validUntil)}. You will not receive assignments until an up-to-date certificate is approved. Download it from urssaf.fr and upload it to your profile.`,
@@ -283,6 +335,22 @@ const en = (f: F, dl: DL): Notices => ({
   verifyEmail: (p) => ({
     subject: "Confirm your stand-by e-mail address",
     text: `Hello ${p.first},\n\nConfirm your address so you can book a team or accept assignments. This link is valid for 48 hours.`,
+    link: "Confirm my address",
+  }),
+  signupResume: (p) => ({
+    subject: "Your Stand-By registration is not finished",
+    text: `Hello ${p.first},\n\nYour registration stopped part-way: you have ${p.left} step${p.left > 1 ? "s" : ""} out of 4 left before you can ${
+      p.role === "commercial" ? "receive your first assignments" : "book your team"
+    }. What you already entered is saved: sign in to pick up where you left off.${
+      p.last ? "\n\nThis is our last reminder. Your account stays available if you want to come back later." : ""
+    }`,
+    link: "Resume my registration",
+  }),
+  verifyReminder: (p) => ({
+    subject: "Reminder: confirm your Stand-By e-mail address",
+    text: `Hello ${p.first},\n\nYour e-mail address is not confirmed yet. Without it, you cannot book a team or accept an assignment. This new link is valid for 48 hours.${
+      p.last ? "\n\nThis is our last reminder. You can always ask for a new link from your dashboard." : ""
+    }`,
     link: "Confirm my address",
   }),
   resetPassword: () => ({
@@ -372,6 +440,24 @@ const es = (f: F, dl: DL): Notices => ({
     title: "Su perfil está validado",
     body: "Sus documentos están verificados: su perfil es visible para los expositores y recibirá sus primeras misiones.",
   }),
+  profileSubmitted: () => ({
+    title: "Expediente recibido: su perfil está en verificación",
+    body: "Gracias, su inscripción está completa. Nuestro equipo verifica sus documentos (documento de identidad, certificado URSSAF, datos bancarios). Recibirá un correo en cuanto su perfil esté validado, o si hay que corregir un documento. Puede seguir el avance desde su espacio.",
+  }),
+  companyCreated: (p) => ({
+    title: `Bienvenido a Stand-By, ${p.company}`,
+    body: p.verified
+      ? "Su cuenta de empresa está creada y su SIRET está verificado. Puede reservar su primer equipo."
+      : "Su cuenta de empresa está creada. Nuestro equipo verifica la identidad de su empresa a partir de su SIRET: le avisaremos por correo. Esto no le impide preparar su primera reserva.",
+  }),
+  companyVerified: () => ({
+    title: "Su empresa está verificada",
+    body: "Nuestro equipo ha confirmado la identidad de su empresa a partir de su SIRET. No tiene que hacer nada más.",
+  }),
+  featuredOnHome: () => ({
+    title: "Usted es nuestro comercial destacado",
+    body: "Enhorabuena: el equipo de Stand-By le destaca en la página de inicio. Aparecen su nombre, la inicial de su apellido, su ciudad, su puesto, sus especialidades, sus idiomas, su valoración y su número de ferias. Si prefiere no aparecer, escríbanos desde la página Contacto y le retiraremos de inmediato.",
+  }),
   urssafExpired: (p) => ({
     title: "Certificado URSSAF caducado: perfil suspendido",
     body: `Su certificado caducó el ${f.longDate(p.validUntil)}. No recibirá misiones hasta que se valide un certificado actualizado. Descárguelo en urssaf.fr y súbalo a su perfil.`,
@@ -427,6 +513,22 @@ const es = (f: F, dl: DL): Notices => ({
     subject: "Confirme su correo electrónico de stand-by",
     text: `Hola, ${p.first}:\n\nConfirme su dirección para poder reservar un equipo o aceptar misiones. Este enlace es válido durante 48 horas.`,
     link: "Confirmar mi dirección",
+  }),
+  signupResume: (p) => ({
+    subject: "Su inscripción en Stand-By no está terminada",
+    text: `Hola ${p.first}:\n\nSu inscripción se quedó a medias: le queda${p.left > 1 ? "n" : ""} ${p.left} paso${p.left > 1 ? "s" : ""} de 4 antes de poder ${
+      p.role === "commercial" ? "recibir sus primeras misiones" : "reservar su equipo"
+    }. Lo que ya introdujo está guardado: inicie sesión para continuar donde lo dejó.${
+      p.last ? "\n\nEste es nuestro último recordatorio. Su cuenta sigue disponible si desea volver más adelante." : ""
+    }`,
+    link: "Continuar mi inscripción",
+  }),
+  verifyReminder: (p) => ({
+    subject: "Recordatorio: confirme su correo electrónico de Stand-By",
+    text: `Hola ${p.first}:\n\nSu correo electrónico aún no está confirmado. Sin esa confirmación no puede reservar un equipo ni aceptar una misión. Este nuevo enlace es válido durante 48 horas.${
+      p.last ? "\n\nEste es nuestro último recordatorio. Siempre podrá pedir un nuevo enlace desde su espacio." : ""
+    }`,
+    link: "Confirmar mi correo",
   }),
   resetPassword: () => ({
     subject: "Restablecer su contraseña de stand-by",

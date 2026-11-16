@@ -98,10 +98,10 @@ nav.clay.nav { position: sticky; top: 14px; z-index: 30; }
 html { scroll-padding-top: 104px; } /* ancres (#avis, #leads…) visibles sous la barre collante */
 .logo { display: flex; align-items: center; gap: 9px; font-size: 26px; color: var(--ink); text-decoration: none; }
 .logo .logo-mark { width: 30px; height: 30px; flex: none; }
-.tabs { margin-left: auto; display: flex; gap: 2px; padding: 5px; border-radius: 14px; }
+.tabs { margin-left: auto; display: flex; gap: 2px; padding: 5px; border-radius: 14px; min-width: 0; overflow-x: auto; }
 .tab { padding: 10px 15px; border-radius: 14px; font: 700 14px/1 var(--sans); color: var(--muted); text-decoration: none; white-space: nowrap; }
 .tab.on { --c: var(--primary); color: #fff; }
-.navright { display: flex; gap: 8px; align-items: center; }
+.navright { display: flex; gap: 8px; align-items: center; flex: none; }
 .bell { position: relative; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--ink); text-decoration: none; }
 .bell b { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger); color: #fff; font: 800 11px/18px var(--sans); text-align: center; padding: 0 4px; }
 
@@ -193,6 +193,12 @@ label:has(> input:focus-visible), .chip:has(input:focus-visible), .rcard:has(inp
 dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .note { font-size: 14px; padding: 10px 14px; border-radius: 14px; background: #ffebc2; color: #8a5200; font-weight: 600; }
 .note.info { background: #dcdfff; color: var(--link); }
+/* profil en cours de vérification (espace commercial) : titre, explication, état de chaque document */
+.note.review { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; }
+.note.review strong { font: 800 16px/1.25 var(--sans); }
+.note.review p { font-weight: 500; }
+.note.review ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.note.review li { display: flex; align-items: center; gap: 8px; }
 .note.ok { background: #d3f2e3; color: var(--ok); }
 /* confirmations des formulaires (components/flash.tsx), sous la barre de navigation */
 .flash { position: fixed; top: 92px; left: 16px; right: 16px; z-index: 40; max-width: 640px; margin: 0 auto; pointer-events: none; }
@@ -289,9 +295,35 @@ details.more[open] > summary::after { transform: rotate(225deg); }
 .salon-body { padding: 0 8px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .salon-body h3 { font: 800 18px/1.25 var(--sans); }
 .salon > .btn { margin: 6px 8px 0; }
+.hero-more { align-self: flex-start; font: 700 15px/1.2 var(--sans); color: var(--link); text-underline-offset: 4px; }
+/* simulateur de coût (components/cost-simulator.tsx) */
+.sim { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.sim-form { flex: 999 1 520px; min-width: 0; border-radius: 24px; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+.sim-when { display: grid; grid-template-columns: minmax(250px, 1.5fr) repeat(2, minmax(130px, 1fr)); gap: 12px; align-items: end; }
+.sim-when .row { min-height: 54px; }
+.sim-when .row b { white-space: nowrap; }
+.sim-result { flex: 1 1 300px; max-width: 380px; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px; }
+.sim-lines { margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.sim-lines div { display: flex; justify-content: space-between; gap: 12px; }
+.sim-lines dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.sim-lines div:last-child { padding-top: 8px; border-top: 1px solid rgba(52, 58, 112, 0.14); }
+/* « Notre top commercial » : un profil choisi dans l'admin */
+.topcard { --c: #e7e9ff; border-radius: 24px; padding: 32px; display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; }
+.topcard-id { flex: 1 1 300px; display: flex; gap: 18px; align-items: center; min-width: 0; }
+.topcard-id > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.topcard-id h3 { font-size: 30px; line-height: 1.1; }
+.topcard-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 14px 28px; }
+.topcard-facts li { display: flex; flex-direction: column; gap: 2px; }
+.topcard-facts b { font-size: 34px; line-height: 1.05; white-space: nowrap; }
+.topcard-tags { flex: 1 1 300px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; min-width: 0; }
+.topcard-tags > div { display: flex; flex-direction: column; gap: 8px; }
+/* réassurance : les deux cartes partagent leurs lignes (étiquette, titre, arguments, bouton), les boutons sont donc
+   à la même hauteur et de même largeur */
 .audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 22px; }
-.audience { border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+/* sans sous-grille (anciens navigateurs) : la liste prend la place restante, le bouton reste en bas */
+.audience { border-radius: 24px; padding: 32px; display: grid; grid-template-rows: auto auto 1fr auto; grid-template-rows: subgrid; grid-row: span 4; gap: 16px; }
 .audience h3 { font-size: 30px; line-height: 1.1; }
+.audience .btn { align-self: end; text-align: center; }
 /* visuel d'un salon : logo aux bonnes dimensions, sinon nom sur la couleur de l'événement (components/event-art.tsx) */
 .eart { border-radius: 16px; overflow: hidden; display: grid; place-items: center; min-height: 56px; }
 .eart.logo { background: #fff; box-shadow: inset 0 0 0 1px rgba(52, 58, 112, 0.1); }
@@ -363,6 +395,19 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .invoice { box-shadow: none; padding: 0; }
 }
 
+/* en-tête sur tablette : initiales à la place du nom du compte (gardé pour les lecteurs d'écran), puis onglets sur
+   une deuxième ligne. Sans cela, un compte connecté débordait de l'écran entre 760 et 1 070 px. */
+@media (max-width: 1100px) {
+  .acct .full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .acct .short { display: inline; }
+  .navright .btn.acct { width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 13px; }
+}
+@media (max-width: 960px) {
+  html { scroll-padding-top: 132px; }
+  .nav { flex-wrap: wrap; gap: 10px 8px; }
+  .tabs { order: 3; width: 100%; margin-left: 0; }
+  .navright { margin-left: auto; }
+}
 @media (max-width: 900px) {
   .foot .cols { grid-template-columns: 1fr 1fr; }
   .aside { position: static; max-width: none; }
@@ -374,7 +419,7 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .nav { flex-wrap: wrap; gap: 10px 8px; padding: 10px 10px 10px 16px; }
   .logo { font-size: 22px; }
   .logo .logo-mark { width: 26px; height: 26px; }
-  .tabs { order: 3; width: 100%; margin-left: 0; overflow-x: auto; mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .tabs { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
   .tab { padding: 9px 13px; font-size: 13px; }
   .navright { margin-left: auto; gap: 6px; }
   .navright .btn { padding: 10px 12px; font-size: 13px; }
@@ -407,7 +452,17 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .audiences { gap: 14px; }
   .audience { padding: 22px; gap: 14px; }
   .audience h3 { font-size: 24px; }
-  .audience .btn { width: 100%; }
+  .sim { gap: 14px; }
+  .sim-form { padding: 18px; }
+  .sim-when { grid-template-columns: 1fr 1fr; }
+  .sim-when .row { grid-column: 1 / -1; }
+  .sim-result { max-width: none; position: static; padding: 20px; }
+  .sim-result .btn { width: 100%; }
+  .topcard { padding: 22px; gap: 20px; }
+  .topcard-id, .topcard-tags { flex-basis: 100%; }
+  .topcard-id h3 { font-size: 24px; }
+  .topcard-facts b { font-size: 28px; }
+  .topcard-tags .btn { width: 100%; }
   /* tableaux de bord */
   .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .kpi { padding: 14px 12px; gap: 6px; border-radius: 18px; }
@@ -434,11 +489,7 @@ details.more[open] > summary::after { transform: rotate(225deg); }
   .cookiebar { left: 8px; right: 8px; bottom: 8px; }
 }
 @media (max-width: 520px) {
-  /* en-tête sur une ligne : initiales à la place du nom, déconnexion depuis l'espace ou « Mon compte » */
-  /* nom complet gardé pour les lecteurs d'écran, initiales affichées */
-  .acct .full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-  .acct .short { display: inline; }
-  .navright .btn.acct { width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 13px; }
+  /* en-tête sur une ligne : déconnexion depuis l'espace ou « Mon compte » */
   .nav-logout { display: none !important; }
   .langs a { padding: 7px 5px; }
 }
