@@ -8,6 +8,7 @@ import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { confirmCompanySiret, reviewDocument } from "@/lib/services/accounts";
+import { eventsWorkbookToCsv } from "@/lib/services/events-template";
 import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setFeaturedFreelancer, setPricing } from "@/lib/services/admin";
 import { chargeBooking, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
@@ -71,9 +72,11 @@ export async function removeLogoAction(id: string): Promise<FormState> {
 export async function importCsvAction(_: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
-    const f = await readUpload(file(fd, "csv"), ["csv", "txt"]);
-    if (!f) return { error: "Choisissez un fichier CSV." };
-    const res = await importEventsCsv(await getDb(), admin.id, f.data.toString("utf8"));
+    const f = await readUpload(file(fd, "csv"), ["csv", "txt", "xlsx"]);
+    if (!f) return { error: "Choisissez un fichier CSV ou Excel." };
+    // le classeur Excel suit le même import que le CSV (mêmes colonnes, mêmes contrôles)
+    const text = f.name.toLowerCase().endsWith(".xlsx") ? await eventsWorkbookToCsv(f.data) : f.data.toString("utf8");
+    const res = await importEventsCsv(await getDb(), admin.id, text);
     revalidatePath("/", "layout");
     return res.errors.length ? { error: `${res.created} salon(s) importé(s). ${res.errors.slice(0, 5).join(" · ")}` } : { ok: `${res.created} salon(s) importé(s).` };
   } catch (e) {

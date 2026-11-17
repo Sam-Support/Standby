@@ -111,17 +111,22 @@ export async function removeEventLogo(db: Db, adminId: string, id: string) {
 
 /** Import CSV (séparateur ; ou ,) : nom;type;ville;debut;fin;montage;secteur;specialite;site */
 export async function importEventsCsv(db: Db, adminId: string, text: string) {
-  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
+  // les lignes vides sont ignorées, mais gardent leur numéro : « Ligne 6 » est la ligne 6 du fichier (ou d'Excel)
+  const lines = text
+    .replace(/^﻿/, "")
+    .split(/\r?\n/)
+    .map((line, i) => ({ line, n: i + 1 }))
+    .filter(({ line }) => line.trim());
   if (lines.length < 2) throw new AdminError("Le fichier doit contenir une ligne d’en-têtes et au moins un salon.");
-  const sep = lines[0].includes(";") ? ";" : ",";
-  const head = lines[0].split(sep).map((h) => slugify(h));
+  const sep = lines[0].line.includes(";") ? ";" : ",";
+  const head = lines[0].line.split(sep).map((h) => slugify(h));
   const col = (row: string[], ...names: string[]) => {
     const i = head.findIndex((h) => names.includes(h));
     return i >= 0 ? (row[i] ?? "").trim().replace(/^"|"$/g, "") : "";
   };
   const errors: string[] = [];
   let created = 0;
-  for (const [n, line] of lines.slice(1).entries()) {
+  for (const { line, n } of lines.slice(1)) {
     const row = line.split(sep);
     const kind = slugify(col(row, "type", "kind")) === "foire" ? "foire" : "salon";
     try {
@@ -141,7 +146,7 @@ export async function importEventsCsv(db: Db, adminId: string, text: string) {
       });
       created++;
     } catch (e) {
-      errors.push(`Ligne ${n + 2} : ${e instanceof Error ? e.message : "erreur"}`);
+      errors.push(`Ligne ${n} : ${e instanceof Error ? e.message : "erreur"}`);
     }
   }
   return { created, errors };

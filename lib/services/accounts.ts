@@ -17,6 +17,7 @@ import {
 import { hourly } from "@/lib/format";
 import { DEFAULT_LANG, isLang, localizePath, type Lang } from "@/lib/i18n/config";
 import { notices } from "@/lib/i18n/messages/notices";
+import { isPwnedPassword } from "@/lib/password-check";
 import { sendEmail } from "@/lib/integrations/email";
 import { lookupSiret } from "@/lib/integrations/sirene";
 import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/integrations/stripe";
@@ -39,6 +40,11 @@ export class AccountError extends Error {}
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Refuse un mot de passe connu des fuites de données (contrôle facultatif : voir lib/password-check.ts). */
+async function assertNotPwned(password: string) {
+  if (await isPwnedPassword(password)) throw new AccountError("Ce mot de passe figure dans des fuites de données connues. Choisissez-en un autre.");
+}
+
 export async function registerAccount(
   db: Db,
   input: { email: string; password: string; role: "exposant" | "commercial"; firstName: string; lastName: string; phone?: string; locale?: Lang },
@@ -49,6 +55,7 @@ export async function registerAccount(
   if (!input.firstName.trim() || !input.lastName.trim()) throw new AccountError("Indiquez votre prénom et votre nom.");
   const [exists] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
   if (exists) throw new AccountError("Un compte existe déjà avec cet e-mail. Connectez-vous.");
+  await assertNotPwned(input.password);
   let id: string;
   try {
     id = await createIdentity(email, input.password);
@@ -122,6 +129,8 @@ export async function requestPasswordReset(db: Db, email: string) {
 
 export async function resetPassword(db: Db, token: string, password: string) {
   if (password.length < 10) throw new AccountError("Le mot de passe doit contenir au moins 10 caractères.");
+  // avant de consommer le lien : un mot de passe refusé ne doit pas brûler la demande
+  await assertNotPwned(password);
   // consommé en une seule requête : deux envois simultanés du même lien ne passent pas tous les deux
   const [r] = await db
     .update(s.passwordResets)
@@ -154,6 +163,7 @@ export async function changePassword(db: Db, user: AccountUser, current: string,
   if (next.length < 10) throw new AccountError("Le nouveau mot de passe doit contenir au moins 10 caractères.");
   if (next === current) throw new AccountError("Choisissez un mot de passe différent de l’actuel.");
   await assertPassword(db, user, current, "Mot de passe actuel incorrect.");
+  await assertNotPwned(next);
   await updateIdentityPassword(db, user.id, next);
   const version = await bumpSessionVersion(db, user.id);
   const lang = langOf(user);

@@ -29,12 +29,18 @@ export default async function Page() {
         Le calendrier affiché sur l’accueil et dans la réservation. Marquez les dates comme vérifiées après contrôle sur le site de l’organisateur.
       </PageHead>
       <section className="clay panel">
-        <h2>Import CSV</h2>
+        <h2>Import Excel ou CSV</h2>
         <p className="muted small">
-          Séparateur « ; » ou « , ». Colonnes : nom ; type (salon/foire) ; ville ; debut (AAAA-MM-JJ) ; fin ; montage ; secteur ; specialite ; site
+          Téléchargez le modèle, remplissez une ligne par salon ou foire, puis importez le fichier. Colonnes : nom ; type (salon/foire) ; ville ; début
+          (AAAA-MM-JJ) ; fin ; montage ; secteur ; spécialité ; site. L’import crée des événements (il ne met pas à jour ceux qui existent déjà).
         </p>
+        <div className="inline">
+          <a className="clay s btn sm butter" href="/admin/salons/modele" download>
+            Télécharger le modèle Excel
+          </a>
+        </div>
         <ActionForm action={importCsvAction} className="inline">
-          <input className="input" type="file" name="csv" accept=".csv,.txt" required aria-label="Fichier CSV" style={{ maxWidth: 320 }} />
+          <input className="input" type="file" name="csv" accept=".xlsx,.csv,.txt" required aria-label="Fichier Excel ou CSV" style={{ maxWidth: 320 }} />
           <Submit className="clay s btn sm" pending="Import…">Importer</Submit>
         </ActionForm>
       </section>

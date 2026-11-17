@@ -19,22 +19,32 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `node scripts/e2e-reset.mjs && npx next start -p ${PORT}`,
-    url: `http://localhost:${PORT}/api/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      DB_DRIVER: "pglite",
-      PGLITE_DIR: ".data/e2e",
-      APP_URL: `http://localhost:${PORT}`,
-      COOKIE_INSECURE: "1",
-      CRON_SECRET: "e2e",
-      AUTH_SECRET: "e2e-secret-de-test-uniquement-pour-playwright",
-      DEMO_DATES_SLIDE: "1", // le calendrier de démo suit la date du jour (db/seed.ts)
-      // SIRENE hors ligne : les inscriptions de test ne dépendent pas d'une API publique (SIRET « à vérifier »)
-      INSEE_API_KEY: "",
-      RECHERCHE_ENTREPRISES_URL: "http://127.0.0.1:9",
+  webServer: [
+    {
+      // faux « Pwned Passwords » : un seul mot de passe y est divulgué (scripts/e2e-pwned.mjs)
+      command: `node scripts/e2e-pwned.mjs`,
+      url: `http://127.0.0.1:3199/range/00000`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
     },
-  },
+    {
+      command: `node scripts/e2e-reset.mjs && npx next start -p ${PORT}`,
+      url: `http://localhost:${PORT}/api/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        PWNED_PASSWORDS_URL: "http://127.0.0.1:3199",
+        DB_DRIVER: "pglite",
+        PGLITE_DIR: ".data/e2e",
+        APP_URL: `http://localhost:${PORT}`,
+        COOKIE_INSECURE: "1",
+        CRON_SECRET: "e2e",
+        AUTH_SECRET: "e2e-secret-de-test-uniquement-pour-playwright",
+        DEMO_DATES_SLIDE: "1", // le calendrier de démo suit la date du jour (db/seed.ts)
+        // SIRENE hors ligne : les inscriptions de test ne dépendent pas d'une API publique (SIRET « à vérifier »)
+        INSEE_API_KEY: "",
+        RECHERCHE_ENTREPRISES_URL: "http://127.0.0.1:9",
+      },
+    },
+  ],
 });

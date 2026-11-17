@@ -16,6 +16,10 @@ const EXACT: Record<string, Tr> = {
   "Terminez d’abord l’étape précédente.": { en: "Complete the previous step first.", es: "Complete primero el paso anterior." },
   "Compte introuvable.": { en: "Account not found.", es: "Cuenta no encontrada." },
   "Entreprise introuvable.": { en: "Company not found.", es: "Empresa no encontrada." },
+  "Ce mot de passe figure dans des fuites de données connues. Choisissez-en un autre.": {
+    en: "This password appears in known data breaches. Please choose another one.",
+    es: "Esta contraseña aparece en filtraciones de datos conocidas. Elija otra.",
+  },
   "Un compte existe déjà avec cet e-mail. Connectez-vous.": { en: "An account already exists with this e-mail. Please log in.", es: "Ya existe una cuenta con este correo. Inicie sesión." },
   "Cette adresse est déjà utilisée par un autre compte.": { en: "This address is already used by another account.", es: "Esta dirección ya la utiliza otra cuenta." },
   "C’est déjà l’adresse de votre compte.": { en: "This is already your account address.", es: "Esta ya es la dirección de su cuenta." },

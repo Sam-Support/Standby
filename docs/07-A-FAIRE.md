@@ -2,7 +2,7 @@
 
 Le produit est terminé côté code : réservation, espaces entreprise et commercial, administration, facturation
 et autofacturation, trois langues, e-mails Resend, version mobile revue, logos contrôlés. Les corrections de la
-revue de sécurité sont faites. Tout est testé : 120 tests unitaires, 68 tests de bout en bout sur le build de
+revue de sécurité sont faites. Tout est testé : 134 tests unitaires, 71 tests de bout en bout sur le build de
 production, dont 5 sur téléphone. L'hébergement est passé du VPS à **Vercel + Supabase** (ADR-003).
 
 **Le site est en ligne sur https://www.stand-by.fr** (`stand-by.fr` y renvoie), avec Stripe en mode test : on
@@ -54,11 +54,16 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
       choisi. Le commercial reçoit une notification.
 - [ ] ⚖️ Politique de confidentialité : mentionner l'affichage public du commercial à l'honneur (prénom, initiale
       du nom, ville, poste, spécialités, langues, note, nombre de salons) et le retrait sur simple demande.
+- [ ] ⚖️ Contrôle des mots de passe divulgués : à l'inscription, à la réinitialisation et au changement de mot de
+      passe, l'appli interroge Have I Been Pwned (service Pwned Passwords), en n'envoyant que 5 caractères de
+      l'empreinte SHA-1 du mot de passe. À mentionner dans la politique de confidentialité si l'avocat le juge utile.
+      Réglage : `PWNED_PASSWORDS_URL` (`off` pour couper).
 - [ ] ⚖️ Relances d'inscription (J+1, J+3, J+7, voir [`05-EMAILS.md`](05-EMAILS.md)) : faire confirmer qu'elles
       relèvent bien du suivi de compte, et fixer la durée de conservation des comptes jamais terminés (aujourd'hui
       ils sont gardés sans limite).
-- [ ] 🧑 Calendrier réel des salons : import CSV dans `/admin/salons`, dates vérifiées, logos uniquement avec
-      l'accord écrit de l'organisateur.
+- [ ] 🧑 Calendrier réel des salons : modèle Excel à télécharger dans `/admin/salons` (« Télécharger le modèle
+      Excel »), rempli puis réimporté (le CSV marche aussi). Dates à vérifier ensuite sur le site de l'organisateur,
+      logos uniquement avec l'accord écrit de l'organisateur.
 
 ## 4. Recette, puis ouverture
 
