@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { shortName, lastInitial } from "@/lib/names";
 import { getFmt, getLang, getMessages } from "@/lib/i18n/server";
 import { booking } from "@/lib/i18n/messages/booking";
 import { domainLabels } from "@/lib/i18n/messages/domain";
@@ -101,7 +102,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {sec.cards.map((c) => (
                     <article key={c.id} className={`clay tc${c.selected ? " on" : ""}`}>
                       <div className="top">
-                        <Avatar first={c.firstName} last={c.lastName} color={sec.role === "accueil" ? "#FF8CB6" : c.avatarColor} size={54} />
+                        <Avatar first={c.firstName} last={lastInitial(c.lastName)} color={sec.role === "accueil" ? "#FF8CB6" : c.avatarColor} size={54} />
                         <span className="match">{t.match(c.score)}</span>
                         <ActionForm action={toggleFav.bind(null, id, c.id)} style={{ marginLeft: "auto" }}>
                           <button className={`fav${c.favorite ? " is" : ""}`} aria-pressed={c.favorite} aria-label={c.favorite ? t.unfav(c.firstName) : t.fav(c.firstName)}>
@@ -110,7 +111,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                         </ActionForm>
                       </div>
                       <h3>
-                        {c.firstName} {c.lastName}
+                        {shortName(c.firstName, c.lastName)}
                       </h3>
                       <span className="muted small">
                         {dl.role(sec.role).short} · {c.city}

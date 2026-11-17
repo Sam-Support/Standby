@@ -1,6 +1,9 @@
 // Référentiels métier repris du design.
 
-export type RoleKey = "commercial" | "accueil" | "interprete" | "chef" | "animateur" | "demonstrateur";
+export type RoleKey = "commercial" | "accueil" | "interprete" | "chef" | "animateur" | "demonstrateur" | "prospecteur";
+
+/** Formule de réservation : équipe de stand, ou prospection autonome dans les allées (sans stand). */
+export type OfferKey = "stand" | "prospection";
 
 export const ROLES: Record<
   RoleKey,
@@ -54,11 +57,23 @@ export const ROLES: Record<
     color: "#68D1A4",
     rare: true,
   },
+  prospecteur: {
+    label: "Prospecteur·rice autonome",
+    short: "Prospection",
+    plural: "prospecteurs",
+    desc: "prospection dans les allées du salon, sans stand",
+    color: "#FF9F55",
+    rare: false,
+  },
 };
+
+/** Postes de la formule « prospection » ; tous les autres sont des postes de stand. */
+export const PROSPECTION_ROLES: RoleKey[] = ["prospecteur"];
+export const isProspectionRole = (r: string) => (PROSPECTION_ROLES as string[]).includes(r);
 
 export const ROLE_KEYS = Object.keys(ROLES) as RoleKey[];
 // Ordre d'affichage du formulaire d'inscription commercial·e
-export const SIGNUP_ROLE_ORDER: RoleKey[] = ["chef", "commercial", "accueil", "animateur", "demonstrateur", "interprete"];
+export const SIGNUP_ROLE_ORDER: RoleKey[] = ["chef", "commercial", "prospecteur", "accueil", "animateur", "demonstrateur", "interprete"];
 
 export function isRoleKey(v: string): v is RoleKey {
   return v in ROLES;
@@ -171,6 +186,10 @@ export const PRICING_DEFAULTS: Record<string, { value: number; label: string; un
   "floor:chef": { value: 3600, label: "Tarif plancher · Chef·fe de stand", unit: "cents" },
   "floor:animateur": { value: 2300, label: "Tarif plancher · Animateur·rice", unit: "cents" },
   "floor:demonstrateur": { value: 2500, label: "Tarif plancher · Démonstrateur·rice produit", unit: "cents" },
+  "floor:prospecteur": { value: 3000, label: "Tarif plancher · Prospecteur·rice autonome", unit: "cents" },
+  // Commission des commerciaux : valeurs proposées à l'entreprise dans son offre (qu'elle peut modifier)
+  commission_lead_default_cents: { value: 500, label: "Commission proposée par lead qualifié", unit: "cents" },
+  commission_sale_default_bps: { value: 500, label: "Commission proposée sur les ventes réalisées sur le stand", unit: "bps" },
   // Barème d'annulation (selon le nombre de jours avant le premier jour réservé)
   cancel_free_days: { value: 14, label: "Annulation gratuite à partir de (jours avant le 1er jour)", unit: "days" },
   cancel_tier1_days: { value: 7, label: "Palier 1 : à partir de (jours avant)", unit: "days" },

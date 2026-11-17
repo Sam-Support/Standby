@@ -5,7 +5,8 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { PageHead, Status } from "@/components/ui";
 import { euros, longDate } from "@/lib/format";
 import { REFUND_LABELS } from "@/lib/services/credit-notes";
-import { retryPaymentAction, runJobsAction } from "../actions";
+import { markPaymentReceivedAction, markPayoutPaidAction, retryPaymentAction, runJobsAction } from "../actions";
+import { manualPayments } from "@/lib/payment-mode";
 import { requireAdmin } from "@/lib/auth/session";
 
 export const metadata = { title: "Finances" };
@@ -154,10 +155,16 @@ export default async function Page() {
                 {b.ref} · {euros(p.amountCents)} <Status tone={p.status === "reussi" ? "ok" : p.status === "echoue" ? "warn" : "info"}>{p.status.replace("_", " ")}</Status>
                 {p.error && <span className="muted small"> · {p.error}</span>}
               </span>
-              {p.status === "echoue" && (
-                <ActionForm action={retryPaymentAction.bind(null, p.id)}>
-                  <Submit className="clay s btn xs">Relancer</Submit>
+              {manualPayments() && p.status !== "reussi" ? (
+                <ActionForm action={markPaymentReceivedAction.bind(null, p.id)}>
+                  <Submit className="clay s btn xs ok">Paiement reçu</Submit>
                 </ActionForm>
+              ) : (
+                p.status === "echoue" && (
+                  <ActionForm action={retryPaymentAction.bind(null, p.id)}>
+                    <Submit className="clay s btn xs">Relancer</Submit>
+                  </ActionForm>
+                )
               )}
             </div>
           ))}
@@ -170,8 +177,13 @@ export default async function Page() {
               <span>
                 {pr.firstName} {pr.lastName} · {euros(p.amountCents)}
               </span>
-              <span>
+              <span className="inline" style={{ gap: 6 }}>
                 <Status tone={p.status === "transfere" ? "ok" : p.status === "echoue" ? "warn" : "info"}>{p.status}</Status> <span className="muted small">{longDate(p.scheduledFor)}</span>
+                {manualPayments() && p.status !== "transfere" && (
+                  <ActionForm action={markPayoutPaidAction.bind(null, p.id)}>
+                    <Submit className="clay s btn xs ok">Virement fait</Submit>
+                  </ActionForm>
+                )}
               </span>
             </div>
           ))}

@@ -37,6 +37,49 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
 | [x] | Vercel : variables posées (dont `APP_URL`), production redéployée ; `/api/health?db=1` répond, le Schedule tourne | 🤖 | fait |
 | [x] | Premier administrateur après le premier déploiement : inscription (étape 1) avec votre mot de passe, puis promotion dans Supabase (tutoriel, étape 7 ; 🤖 peut faire la promotion) ; contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
 
+## 2 bis. Mode manuel (en attendant Stripe en mode réel)
+
+Depuis le 17 novembre 2026, la production tourne avec `PAYMENT_MODE=manuel` (variable Vercel, environnement
+Production). Aucun argent ne passe par Stripe ; Stripe reste branché pour plus tard.
+
+- **Ce qui change pour l'entreprise** : pas de moyen de paiement à enregistrer ; la réservation est confirmée
+  directement, l'équipe la contacte pour le contrat. Elle voit les commerciaux en « Prénom N. », sans téléphone,
+  tant que l'équipe n'a pas cliqué **« Autoriser le contact »** sur la réservation (`/admin/reservations/…`). Le
+  commercial ne voit pas non plus le téléphone du référent avant ce clic.
+- **Ce qui change pour le commercial** : pas de compte Stripe à ouvrir ; LinkedIn ou Instagram (au moins l'un des
+  deux) demandés à l'inscription, visibles seulement dans `/admin/inscrits`.
+- **E-mails d'étape à `SUPPORT_EMAIL`** (catégorie « equipe », lisibles aussi dans `/admin/emails`) : inscription
+  terminée d'une entreprise, dossier d'un commercial, réservation confirmée, mission acceptée ou refusée, équipe
+  complète, désistement, annulation, facture à encaisser, nouvel avis. Chacun contient la fiche complète de la
+  réservation (société, SIRET, contact, salon, jours, postes, commission, équipe avec coordonnées) pour établir
+  les contrats. Si `SUPPORT_EMAIL` manque, `/admin` l'indique et aucun e-mail d'étape ne part.
+- **À faire à la main, puis à noter dans l'administration** :
+  - virement de l'entreprise reçu → **« Paiement reçu »** (réservation ou `/admin/finances`) : la réservation passe
+    en payée, les autofactures et la paie des commerciaux sont programmées ;
+  - virement fait au commercial → **« Virement fait »** dans `/admin/finances` ;
+  - avoir d'une annulation déjà payée → rembourser par virement, puis **« Remboursé par virement »**.
+- **Revenir à Stripe** : supprimer `PAYMENT_MODE` dans Vercel (ou le vider) et redéployer.
+
+## 2 ter. Formules, commission et avis (17 novembre 2026)
+
+- **Formule « Prospection dans les allées »** : des prospecteurs autonomes (nouveau poste, 30 €/h plancher)
+  prospectent sur le salon sans stand. L'entreprise décrit ses cibles dans le brief (obligatoire). Lien direct :
+  `/reserver/nouveau?formule=prospection`. Les commerciaux cochent ce poste dans leur profil. 🧑 Rappel J-7 :
+  badges **visiteur** (et non exposant) à demander à l'organisateur.
+- **Commission des commerciaux**, réglée par l'entreprise à l'étape équipe : aucune, par lead qualifié (5 € par
+  défaut) ou en % des ventes réalisées sur le stand (5 % par défaut ; pas pour la prospection). Après le salon,
+  l'entreprise indique avec les heures le nombre de leads retenus (pré-rempli avec les leads remontés) ou le montant
+  des ventes HT. La commission s'ajoute à la facture (frais de service compris) et à la paie du commercial.
+  🧑 Valeurs proposées par défaut et tarif plancher du prospecteur réglables dans `/admin/tarification`.
+- **Avis sur l'accueil** : dans `/admin/avis`, « Publier sur l'accueil » affiche un avis (avec commentaire) sur la
+  page d'accueil. Le nom de la société n'apparaît que si elle a coché l'accord en laissant l'avis ; sinon
+  « Exposant » et son secteur. Le commercial y figure en prénom et initiale. La section reste masquée tant
+  qu'aucun avis n'est publié.
+- [ ] ⚖️ CGV et contrats : formule prospection (badge visiteur, règlement des salons sur la prospection dans les
+      allées), commission sur résultats déclarés par l'entreprise, paiement par virement pendant le mode manuel.
+- [ ] ⚖️ Politique de confidentialité : liens LinkedIn et Instagram des commerciaux (vérification du profil,
+      vus par l'équipe seulement) ; publication des avis avec le nom de la société sur accord.
+
 ## 3. Contenu, juridique, métier
 
 - [ ] ⚖️ Compléter les passages `[…]` des textes juridiques : éditeur, hébergeur, délais et pénalités, barème

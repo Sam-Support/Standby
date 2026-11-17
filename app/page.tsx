@@ -1,4 +1,6 @@
 import Link from "@/components/link";
+import { publishedReviews } from "@/lib/services/reviews";
+import { features } from "@/lib/i18n/messages/features";
 import { getDb } from "@/db";
 import { CostSimulator } from "@/components/cost-simulator";
 import { EventArt } from "@/components/event-art";
@@ -23,7 +25,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const stats = await platformStats(db);
   const pricing = await getPricing(db);
   const top = await featuredFreelancer(db);
+  const reviews = await publishedReviews(db);
   const t = await getMessages(home);
+  const x = await getMessages(features);
   const f = await getFmt();
   const dl = domainLabels(f.lang);
 
@@ -111,6 +115,27 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           <p className="muted">{t.simulator.lead}</p>
         </div>
         <CostSimulator floors={pricing.floors} serviceFeeBps={pricing.serviceFeeBps} vatBps={pricing.vatBps} />
+      </section>
+
+      <section className="section" aria-labelledby="prospection-title">
+        <article className="clay prospect">
+          <div>
+            <span className="lab">{x.landing.eyebrow}</span>
+            <h2 className="big" id="prospection-title">{x.landing.title}</h2>
+            <p className="muted">{x.landing.lead}</p>
+            <Link className="clay btn" href="/reserver/nouveau?formule=prospection" prefetch={false}>
+              {x.landing.cta}
+            </Link>
+          </div>
+          <ul className="ticks">
+            {x.landing.ticks.map((tick) => (
+              <li key={tick}>
+                <i className="clay s" style={{ ["--c" as string]: "#FF9F55" }} aria-hidden="true"></i>
+                {tick}
+              </li>
+            ))}
+          </ul>
+        </article>
       </section>
 
       <section className="section" aria-labelledby="agenda-title">
@@ -216,6 +241,36 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               </Link>
             </div>
           </article>
+        </section>
+      )}
+
+      {/* avis choisis dans /admin/avis ; la société n'est nommée qu'avec son accord */}
+      {reviews.length > 0 && (
+        <section className="section" aria-labelledby="reviews-title">
+          <div className="section-head">
+            <div>
+              <span className="lab">{x.reviews.eyebrow}</span>
+              <h2 className="big" id="reviews-title">{x.reviews.title}</h2>
+            </div>
+            <p className="muted">{x.reviews.lead}</p>
+          </div>
+          <div className="quotes">
+            {reviews.map((r) => (
+              <figure key={r.id} className="clay quote">
+                <span className="stars" role="img" aria-label={x.reviews.stars(r.rating)}>
+                  {"★".repeat(r.rating)}
+                  {"☆".repeat(5 - r.rating)}
+                </span>
+                <blockquote>{r.comment}</blockquote>
+                <figcaption className="small">
+                  <b>{r.company ?? [x.reviews.exhibitor, r.sector].filter(Boolean).join(" · ")}</b>
+                  {r.event && <span className="muted"> · {r.event}</span>}
+                  <br />
+                  <span className="muted">{x.reviews.about(r.freelancer)}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </section>
       )}
 

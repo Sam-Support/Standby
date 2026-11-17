@@ -6,6 +6,7 @@ import { BOOKING_STATUS_LABELS } from "@/lib/domain";
 import { euros, percent } from "@/lib/format";
 import { stripeEnabled } from "@/lib/integrations/stripe";
 import { hubspotEnabled } from "@/lib/integrations/hubspot";
+import { manualPayments } from "@/lib/payment-mode";
 import { ocrEnabled } from "@/lib/integrations/ocr";
 import { supabaseEnabled } from "@/lib/integrations/supabase";
 import { dashboardStats } from "@/lib/services/admin";
@@ -39,7 +40,13 @@ export default async function Page() {
   };
   const services: [string, boolean][] = [
     ["Base et authentification Supabase", supabaseEnabled() || Boolean(databaseUrl())],
-    ["Paiements Stripe Connect", stripeEnabled()],
+    ["Paiements Stripe Connect", stripeEnabled() && !manualPayments()],
+    [
+      manualPayments() && !process.env.SUPPORT_EMAIL
+        ? "Paiement manuel : SUPPORT_EMAIL manquant, l’équipe ne reçoit aucun e-mail d’étape"
+        : "Paiement manuel (contrats et virements par l’équipe, e-mails d’étape à SUPPORT_EMAIL)",
+      manualPayments() && Boolean(process.env.SUPPORT_EMAIL),
+    ],
     ["E-mails Resend", Boolean(process.env.RESEND_API_KEY)],
     ["HubSpot", hubspotEnabled()],
     ["Lecture des cartes (Claude)", ocrEnabled()],

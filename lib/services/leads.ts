@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/crypto";
@@ -249,6 +249,18 @@ export async function transcribeCard(db: Db, cardId: string, adminId: string, ca
   await db.update(s.businessCards).set({ status: "saisie", leadId: lead.id }).where(eq(s.businessCards.id, cardId));
   await audit(db, adminId, "card.transcribe", "business_card", cardId);
   if (row.batch.status !== "brouillon" && row.c.leadMode === "crm") await pushBatchToCrm(db, row.batch.id);
+}
+
+/** Leads envoyés à l'entreprise par chaque commercial (base de la commission « par lead qualifié »). */
+export async function leadsCountByAssignment(db: Db, assignmentIds: string[]): Promise<Map<string, number>> {
+  if (assignmentIds.length === 0) return new Map();
+  const rows = await db
+    .select({ assignmentId: s.leadBatches.assignmentId, n: count(s.leads.id) })
+    .from(s.leads)
+    .innerJoin(s.leadBatches, eq(s.leadBatches.id, s.leads.batchId))
+    .where(and(inArray(s.leadBatches.assignmentId, assignmentIds), inArray(s.leadBatches.status, ["envoye", "pousse_crm"])))
+    .groupBy(s.leadBatches.assignmentId);
+  return new Map(rows.filter((r) => r.assignmentId).map((r) => [r.assignmentId!, Number(r.n)]));
 }
 
 export async function bookingLeads(db: Db, bookingId: string) {

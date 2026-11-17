@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { manualPayments } from "@/lib/payment-mode";
 import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { ActionForm, Submit } from "@/components/action-form";
@@ -51,6 +52,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
               <label className="field">{t.city}<input className="input" name="city" defaultValue={f.city} /></label>
             </div>
             <label className="field">{t.bio}<textarea className="input" name="bio" defaultValue={f.bio ?? ""}></textarea></label>
+            <div className="fgrid">
+              <label className="field">{t.linkedin}<input className="input" name="linkedin" inputMode="url" defaultValue={f.linkedinUrl ?? ""} placeholder="linkedin.com/in/…" /></label>
+              <label className="field">{t.instagram}<input className="input" name="instagram" defaultValue={f.instagramUrl ?? ""} placeholder="instagram.com/…" /></label>
+            </div>
+            <p className="muted small">{t.socialHint}</p>
             <Submit className="clay s btn sm">{all.save}</Submit>
           </ActionForm>
         </section>
@@ -97,12 +103,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
           })}
           <p className="muted small">{t.docsHelp}</p>
           <div className="brow">
-            <span>
-              {t.payouts} <Status tone={f.payoutsEnabled ? "ok" : "warn"}>{f.payoutsEnabled ? t.enabled : t.toEnable}</Status>
-            </span>
-            <ActionForm action={stripeSetupAction}>
-              <Submit className="clay s btn xs">{f.payoutsEnabled ? t.updateIban : stripeEnabled() ? t.enableStripe : t.enable}</Submit>
-            </ActionForm>
+            {manualPayments() ? (
+              <span>
+                {t.payouts} <Status tone="ok">{t.manualPayouts}</Status>
+              </span>
+            ) : (
+              <>
+                <span>
+                  {t.payouts} <Status tone={f.payoutsEnabled ? "ok" : "warn"}>{f.payoutsEnabled ? t.enabled : t.toEnable}</Status>
+                </span>
+                <ActionForm action={stripeSetupAction}>
+                  <Submit className="clay s btn xs">{f.payoutsEnabled ? t.updateIban : stripeEnabled() ? t.enableStripe : t.enable}</Submit>
+                </ActionForm>
+              </>
+            )}
           </div>
         </section>
         <section className="clay panel" id="facturation">

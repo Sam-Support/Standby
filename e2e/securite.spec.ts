@@ -56,6 +56,7 @@ test.describe("sécurité", () => {
     await page.getByLabel("Confirmation *").fill("motdepasse-e2e");
     await page.getByLabel(/J’accepte les/).check();
     await page.getByLabel("Ville *").fill("Lyon");
+    await page.getByLabel("Profil LinkedIn").fill("linkedin.com/in/e2e-commercial");
     await page.getByRole("button", { name: "Continuer →" }).click();
     await page.waitForURL(/etape=2/);
     await expect(page.getByText(`un lien a été envoyé à ${email}`)).toBeVisible();

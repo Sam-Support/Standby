@@ -219,6 +219,9 @@ export const freelancers = pgTable("freelancers", {
   avatarColor: text("avatar_color").notNull().default("#82C9FF"),
   // « Notre top commercial » sur la page d'accueil : un seul profil à la fois, choisi dans l'admin
   featuredSince: timestamp("featured_since", { withTimezone: true }),
+  // réseaux du commercial (au moins un à l'inscription) : visibles seulement par l'équipe Stand-By
+  linkedinUrl: text("linkedin_url"),
+  instagramUrl: text("instagram_url"),
   onboardingStep: integer("onboarding_step").notNull().default(1),
   createdAt: createdAt(),
 });
@@ -309,6 +312,16 @@ export const bookings = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     // conditions appliquées à l'annulation : taux, frais facturés, indemnités des commerciaux
     cancellation: jsonb("cancellation"),
+    // formule : équipe de stand, ou prospection autonome dans les allées (sans stand)
+    offer: text("offer").notNull().default("stand"), // stand | prospection
+    prospectionTarget: text("prospection_target"), // cibles de la prospection (formule prospection)
+    // commission des commerciaux fixée par l'entreprise : par lead qualifié, ou en % des ventes réalisées sur le stand
+    commissionType: text("commission_type").notNull().default("aucune"), // aucune | lead | vente
+    commissionLeadCents: integer("commission_lead_cents").notNull().default(0),
+    commissionSaleBps: integer("commission_sale_bps").notNull().default(0),
+    // coordonnées entre l'entreprise et les commerciaux : masquées tant que l'équipe Stand-By n'a pas autorisé le contact
+    contactAuthorizedAt: timestamp("contact_authorized_at", { withTimezone: true }),
+    contactAuthorizedBy: uuid("contact_authorized_by"),
     createdAt: createdAt(),
   },
   (t) => [index("bookings_company_idx").on(t.companyId)],
@@ -353,6 +366,10 @@ export const assignments = pgTable(
     hoursAdjustedAt: timestamp("hours_adjusted_at", { withTimezone: true }),
     hoursAdjustmentNote: text("hours_adjustment_note"),
     hoursDisputeNote: text("hours_dispute_note"),
+    // commission : leads qualifiés ou ventes HT retenus par l'entreprise à la validation, montant calculé à la facture
+    qualifiedLeads: integer("qualified_leads"),
+    salesCents: integer("sales_cents"),
+    commissionCents: integer("commission_cents").notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [
@@ -530,6 +547,11 @@ export const reviews = pgTable(
     companyId: uuid("company_id").notNull().references(() => companies.id),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    // accord de l'entreprise pour publier l'avis avec son nom ; sans accord, l'avis publié reste anonyme
+    publicConsent: boolean("public_consent").notNull().default(false),
+    // publié sur la page d'accueil par l'équipe Stand-By
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    publishedBy: uuid("published_by"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("reviews_booking_freelancer_idx").on(t.bookingId, t.freelancerId)],

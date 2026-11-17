@@ -29,6 +29,7 @@ test("un mot de passe connu des fuites est refusé à l'inscription, puis un aut
   await page.getByLabel("Mot de passe (10 caractères minimum) *").fill("motdepasse-divulgue");
   await page.getByLabel("Confirmation *").fill("motdepasse-divulgue");
   await page.getByLabel("Ville *").fill("Lyon");
+  await page.getByLabel("Profil LinkedIn").fill("linkedin.com/in/e2e-commercial");
   await next(page);
 
   const alert = page.locator("form p[role=alert]");
@@ -47,6 +48,7 @@ test("commercial : dossier envoyé, profil en cours de vérification, accusé de
   const email = `commercial-${Date.now()}@e2e.test`;
   await createAccount(page, "/inscription/commercial", email);
   await page.getByLabel("Ville *").fill("Lyon");
+  await page.getByLabel("Profil LinkedIn").fill("linkedin.com/in/e2e-commercial");
   await next(page);
   await page.waitForURL(/etape=2/);
 

@@ -60,7 +60,7 @@ const LAST = ["Martin", "Bernard", "Petit", "Robert", "Richard", "Durand", "More
 const CITIES = ["Paris", "Lyon", "Cannes", "Marseille", "Lille", "Bordeaux"];
 const SPECS = ["Tech & SaaS", "Retail", "Industrie", "Agro & restauration", "Immobilier & bâtiment", "Santé", "Mode & luxe", "Mobilité & logistique", "Secteur public", "Maison & grand public"];
 const LANGS = ["Anglais", "Espagnol", "Allemand", "Italien", "Mandarin", "Arabe"];
-const ROLE_RATES: Record<RoleKey, number> = { commercial: 27, accueil: 19, interprete: 34, chef: 36, animateur: 23, demonstrateur: 25 };
+const ROLE_RATES: Record<RoleKey, number> = { commercial: 27, accueil: 19, interprete: 34, chef: 36, animateur: 23, demonstrateur: 25, prospecteur: 30 };
 const ROLE_CYCLE: RoleKey[] = ["commercial", "accueil", "commercial", "interprete", "accueil", "chef", "animateur", "demonstrateur", "commercial", "accueil"];
 
 function generatedFreelancers(): FreelancerSeed[] {
@@ -70,7 +70,8 @@ function generatedFreelancers(): FreelancerSeed[] {
       first: FIRST[i % FIRST.length],
       last: LAST[(i * 7 + Math.floor(i / FIRST.length) * 3) % LAST.length],
       city: CITIES[i % CITIES.length],
-      roles: [role],
+      // un commercial sur deux fait aussi de la prospection autonome (poste secondaire : le matching des stands ne change pas)
+      roles: role === "commercial" && i % 2 === 0 ? [role, "prospecteur"] : [role],
       rate: ROLE_RATES[role] + (i % 5),
       rating: 42 + (i % 8),
       missions: 6 + ((i * 13) % 70),

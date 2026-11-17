@@ -17,7 +17,9 @@ test.describe.serial("missions : désistement, heures contestées, avoir", () =>
     // l'exposant voit le désistement dans son équipe
     await login(page, ACCOUNTS.entreprise);
     await page.getByRole("link", { name: "Supply Chain Event" }).click();
-    await expect(page.locator(".brow", { hasText: "Karim Benali" }).getByText("Désisté·e")).toBeVisible();
+    // prénom et initiale tant que l'équipe n'a pas autorisé le contact
+    await expect(page.locator(".brow", { hasText: "Karim B." }).getByText("Désisté·e")).toBeVisible();
+    await expect(page.getByText("Benali")).toHaveCount(0);
   });
 
   test("l'exposant réduit des heures, le commercial conteste, l'équipe arbitre puis émet un avoir", async ({ page }) => {
@@ -27,9 +29,10 @@ test.describe.serial("missions : désistement, heures contestées, avoir", () =>
     await login(page, ACCOUNTS.entreprise);
     await page.getByLabel("Heures de Karim").fill("14");
     await page.getByLabel("Motif si vous retenez moins d’heures pour Karim").fill("Arrivé à 11 h le deuxième jour");
-    await row("Karim Benali").getByRole("button", { name: "Valider" }).click();
-    await expect(row("Karim Benali").getByText("14 h retenues")).toBeVisible();
-    for (const name of ["Sarah Benhamou", "Chloé Vidal"]) {
+    // côté entreprise : prénom et initiale (contact pas encore autorisé)
+    await row("Karim B.").getByRole("button", { name: "Valider" }).click();
+    await expect(row("Karim B.").getByText("14 h retenues")).toBeVisible();
+    for (const name of ["Sarah B.", "Chloé V."]) {
       await row(name).getByRole("button", { name: "Valider" }).click();
       await expect(row(name).getByText("validées")).toBeVisible();
     }

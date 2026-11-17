@@ -1,4 +1,7 @@
 import Link from "@/components/link";
+import { commissionText } from "@/lib/commission";
+import { features } from "@/lib/i18n/messages/features";
+import { shortName, lastInitial } from "@/lib/names";
 import { getFmt, getLang, getMessages, say } from "@/lib/i18n/server";
 import { booking } from "@/lib/i18n/messages/booking";
 import { domainLabels } from "@/lib/i18n/messages/domain";
@@ -8,7 +11,7 @@ import { ActionForm, Submit } from "@/components/action-form";
 import { BookingAside, Stepper } from "@/components/booking";
 import { Avatar, PageHead } from "@/components/ui";
 import { languageCode } from "@/lib/domain";
-import { stripeEnabled } from "@/lib/integrations/stripe";
+import { manualPayments, onlinePayments } from "@/lib/payment-mode";
 import { billableMinutesPerDay } from "@/lib/pricing";
 import { confirmationIssues } from "@/lib/services/booking";
 import { templateColumns } from "@/lib/services/leads";
@@ -32,6 +35,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const brochure = d.booking.brochureName ?? d.company.brochureName;
   const m = await getMessages(booking);
   const t = m.recap;
+  const x = await getMessages(features);
   const f = await getFmt();
   const dl = domainLabels(f.lang);
   const h = f.timeLabel;
@@ -55,7 +59,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 <div className="kv"><dt>{t.days}</dt><dd>{d.booking.days.map((x) => f.dayLabel(x)).join(", ")}</dd></div>
                 <div className="kv"><dt>{t.hours}</dt><dd>{h(d.booking.startTime)} – {h(d.booking.endTime)} · {t.billed(f.hoursLabel(minutes))}</dd></div>
                 <div className="kv"><dt>{t.languages}</dt><dd>{d.booking.languages.map(dl.language).join(", ")}</dd></div>
-                <div className="kv"><dt>{t.outfit}</dt><dd>{dl.outfit(d.booking.outfit)}</dd></div>
+                <div className="kv"><dt>{x.recap.offer}</dt><dd>{d.booking.offer === "prospection" ? x.offer.prospection : x.offer.stand}</dd></div>
+                {d.booking.offer === "prospection" && d.booking.prospectionTarget && <div className="kv"><dt>{x.recap.target}</dt><dd>{d.booking.prospectionTarget}</dd></div>}
+                {d.booking.offer !== "prospection" && <div className="kv"><dt>{t.outfit}</dt><dd>{dl.outfit(d.booking.outfit)}</dd></div>}
+                <div className="kv"><dt>{x.recap.commission}</dt><dd>{commissionText(f.lang, d.booking) ?? x.commission.none}</dd></div>
                 <div className="kv"><dt>{t.referent}</dt><dd>{referent}</dd></div>
                 {brochure && <div className="kv"><dt>{t.brochure}</dt><dd>{brochure}</dd></div>}
                 <div className="kv"><dt>{t.leads}</dt><dd>{tplName} · {d.booking.leadFrequency === "quotidien" ? t.daily : t.end}</dd></div>
@@ -64,9 +71,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
                 {d.assignments.map((a) => (
                   <li key={a.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <Avatar first={a.firstName} last={a.lastName} color={a.avatarColor} />
+                    <Avatar first={a.firstName} last={lastInitial(a.lastName)} color={a.avatarColor} />
                     <span>
-                      <b>{a.firstName} {a.lastName}</b>
+                      <b>{shortName(a.firstName, a.lastName)}</b>
                       <br />
                       <span className="muted small">
                         {dl.role(a.role).short} · {f.hourly(a.hourlyRateCents)}
@@ -118,7 +125,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   </label>
                   <p className="muted small">
                     {t.debit}
-                    {stripeEnabled() ? t.mandate : ""}
+                    {onlinePayments() ? t.mandate : manualPayments() ? t.manualMandate : ""}
                   </p>
                   <Submit className="clay btn mint" pending={t.pending}>
                     {t.confirm}

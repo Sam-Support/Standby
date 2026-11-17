@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { done, fail, oops, file, parseHours, str, type FormState } from "@/lib/action";
+import { done, fail, oops, file, parseHours, str, type FormState, eurosToCents } from "@/lib/action";
 import { getCurrentUser, requireCompany } from "@/lib/auth/session";
 import { companyIdentity, companyLeadFormat, companyReferents, companyWeb } from "@/lib/services/accounts";
 import { validateAssignmentHours } from "@/lib/services/hours";
@@ -18,7 +18,13 @@ export async function validateHours(assignmentId: string, _: FormState, fd: Form
     const raw = str(fd, "hours");
     const minutes = raw ? parseHours(raw) : undefined;
     if (minutes !== undefined && !Number.isFinite(minutes)) return oops("Heures invalides : indiquez par exemple 16 ou 15:30.");
-    ({ adjusted } = await validateAssignmentHours(await getDb(), assignmentId, company.id, user!.id, minutes, { note: str(fd, "note") }));
+    const leads = str(fd, "qualifiedLeads");
+    const sales = str(fd, "sales");
+    ({ adjusted } = await validateAssignmentHours(await getDb(), assignmentId, company.id, user!.id, minutes, {
+      note: str(fd, "note"),
+      ...(leads ? { qualifiedLeads: Number(leads) } : {}),
+      ...(sales ? { salesCents: eurosToCents(sales) } : {}),
+    }));
   } catch (e) {
     return fail(e);
   }
@@ -29,7 +35,7 @@ export async function validateHours(assignmentId: string, _: FormState, fd: Form
 export async function reviewAction(assignmentId: string, _: FormState, fd: FormData): Promise<FormState> {
   try {
     const company = await requireCompany();
-    await submitReview(await getDb(), company.id, assignmentId, Number(str(fd, "rating")), str(fd, "comment"));
+    await submitReview(await getDb(), company.id, assignmentId, Number(str(fd, "rating")), str(fd, "comment"), fd.get("publicConsent") === "on");
   } catch (e) {
     return fail(e);
   }

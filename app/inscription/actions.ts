@@ -19,6 +19,7 @@ import {
   freelancerSizes,
   freelancerStatusStep,
   registerAccount,
+  socialLinks,
   uploadFreelancerDocument,
 } from "@/lib/services/accounts";
 import { parseLeadWorkbook } from "@/lib/services/leads";
@@ -107,6 +108,7 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
     const db = await getDb();
     if (step === 1) {
       if (!str(fd, "city")) return oops("Indiquez votre ville.");
+      socialLinks({ linkedin: str(fd, "linkedin"), instagram: str(fd, "instagram") }); // contrôlés avant de créer le compte
       const userId = await ensureAccount(fd, "commercial");
       await freelancerIdentity(db, userId, {
         firstName: str(fd, "firstName"),
@@ -114,6 +116,8 @@ export async function freelancerStep(step: number, _: FormState, fd: FormData): 
         phone: str(fd, "phone"),
         city: str(fd, "city"),
         bio: str(fd, "bio"),
+        linkedin: str(fd, "linkedin"),
+        instagram: str(fd, "instagram"),
       });
       next = "/inscription/commercial?etape=2";
     } else {
