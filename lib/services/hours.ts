@@ -61,7 +61,7 @@ export async function validateAssignmentHours(
   companyId: string,
   actorId: string,
   totalMinutes?: number,
-  opts: { note?: string; final?: boolean } = {},
+  opts: { note?: string; final?: boolean; qualifiedLeads?: number; salesCents?: number } = {},
 ) {
   const row = await loadMission(db, assignmentId);
   if (!row || row.b.companyId !== companyId) throw new BookingError("Mission introuvable.");
@@ -77,6 +77,15 @@ export async function validateAssignmentHours(
       .insert(s.timesheets)
       .values(row.b.days.map((day) => ({ assignmentId, day, minutesDeclared: planned })))
       .returning();
+  }
+  // résultats retenus pour la commission (leads qualifiés ou ventes HT), saisis avec les heures
+  if (opts.qualifiedLeads !== undefined) {
+    if (!Number.isInteger(opts.qualifiedLeads) || opts.qualifiedLeads < 0 || opts.qualifiedLeads > 100_000) throw new BookingError("Nombre de leads qualifiés invalide.");
+    await db.update(s.assignments).set({ qualifiedLeads: opts.qualifiedLeads }).where(eq(s.assignments.id, assignmentId));
+  }
+  if (opts.salesCents !== undefined) {
+    if (!Number.isInteger(opts.salesCents) || opts.salesCents < 0 || opts.salesCents > 1_000_000_000) throw new BookingError("Montant des ventes invalide.");
+    await db.update(s.assignments).set({ salesCents: opts.salesCents }).where(eq(s.assignments.id, assignmentId));
   }
   sheets.sort((x, y) => x.day.localeCompare(y.day));
   const declared = total(sheets, "declared");

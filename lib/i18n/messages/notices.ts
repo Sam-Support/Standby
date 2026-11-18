@@ -1,4 +1,5 @@
 import { fmt } from "@/lib/format";
+import { commissionText, type CommissionTerms } from "@/lib/commission";
 import type { Lang } from "../config";
 import { domainLabels } from "./domain";
 
@@ -15,9 +16,9 @@ const s = (n: number) => (n > 1 ? "s" : "");
 const fr = (f: F, dl: DL) => ({
   open: "Ouvrir stand-by",
   footer: "Stand-By · salons professionnels et foires",
-  newMission: (p: { event: string | null; role: string; days: number; rateCents: number }): Text => ({
+  newMission: (p: { event: string | null; role: string; days: number; rateCents: number; commission?: CommissionTerms }): Text => ({
     title: `Nouvelle mission : ${p.event ?? "salon"}`,
-    body: `${dl.role(p.role).label} · ${p.days} jour(s) · ${f.hourly(p.rateCents)}. Acceptez ou refusez la mission depuis votre espace.`,
+    body: `${dl.role(p.role).label} · ${p.days} jour(s) · ${f.hourly(p.rateCents)}${p.commission && commissionText("fr", p.commission) ? ` + commission : ${commissionText("fr", p.commission)}` : ""}. Acceptez ou refusez la mission depuis votre espace.`,
   }),
   bookingConfirmed: (p: { ref: string }): Text => ({ title: `Réservation ${p.ref} confirmée`, body: "Toute l’équipe a accepté. Rendez-vous au briefing J-2." }),
   missionAccepted: (p: { first: string; last: string; ref: string }): Text => ({
@@ -138,9 +139,19 @@ const fr = (f: F, dl: DL) => ({
     title: `Mission dans ${p.left} jours : ${p.event}`,
     body: `${p.event} · ${p.city} · ${f.dateRange(p.startsOn, p.endsOn)}${p.stand ? ` · stand ${p.stand}` : ""}, ${f.timeLabel(p.startTime)} – ${f.timeLabel(p.endTime)}. Relisez le brief et la plaquette avant le briefing de J-2.`,
   }),
-  briefingCompany: (p: { event: string; left: number; referent: string; contacts: string }): Text => ({
+  briefingCompany: (p: { event: string; left: number; referent: string; contacts: string; authorized: boolean }): Text => ({
     title: `Briefing de votre équipe (${p.event}, ${when.fr(p.left)})`,
-    body: `Organisez le briefing visio avec ${p.referent} et l’équipe : ${p.contacts || "aucun commercial confirmé pour l’instant"}.`,
+    body: `Organisez le briefing visio avec ${p.referent} et l’équipe : ${p.contacts || "aucun commercial confirmé pour l’instant"}.${
+      p.authorized ? "" : " Les coordonnées de l’équipe vous sont transmises par l’équipe Stand-By une fois le contrat validé."
+    }`,
+  }),
+  contactAuthorizedCompany: (p: { ref: string; team: string }): Text => ({
+    title: `Coordonnées de votre équipe (${p.ref})`,
+    body: `L’équipe Stand-By a validé votre réservation. Vous pouvez joindre votre équipe : ${p.team || "aucun commercial confirmé pour l’instant"}.`,
+  }),
+  contactAuthorizedFreelancer: (p: { ref: string; event: string | null; company: string; referent: string; phone: string | null }): Text => ({
+    title: `Coordonnées de votre mission (${p.event ?? p.ref})`,
+    body: `L’équipe Stand-By a validé la réservation ${p.ref} de ${p.company}. Votre référent sur place : ${p.referent}${p.phone ? `, ${p.phone}` : ""}.`,
   }),
   briefingFreelancer: (p: { event: string; left: number; referent: string; phone: string | null; startTime: string; endTime: string; stand: Stand }): Text => ({
     title: `Briefing J-2 : ${p.event} (${when.fr(p.left)})`,
@@ -211,7 +222,7 @@ const en = (f: F, dl: DL): Notices => ({
   footer: "Stand-By · trade shows and fairs",
   newMission: (p) => ({
     title: `New assignment: ${p.event ?? "trade show"}`,
-    body: `${dl.role(p.role).label} · ${p.days} day(s) · ${f.hourly(p.rateCents)}. Accept or decline the assignment from your dashboard.`,
+    body: `${dl.role(p.role).label} · ${p.days} day(s) · ${f.hourly(p.rateCents)}${p.commission && commissionText("en", p.commission) ? ` + commission: ${commissionText("en", p.commission)}` : ""}. Accept or decline the assignment from your dashboard.`,
   }),
   bookingConfirmed: (p) => ({ title: `Booking ${p.ref} confirmed`, body: "The whole team has accepted. See you at the D-2 briefing." }),
   missionAccepted: (p) => ({ title: `${p.first} accepted the assignment`, body: `${p.first} ${p.last} joins your team (ref. ${p.ref}).` }),
@@ -325,7 +336,17 @@ const en = (f: F, dl: DL): Notices => ({
   }),
   briefingCompany: (p) => ({
     title: `Your team’s briefing (${p.event}, ${when.en(p.left)})`,
-    body: `Organise the video briefing with ${p.referent} and the team: ${p.contacts || "no freelancer confirmed yet"}.`,
+    body: `Organise the video briefing with ${p.referent} and the team: ${p.contacts || "no freelancer confirmed yet"}.${
+      p.authorized ? "" : " The Stand-By team shares your team’s contact details once the contract is approved."
+    }`,
+  }),
+  contactAuthorizedCompany: (p) => ({
+    title: `Your team’s contact details (${p.ref})`,
+    body: `The Stand-By team has approved your booking. You can reach your team: ${p.team || "no freelancer confirmed yet"}.`,
+  }),
+  contactAuthorizedFreelancer: (p) => ({
+    title: `Contact details for your assignment (${p.event ?? p.ref})`,
+    body: `The Stand-By team has approved booking ${p.ref} from ${p.company}. Your on-site contact: ${p.referent}${p.phone ? `, ${p.phone}` : ""}.`,
   }),
   briefingFreelancer: (p) => ({
     title: `D-2 briefing: ${p.event} (${when.en(p.left)})`,
@@ -388,7 +409,7 @@ const es = (f: F, dl: DL): Notices => ({
   footer: "Stand-By · ferias profesionales y salones",
   newMission: (p) => ({
     title: `Nueva misión: ${p.event ?? "feria"}`,
-    body: `${dl.role(p.role).label} · ${p.days} día(s) · ${f.hourly(p.rateCents)}. Acepte o rechace la misión desde su espacio.`,
+    body: `${dl.role(p.role).label} · ${p.days} día(s) · ${f.hourly(p.rateCents)}${p.commission && commissionText("es", p.commission) ? ` + comisión: ${commissionText("es", p.commission)}` : ""}. Acepte o rechace la misión desde su espacio.`,
   }),
   bookingConfirmed: (p) => ({ title: `Reserva ${p.ref} confirmada`, body: "Todo el equipo ha aceptado. Nos vemos en el briefing D-2." }),
   missionAccepted: (p) => ({ title: `${p.first} ha aceptado la misión`, body: `${p.first} ${p.last} se une a su equipo (ref. ${p.ref}).` }),
@@ -502,7 +523,17 @@ const es = (f: F, dl: DL): Notices => ({
   }),
   briefingCompany: (p) => ({
     title: `Briefing de su equipo (${p.event}, ${when.es(p.left)})`,
-    body: `Organice el briefing por videollamada con ${p.referent} y el equipo: ${p.contacts || "todavía no hay comerciales confirmados"}.`,
+    body: `Organice el briefing por videollamada con ${p.referent} y el equipo: ${p.contacts || "todavía no hay comerciales confirmados"}.${
+      p.authorized ? "" : " El equipo de Stand-By le comunica los datos de contacto de su equipo una vez validado el contrato."
+    }`,
+  }),
+  contactAuthorizedCompany: (p) => ({
+    title: `Datos de contacto de su equipo (${p.ref})`,
+    body: `El equipo de Stand-By ha validado su reserva. Puede contactar con su equipo: ${p.team || "todavía no hay comerciales confirmados"}.`,
+  }),
+  contactAuthorizedFreelancer: (p) => ({
+    title: `Datos de contacto de su misión (${p.event ?? p.ref})`,
+    body: `El equipo de Stand-By ha validado la reserva ${p.ref} de ${p.company}. Su responsable in situ: ${p.referent}${p.phone ? `, ${p.phone}` : ""}.`,
   }),
   briefingFreelancer: (p) => ({
     title: `Briefing D-2: ${p.event} (${when.es(p.left)})`,

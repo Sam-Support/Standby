@@ -1,4 +1,5 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { mailTeam } from "@/lib/team-mail";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { AuthError, createIdentity, storeLocalPassword, updateIdentityEmail, updateIdentityPassword, verifyIdentity } from "@/lib/auth/provider";
@@ -17,6 +18,7 @@ import {
 import { hourly } from "@/lib/format";
 import { DEFAULT_LANG, isLang, localizePath, type Lang } from "@/lib/i18n/config";
 import { notices } from "@/lib/i18n/messages/notices";
+import { isPwnedPassword } from "@/lib/password-check";
 import { sendEmail } from "@/lib/integrations/email";
 import { lookupSiret } from "@/lib/integrations/sirene";
 import { createConnectedAccount, onboardingLink, stripeEnabled } from "@/lib/integrations/stripe";
@@ -39,6 +41,11 @@ export class AccountError extends Error {}
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Refuse un mot de passe connu des fuites de données (contrôle facultatif : voir lib/password-check.ts). */
+async function assertNotPwned(password: string) {
+  if (await isPwnedPassword(password)) throw new AccountError("Ce mot de passe figure dans des fuites de données connues. Choisissez-en un autre.");
+}
+
 export async function registerAccount(
   db: Db,
   input: { email: string; password: string; role: "exposant" | "commercial"; firstName: string; lastName: string; phone?: string; locale?: Lang },
@@ -49,6 +56,7 @@ export async function registerAccount(
   if (!input.firstName.trim() || !input.lastName.trim()) throw new AccountError("Indiquez votre prénom et votre nom.");
   const [exists] = await db.select({ id: s.profiles.id }).from(s.profiles).where(eq(s.profiles.email, email));
   if (exists) throw new AccountError("Un compte existe déjà avec cet e-mail. Connectez-vous.");
+  await assertNotPwned(input.password);
   let id: string;
   try {
     id = await createIdentity(email, input.password);
@@ -122,6 +130,8 @@ export async function requestPasswordReset(db: Db, email: string) {
 
 export async function resetPassword(db: Db, token: string, password: string) {
   if (password.length < 10) throw new AccountError("Le mot de passe doit contenir au moins 10 caractères.");
+  // avant de consommer le lien : un mot de passe refusé ne doit pas brûler la demande
+  await assertNotPwned(password);
   // consommé en une seule requête : deux envois simultanés du même lien ne passent pas tous les deux
   const [r] = await db
     .update(s.passwordResets)
@@ -154,6 +164,7 @@ export async function changePassword(db: Db, user: AccountUser, current: string,
   if (next.length < 10) throw new AccountError("Le nouveau mot de passe doit contenir au moins 10 caractères.");
   if (next === current) throw new AccountError("Choisissez un mot de passe différent de l’actuel.");
   await assertPassword(db, user, current, "Mot de passe actuel incorrect.");
+  await assertNotPwned(next);
   await updateIdentityPassword(db, user.id, next);
   const version = await bumpSessionVersion(db, user.id);
   const lang = langOf(user);
@@ -352,13 +363,60 @@ export async function companyLeadFormat(
   // qui dit aussi si l'identité de l'entreprise est encore en cours de vérification
   if (company.onboardingStep <= 4) {
     await notify(db, company.ownerId, { t: (n) => n.companyCreated({ company: company.name, verified: company.siretVerified }), link: "/entreprise" });
+    const [owner] = await db.select().from(s.profiles).where(eq(s.profiles.id, company.ownerId));
+    await mailTeam(db, `Nouvelle entreprise inscrite : ${company.name}`, [
+      `Entreprise : ${company.name} · SIRET ${company.siret}${company.siretVerified ? " (vérifié)" : " (identité à vérifier)"}`,
+      company.siretName ? `Nom SIRENE : ${company.siretName}` : null,
+      company.billingAddress ? `Adresse : ${company.billingAddress}` : null,
+      company.sector ? `Secteur : ${company.sector}${company.size ? ` · ${company.size}` : ""}` : null,
+      owner ? `Contact : ${owner.firstName} ${owner.lastName} · ${owner.email}${owner.phone ? ` · ${owner.phone}` : ""}` : null,
+      company.website ? `Site : ${company.website}` : null,
+      `Format des leads : ${input.mode}`,
+    ], "/admin/inscrits");
   }
 }
 
 // ——— Commercial·e ———
 
-export async function freelancerIdentity(db: Db, userId: string, input: { firstName: string; lastName: string; phone: string; city: string; bio: string }) {
+/** « linkedin.com/in/x » → URL https complète, si l'hôte est bien celui attendu ; sinon null. */
+function socialUrl(v: string, host: "linkedin.com" | "instagram.com"): string | null {
+  let raw = v.trim();
+  if (host === "instagram.com" && /^@?[A-Za-z0-9._]{1,30}$/.test(raw)) raw = `https://www.instagram.com/${raw.replace(/^@/, "")}`;
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    const h = url.hostname.toLowerCase();
+    if (h !== host && !h.endsWith(`.${host}`)) return null;
+    if (url.pathname.replace(/\/+$/, "") === "") return null; // la page d'accueil du réseau n'est pas un profil
+    url.protocol = "https:";
+    return url.toString().slice(0, 300);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Réseaux du commercial : au moins un des deux. Ils ne sont montrés qu'à l'équipe Stand-By (vérification du
+ * profil), jamais aux entreprises.
+ */
+export function socialLinks(input: { linkedin: string; instagram: string }) {
+  const li = input.linkedin.trim();
+  const ig = input.instagram.trim();
+  if (!li && !ig) throw new AccountError("Indiquez votre profil LinkedIn ou votre compte Instagram (au moins l’un des deux).");
+  const linkedinUrl = li ? socialUrl(li, "linkedin.com") : null;
+  if (li && !linkedinUrl) throw new AccountError("Lien LinkedIn invalide : collez l’adresse de votre profil (linkedin.com/in/…).");
+  const instagramUrl = ig ? socialUrl(ig, "instagram.com") : null;
+  if (ig && !instagramUrl) throw new AccountError("Lien Instagram invalide : collez l’adresse de votre compte (instagram.com/…) ou votre @identifiant.");
+  return { linkedinUrl, instagramUrl };
+}
+
+export async function freelancerIdentity(
+  db: Db,
+  userId: string,
+  input: { firstName: string; lastName: string; phone: string; city: string; bio: string; linkedin?: string; instagram?: string },
+) {
   if (!input.city.trim()) throw new AccountError("Indiquez votre ville.");
+  // formulaires d'inscription et de profil : réseaux obligatoires (au moins un) ; absents des autres appels
+  const social = input.linkedin !== undefined || input.instagram !== undefined ? socialLinks({ linkedin: input.linkedin ?? "", instagram: input.instagram ?? "" }) : {};
   await db
     .update(s.profiles)
     .set({ firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone.trim() || null })
@@ -367,13 +425,13 @@ export async function freelancerIdentity(db: Db, userId: string, input: { firstN
   if (existing) {
     await db
       .update(s.freelancers)
-      .set({ city: input.city.trim(), bio: input.bio.trim() || null, onboardingStep: Math.max(existing.onboardingStep, 2) })
+      .set({ city: input.city.trim(), bio: input.bio.trim() || null, ...social, onboardingStep: Math.max(existing.onboardingStep, 2) })
       .where(eq(s.freelancers.id, existing.id));
     return existing.id;
   }
   const [f] = await db
     .insert(s.freelancers)
-    .values({ userId, city: input.city.trim(), bio: input.bio.trim() || null, onboardingStep: 2, avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)] })
+    .values({ userId, city: input.city.trim(), bio: input.bio.trim() || null, ...social, onboardingStep: 2, avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)] })
     .returning();
   return f.id;
 }
@@ -499,7 +557,20 @@ export async function freelancerStatusStep(
       await notify(db, a.id, { title: "Nouveau profil à vérifier", body: "Un commercial a transmis ses documents.", link: "/admin/inscrits", email: false });
     }
     // accusé de réception : le dossier est complet et en cours de vérification (une seule fois par passage en revue)
-    if (f.status !== "en_revue") await notify(db, f.userId, { t: (n) => n.profileSubmitted(), link: "/commercial" });
+    if (f.status !== "en_revue") {
+      await notify(db, f.userId, { t: (n) => n.profileSubmitted(), link: "/commercial" });
+      const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, f.userId));
+      const [cur] = await db.select().from(s.freelancers).where(eq(s.freelancers.id, f.id));
+      await mailTeam(db, `Nouveau commercial à vérifier : ${p?.firstName ?? ""} ${p?.lastName ?? ""}`, [
+        p ? `${p.firstName} ${p.lastName} · ${p.email}${p.phone ? ` · ${p.phone}` : ""}` : null,
+        `Ville : ${cur.city} · postes : ${cur.roles.join(", ")} · tarif : ${hourly(cur.hourlyRateCents)}`,
+        `Spécialités : ${cur.specialties.join(", ")} · langues : ${cur.languages.join(", ")}`,
+        `LinkedIn : ${cur.linkedinUrl ?? "—"}`,
+        `Instagram : ${cur.instagramUrl ?? "—"}`,
+        `SIRET : ${cur.siret ?? "—"} (${cur.siretStatus}) · statut : ${cur.legalStatus ?? "—"}`,
+        "Documents à vérifier dans l’administration.",
+      ], "/admin/inscrits");
+    }
   }
 }
 

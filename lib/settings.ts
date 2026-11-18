@@ -9,6 +9,8 @@ export type Pricing = {
   freelancerCommissionBps: number;
   vatBps: number;
   floors: Record<RoleKey, number>;
+  /** Commission proposée par défaut dans une offre : par lead qualifié (centimes) et sur les ventes (points de base). */
+  commissionDefaults: { leadCents: number; saleBps: number };
   cancellation: CancellationPolicy;
   leadsRetentionDays: number;
   raw: Record<string, number>;
@@ -39,7 +41,9 @@ export async function getPricing(db: Db, at = new Date()): Promise<Pricing> {
       chef: raw["floor:chef"],
       animateur: raw["floor:animateur"],
       demonstrateur: raw["floor:demonstrateur"],
+      prospecteur: raw["floor:prospecteur"],
     },
+    commissionDefaults: { leadCents: raw.commission_lead_default_cents, saleBps: raw.commission_sale_default_bps },
     cancellation: {
       freeDays: raw.cancel_free_days,
       tier1Days: raw.cancel_tier1_days,

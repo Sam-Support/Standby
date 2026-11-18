@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { manualPayments } from "@/lib/payment-mode";
 import { ActionForm, Submit } from "@/components/action-form";
 import { AssignmentStatus, Avatar, Status } from "@/components/ui";
 import { getCurrentUser, requireFreelancer } from "@/lib/auth/session";
@@ -118,7 +119,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             <Link className="small" href="/commercial/revenus">
               {t.invoicesLink}
             </Link>
-            {!f.payoutsEnabled && (
+            {!f.payoutsEnabled && !manualPayments() && (
               <ActionForm action={stripeSetupAction}>
                 <Submit className="clay s btn sm butter">{t.enablePayouts}</Submit>
               </ActionForm>

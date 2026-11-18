@@ -1,4 +1,6 @@
 import Link from "@/components/link";
+import { commissionText } from "@/lib/commission";
+import { features } from "@/lib/i18n/messages/features";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";
@@ -43,6 +45,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const editable = pastDays.some((d) => (m.timesheets.find((x) => x.day === d)?.status ?? "declare") === "declare");
   const brochure = m.b.brochurePath ? { path: m.b.brochurePath, name: m.b.brochureName! } : m.c.brochurePath ? { path: m.c.brochurePath, name: m.c.brochureName! } : null;
   const t = (await getMessages(messages)).mission;
+  const x = await getMessages(features);
   const lf = (await getMessages(bookingMessages)).leadFormats;
   const fm = await getFmt();
   const dl = domainLabels(fm.lang);
@@ -89,7 +92,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <dl>
             <div className="kv"><dt>{t.daysLabel}</dt><dd>{m.days.map((d) => fm.dayLabel(d)).join(", ")}</dd></div>
             <div className="kv"><dt>{t.hours}</dt><dd>{fm.timeLabel(m.b.startTime)} – {fm.timeLabel(m.b.endTime)} · {t.billed(fm.hoursLabel(m.minutesPerDay))}</dd></div>
-            <div className="kv"><dt>{t.outfit}</dt><dd>{dl.outfit(m.b.outfit)}</dd></div>
+            <div className="kv"><dt>{x.mission.offer}</dt><dd>{m.b.offer === "prospection" ? x.offer.prospection : x.offer.stand}</dd></div>
+            {commissionText(fm.lang, m.b) && <div className="kv"><dt>{x.mission.commission}</dt><dd>{commissionText(fm.lang, m.b)}</dd></div>}
+            {m.b.offer === "prospection" && m.b.prospectionTarget && <div className="kv"><dt>{x.mission.target}</dt><dd style={{ fontWeight: 500 }}>{m.b.prospectionTarget}</dd></div>}
+            {m.b.offer !== "prospection" && <div className="kv"><dt>{t.outfit}</dt><dd>{dl.outfit(m.b.outfit)}</dd></div>}
             <div className="kv"><dt>{t.languages}</dt><dd>{m.b.languages.map(dl.language).join(", ")}</dd></div>
             {m.b.highlights && <div className="kv"><dt>{t.highlights}</dt><dd>{m.b.highlights}</dd></div>}
             {m.b.brief && <div className="kv"><dt>{t.briefLabel}</dt><dd style={{ fontWeight: 500 }}>{m.b.brief}</dd></div>}
@@ -216,7 +222,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <p>
               <b>{referent?.name ?? m.b.referentOtherName}</b>
               <br />
-              <span className="muted small">{[referent?.title, referent?.phone ?? m.b.referentOtherPhone].filter(Boolean).join(" · ")}</span>
+              <span className="muted small">
+                {m.b.contactAuthorizedAt ? [referent?.title, referent?.phone ?? m.b.referentOtherPhone].filter(Boolean).join(" · ") : [referent?.title, t.contactPending].filter(Boolean).join(" · ")}
+              </span>
             </p>
           ) : (
             <p className="muted small">{t.afterAccept}</p>

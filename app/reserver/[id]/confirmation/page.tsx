@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { ActionForm, Submit } from "@/components/action-form";
 import { BookingAside, Stepper } from "@/components/booking";
 import { Status } from "@/components/ui";
-import { stripeEnabled } from "@/lib/integrations/stripe";
+import { manualPayments, onlinePayments } from "@/lib/payment-mode";
 import { billableMinutesPerDay } from "@/lib/pricing";
 import { templateColumns } from "@/lib/services/leads";
 import { paymentSetup } from "../../actions";
@@ -30,7 +30,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const referentName = d.referent?.name ?? d.booking.referentOtherName ?? t.yourReferent;
   const tplName = d.company.leadMode === "crm" ? m.leadFormats.crm(d.company.crmProvider ?? "CRM") : tpl.name === "Fiche standard Stand-By" ? m.leadFormats.standard : tpl.name;
   const timeline = [t.timeline.today, t.timeline.badges, t.timeline.briefing(referentName), t.timeline.leads(d.booking.leadFrequency === "quotidien", tplName), t.timeline.monday];
-  const needsPayment = stripeEnabled() && !d.company.stripePaymentMethodId;
+  const needsPayment = onlinePayments() && !d.company.stripePaymentMethodId;
 
   return (
     <>
@@ -46,6 +46,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <p className="muted">
             {t.reference} <b>{d.booking.ref}</b> · {d.event?.name} · {d.event ? f.dateRange(d.event.startsOn, d.event.endsOn, true) : ""}
           </p>
+          {manualPayments() && d.booking.status !== "annulee" && <p className="note info">{t.manualNext}</p>}
           {paiement === "ok" && <p className="note ok">{t.paymentOk}</p>}
           {paiement === "annule" && <p className="note">{t.paymentCancelled}</p>}
           {needsPayment && (

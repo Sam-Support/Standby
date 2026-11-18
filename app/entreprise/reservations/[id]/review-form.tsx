@@ -1,4 +1,6 @@
 import { ActionForm, Submit } from "@/components/action-form";
+import { features } from "@/lib/i18n/messages/features";
+import { nameFor, lastInitial } from "@/lib/names";
 import { Avatar } from "@/components/ui";
 import { company } from "@/lib/i18n/messages/company";
 import { getMessages } from "@/lib/i18n/server";
@@ -6,13 +8,14 @@ import { reviewAction } from "../../actions";
 
 type Person = { id: string; firstName: string; lastName: string; avatarColor: string };
 
-export async function ReviewForm({ a, given }: { a: Person; given?: { rating: number; comment: string | null } }) {
+export async function ReviewForm({ a, given, authorized = false }: { a: Person; given?: { rating: number; comment: string | null }; authorized?: boolean }) {
   const t = (await getMessages(company)).review;
-  const name = `${a.firstName} ${a.lastName}`;
+  const x = await getMessages(features);
+  const name = nameFor(a.firstName, a.lastName, authorized);
   return (
     <div className="brow" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <Avatar first={a.firstName} last={a.lastName} color={a.avatarColor} />
+        <Avatar first={a.firstName} last={lastInitial(a.lastName)} color={a.avatarColor} />
         <b>{name}</b>
         {given && (
           <span className="st ok" aria-label={t.given(given.rating)}>
@@ -38,6 +41,10 @@ export async function ReviewForm({ a, given }: { a: Person; given?: { rating: nu
           <label className="field">
             {t.comment}
             <textarea className="input" name="comment" maxLength={1000} style={{ minHeight: 64 }}></textarea>
+          </label>
+          <label className="check small">
+            <input type="checkbox" name="publicConsent" />
+            <span>{x.reviews.consent}</span>
           </label>
           <div>
             <Submit className="clay s btn xs" pending={t.sending}>

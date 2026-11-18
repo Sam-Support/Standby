@@ -8,12 +8,16 @@ import { startDraft } from "@/lib/services/booking";
 /** Ouvre un brouillon de réservation (le dernier resté vide, sinon un nouveau), éventuellement sur un salon. */
 export async function GET(req: NextRequest) {
   const salon = req.nextUrl.searchParams.get("salon");
-  const here = `/reserver/nouveau${salon ? `?salon=${encodeURIComponent(salon)}` : ""}`;
+  const offer = req.nextUrl.searchParams.get("formule") === "prospection" ? "prospection" : null;
+  const query = new URLSearchParams();
+  if (salon) query.set("salon", salon);
+  if (offer) query.set("formule", offer);
+  const here = `/reserver/nouveau${query.size ? `?${query}` : ""}`;
   const user = await getCurrentUser();
   if (!user) return NextResponse.redirect(new URL(localizePath(`/connexion?next=${encodeURIComponent(here)}`, await getLang()), req.url));
   if (user.role !== "exposant") return NextResponse.redirect(new URL(localizePath("/comptes?erreur=role", await getLang()), req.url));
   const company = await getCurrentCompany();
   if (!company || company.onboardingStep <= 4) return NextResponse.redirect(new URL(localizePath("/inscription/entreprise", await getLang()), req.url));
-  const draft = await startDraft(await getDb(), company.id, salon);
+  const draft = await startDraft(await getDb(), company.id, salon, offer);
   return NextResponse.redirect(new URL(localizePath(`/reserver/${draft.id}/${draft.eventId ? "equipe" : "evenement"}`, await getLang()), req.url));
 }

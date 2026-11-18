@@ -2,7 +2,7 @@
 
 Le produit est terminé côté code : réservation, espaces entreprise et commercial, administration, facturation
 et autofacturation, trois langues, e-mails Resend, version mobile revue, logos contrôlés. Les corrections de la
-revue de sécurité sont faites. Tout est testé : 120 tests unitaires, 68 tests de bout en bout sur le build de
+revue de sécurité sont faites. Tout est testé : 134 tests unitaires, 71 tests de bout en bout sur le build de
 production, dont 5 sur téléphone. L'hébergement est passé du VPS à **Vercel + Supabase** (ADR-003).
 
 **Le site est en ligne sur https://www.stand-by.fr** (`stand-by.fr` y renvoie), avec Stripe en mode test : on
@@ -37,6 +37,49 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
 | [x] | Vercel : variables posées (dont `APP_URL`), production redéployée ; `/api/health?db=1` répond, le Schedule tourne | 🤖 | fait |
 | [x] | Premier administrateur après le premier déploiement : inscription (étape 1) avec votre mot de passe, puis promotion dans Supabase (tutoriel, étape 7 ; 🤖 peut faire la promotion) ; contrôles de `/admin` et de `/admin/emails` | 🧑 | 15 min |
 
+## 2 bis. Mode manuel (en attendant Stripe en mode réel)
+
+Depuis le 17 novembre 2026, la production tourne avec `PAYMENT_MODE=manuel` (variable Vercel, environnement
+Production). Aucun argent ne passe par Stripe ; Stripe reste branché pour plus tard.
+
+- **Ce qui change pour l'entreprise** : pas de moyen de paiement à enregistrer ; la réservation est confirmée
+  directement, l'équipe la contacte pour le contrat. Elle voit les commerciaux en « Prénom N. », sans téléphone,
+  tant que l'équipe n'a pas cliqué **« Autoriser le contact »** sur la réservation (`/admin/reservations/…`). Le
+  commercial ne voit pas non plus le téléphone du référent avant ce clic.
+- **Ce qui change pour le commercial** : pas de compte Stripe à ouvrir ; LinkedIn ou Instagram (au moins l'un des
+  deux) demandés à l'inscription, visibles seulement dans `/admin/inscrits`.
+- **E-mails d'étape à `SUPPORT_EMAIL`** (catégorie « equipe », lisibles aussi dans `/admin/emails`) : inscription
+  terminée d'une entreprise, dossier d'un commercial, réservation confirmée, mission acceptée ou refusée, équipe
+  complète, désistement, annulation, facture à encaisser, nouvel avis. Chacun contient la fiche complète de la
+  réservation (société, SIRET, contact, salon, jours, postes, commission, équipe avec coordonnées) pour établir
+  les contrats. Si `SUPPORT_EMAIL` manque, `/admin` l'indique et aucun e-mail d'étape ne part.
+- **À faire à la main, puis à noter dans l'administration** :
+  - virement de l'entreprise reçu → **« Paiement reçu »** (réservation ou `/admin/finances`) : la réservation passe
+    en payée, les autofactures et la paie des commerciaux sont programmées ;
+  - virement fait au commercial → **« Virement fait »** dans `/admin/finances` ;
+  - avoir d'une annulation déjà payée → rembourser par virement, puis **« Remboursé par virement »**.
+- **Revenir à Stripe** : supprimer `PAYMENT_MODE` dans Vercel (ou le vider) et redéployer.
+
+## 2 ter. Formules, commission et avis (17 novembre 2026)
+
+- **Formule « Prospection dans les allées »** : des prospecteurs autonomes (nouveau poste, 30 €/h plancher)
+  prospectent sur le salon sans stand. L'entreprise décrit ses cibles dans le brief (obligatoire). Lien direct :
+  `/reserver/nouveau?formule=prospection`. Les commerciaux cochent ce poste dans leur profil. 🧑 Rappel J-7 :
+  badges **visiteur** (et non exposant) à demander à l'organisateur.
+- **Commission des commerciaux**, réglée par l'entreprise à l'étape équipe : aucune, par lead qualifié (5 € par
+  défaut) ou en % des ventes réalisées sur le stand (5 % par défaut ; pas pour la prospection). Après le salon,
+  l'entreprise indique avec les heures le nombre de leads retenus (pré-rempli avec les leads remontés) ou le montant
+  des ventes HT. La commission s'ajoute à la facture (frais de service compris) et à la paie du commercial.
+  🧑 Valeurs proposées par défaut et tarif plancher du prospecteur réglables dans `/admin/tarification`.
+- **Avis sur l'accueil** : dans `/admin/avis`, « Publier sur l'accueil » affiche un avis (avec commentaire) sur la
+  page d'accueil. Le nom de la société n'apparaît que si elle a coché l'accord en laissant l'avis ; sinon
+  « Exposant » et son secteur. Le commercial y figure en prénom et initiale. La section reste masquée tant
+  qu'aucun avis n'est publié.
+- [ ] ⚖️ CGV et contrats : formule prospection (badge visiteur, règlement des salons sur la prospection dans les
+      allées), commission sur résultats déclarés par l'entreprise, paiement par virement pendant le mode manuel.
+- [ ] ⚖️ Politique de confidentialité : liens LinkedIn et Instagram des commerciaux (vérification du profil,
+      vus par l'équipe seulement) ; publication des avis avec le nom de la société sur accord.
+
 ## 3. Contenu, juridique, métier
 
 - [ ] ⚖️ Compléter les passages `[…]` des textes juridiques : éditeur, hébergeur, délais et pénalités, barème
@@ -54,11 +97,16 @@ et les secrets `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` (générés, un je
       choisi. Le commercial reçoit une notification.
 - [ ] ⚖️ Politique de confidentialité : mentionner l'affichage public du commercial à l'honneur (prénom, initiale
       du nom, ville, poste, spécialités, langues, note, nombre de salons) et le retrait sur simple demande.
+- [ ] ⚖️ Contrôle des mots de passe divulgués : à l'inscription, à la réinitialisation et au changement de mot de
+      passe, l'appli interroge Have I Been Pwned (service Pwned Passwords), en n'envoyant que 5 caractères de
+      l'empreinte SHA-1 du mot de passe. À mentionner dans la politique de confidentialité si l'avocat le juge utile.
+      Réglage : `PWNED_PASSWORDS_URL` (`off` pour couper).
 - [ ] ⚖️ Relances d'inscription (J+1, J+3, J+7, voir [`05-EMAILS.md`](05-EMAILS.md)) : faire confirmer qu'elles
       relèvent bien du suivi de compte, et fixer la durée de conservation des comptes jamais terminés (aujourd'hui
       ils sont gardés sans limite).
-- [ ] 🧑 Calendrier réel des salons : import CSV dans `/admin/salons`, dates vérifiées, logos uniquement avec
-      l'accord écrit de l'organisateur.
+- [ ] 🧑 Calendrier réel des salons : modèle Excel à télécharger dans `/admin/salons` (« Télécharger le modèle
+      Excel »), rempli puis réimporté (le CSV marche aussi). Dates à vérifier ensuite sur le site de l'organisateur,
+      logos uniquement avec l'accord écrit de l'organisateur.
 
 ## 4. Recette, puis ouverture
 

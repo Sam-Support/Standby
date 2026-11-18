@@ -57,6 +57,8 @@ sa règle SPF ne changent pas.
    - `EMAIL_FROM` doit appartenir au domaine vérifié à l'étape 2.
    - `EMAIL_REPLY_TO` est l'adresse qui reçoit les réponses des utilisateurs. À défaut, c'est
      `SUPPORT_EMAIL` qui sert.
+   - En mode manuel (`PAYMENT_MODE=manuel`), `SUPPORT_EMAIL` reçoit aussi un e-mail à chaque étape importante
+     (catégorie « equipe », voir [`07-A-FAIRE.md`](07-A-FAIRE.md), section 2 bis) : de quoi établir les contrats.
    - `SUPPORT_EMAIL` reçoit les messages du formulaire de contact : « Répondre » y écrit directement au
      visiteur.
 8. **Vérification** : dans `/admin/emails`, le bloc *Configuration* ne doit plus signaler de problème.

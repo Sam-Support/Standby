@@ -1,8 +1,11 @@
 import { randomInt } from "node:crypto";
+import { COMMISSION_LIMITS, isCommissionType, type CommissionType } from "@/lib/commission";
+import { bookingLines, mailTeam } from "@/lib/team-mail";
+import { lastInitial } from "@/lib/names";
 import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
-import { isRoleKey, ROLES, type RoleKey } from "@/lib/domain";
+import { isProspectionRole, isRoleKey, ROLES, type OfferKey, type RoleKey } from "@/lib/domain";
 import { daysUntil, listDays, todayIso } from "@/lib/format";
 import { daysOverlap, matchScore } from "@/lib/matching";
 import { audit, notify, notifyAdmins } from "@/lib/notify";
@@ -53,7 +56,14 @@ export async function createDraft(db: Db, companyId: string, eventSlug?: string 
  * Point d'entrée « Nouvelle réservation » : reprend le dernier brouillon resté vide (aucun poste choisi) au lieu
  * d'en créer un à chaque visite ; un salon passé en paramètre le remplace.
  */
-export async function startDraft(db: Db, companyId: string, eventSlug?: string | null): Promise<Booking> {
+export async function startDraft(db: Db, companyId: string, eventSlug?: string | null, offer?: OfferKey | null): Promise<Booking> {
+  const draft = await reuseOrCreateDraft(db, companyId, eventSlug);
+  if (!offer || draft.offer === offer) return draft;
+  const [updated] = await db.update(s.bookings).set({ offer, ...(offer === "prospection" ? { outfit: "perso" as const } : {}) }).where(eq(s.bookings.id, draft.id)).returning();
+  return updated;
+}
+
+async function reuseOrCreateDraft(db: Db, companyId: string, eventSlug?: string | null): Promise<Booking> {
   const drafts = await db
     .select()
     .from(s.bookings)
@@ -187,11 +197,34 @@ export async function saveEventStep(
 export async function saveTeamStep(
   db: Db,
   b: Booking,
-  input: { positions: Partial<Record<RoleKey, number>>; languages: string[]; outfit: "exposant" | "perso" },
+  input: {
+    positions: Partial<Record<RoleKey, number>>;
+    languages: string[];
+    outfit: "exposant" | "perso";
+    offer?: OfferKey;
+    commission?: { type: CommissionType; leadCents: number; saleBps: number };
+  },
 ) {
   assertDraft(b);
+  const offer: OfferKey = input.offer === "prospection" ? "prospection" : "stand";
   const entries = Object.entries(input.positions).filter(([role, qty]) => isRoleKey(role) && (qty ?? 0) > 0) as [RoleKey, number][];
-  if (entries.length === 0) throw new BookingError("Ajoutez au moins une personne sur le stand.");
+  if (entries.length === 0) {
+    if (offer === "prospection") throw new BookingError("Ajoutez au moins un prospecteur.");
+    throw new BookingError("Ajoutez au moins une personne sur le stand.");
+  }
+  // une formule = un type de postes : stand (commercial, accueil…) ou prospection (prospecteurs)
+  if (entries.some(([role]) => isProspectionRole(role) !== (offer === "prospection"))) {
+    throw new BookingError("Les prospecteurs se réservent avec la formule « prospection », les autres postes avec une équipe de stand.");
+  }
+  const commission = input.commission ?? { type: "aucune" as CommissionType, leadCents: 0, saleBps: 0 };
+  if (!isCommissionType(commission.type)) throw new BookingError("Commission par lead invalide : entre 0,50 € et 500 €.");
+  if (commission.type === "vente" && offer === "prospection") throw new BookingError("La commission sur les ventes ne s’applique qu’à une équipe de stand.");
+  if (commission.type === "lead" && !(commission.leadCents >= COMMISSION_LIMITS.minLeadCents && commission.leadCents <= COMMISSION_LIMITS.maxLeadCents)) {
+    throw new BookingError("Commission par lead invalide : entre 0,50 € et 500 €.");
+  }
+  if (commission.type === "vente" && !(commission.saleBps >= COMMISSION_LIMITS.minSaleBps && commission.saleBps <= COMMISSION_LIMITS.maxSaleBps)) {
+    throw new BookingError("Commission sur les ventes invalide : entre 0,5 % et 50 %.");
+  }
   if (entries.some(([, q]) => q > 20)) throw new BookingError("20 personnes maximum par poste.");
   const languages = [...new Set(input.languages.map((l) => l.trim()).filter(Boolean))].slice(0, 10);
   if (languages.length === 0) throw new BookingError("Choisissez au moins une langue.");
@@ -213,7 +246,17 @@ export async function saveTeamStep(
     else keep.set(a.role, n + 1);
   }
   if (toDelete.length) await db.delete(s.assignments).where(inArray(s.assignments.id, toDelete));
-  await db.update(s.bookings).set({ languages, outfit: input.outfit }).where(eq(s.bookings.id, b.id));
+  await db
+    .update(s.bookings)
+    .set({
+      languages,
+      outfit: offer === "prospection" ? "perso" : input.outfit,
+      offer,
+      commissionType: commission.type,
+      commissionLeadCents: commission.type === "lead" ? commission.leadCents : 0,
+      commissionSaleBps: commission.type === "vente" ? commission.saleBps : 0,
+    })
+    .where(eq(s.bookings.id, b.id));
 }
 
 export async function saveBriefStep(
@@ -228,9 +271,12 @@ export async function saveBriefStep(
     leadTemplateId: string | null;
     leadFrequency: "quotidien" | "fin";
     brochure?: { path: string; name: string } | null;
+    prospectionTarget?: string;
   },
 ) {
   assertDraft(b);
+  const target = input.prospectionTarget?.trim().slice(0, 2000) || null;
+  if (b.offer === "prospection" && !target) throw new BookingError("Décrivez les cibles de la prospection : types d’exposants ou de visiteurs, secteurs, objectif.");
   let referentId: string | null = null;
   if (input.referentId) {
     const [r] = await db
@@ -261,6 +307,7 @@ export async function saveBriefStep(
       brief: input.brief.trim().slice(0, 5000) || null,
       leadTemplateId,
       leadFrequency: input.leadFrequency,
+      prospectionTarget: b.offer === "prospection" ? target : null,
       ...(input.brochure ? { brochurePath: input.brochure.path, brochureName: input.brochure.name } : {}),
     })
     .where(eq(s.bookings.id, b.id));
@@ -381,6 +428,7 @@ export async function confirmationIssues(db: Db, b: Booking): Promise<string[]> 
   const positions = await db.select().from(s.bookingPositions).where(eq(s.bookingPositions.bookingId, b.id));
   if (positions.length === 0) issues.push("Composez l’équipe.");
   if (!b.referentId && !b.referentOtherName) issues.push("Indiquez le référent sur place dans le brief.");
+  if (b.offer === "prospection" && !b.prospectionTarget) issues.push("Décrivez les cibles de la prospection dans le brief.");
   const selected = await db.select().from(s.assignments).where(eq(s.assignments.bookingId, b.id));
   for (const p of positions) {
     const n = selected.filter((a) => a.role === p.role).length;
@@ -412,11 +460,17 @@ export async function confirmBooking(db: Db, b: Booking, actorId: string) {
     .where(and(eq(s.assignments.bookingId, b.id), eq(s.assignments.status, "selectionne")));
   for (const a of ctx.assignments) {
     await notify(db, a.userId, {
-      t: (n) => n.newMission({ event: ctx.event?.name ?? null, role: a.role, days: b.days.length, rateCents: a.hourlyRateCents }),
+      t: (n) => n.newMission({ event: ctx.event?.name ?? null, role: a.role, days: b.days.length, rateCents: a.hourlyRateCents, commission: b }),
       link: `/commercial/missions/${a.id}`,
     });
   }
   await audit(db, actorId, "booking.confirm", "booking", b.id, { totalHtCents: ctx.quote.totalHtCents });
+  await mailTeam(
+    db,
+    `[${b.ref}] Nouvelle réservation confirmée par l’entreprise`,
+    ["Missions envoyées aux commerciaux. Contrat à établir avec l’entreprise.", "", ...(await bookingLines(db, b.id))],
+    `/admin/reservations/${b.id}`,
+  );
 }
 
 async function refreshBookingStatus(db: Db, bookingId: string) {
@@ -455,7 +509,8 @@ export async function respondToMission(db: Db, assignmentId: string, freelancerU
   const updated = await refreshBookingStatus(db, row.b.id);
   if (accept) {
     await notify(db, owner.ownerId, {
-      t: (n) => (updated?.status === "confirmee" ? n.bookingConfirmed({ ref: row.b.ref }) : n.missionAccepted({ first: p.firstName, last: p.lastName, ref: row.b.ref })),
+      // initiale du nom seulement : pas de contact direct avant l'accord de Stand-By
+      t: (n) => (updated?.status === "confirmee" ? n.bookingConfirmed({ ref: row.b.ref }) : n.missionAccepted({ first: p.firstName, last: lastInitial(p.lastName), ref: row.b.ref })),
       link: `/entreprise/reservations/${row.b.id}`,
     });
   } else {
@@ -465,6 +520,13 @@ export async function respondToMission(db: Db, assignmentId: string, freelancerU
       link: `/entreprise/reservations/${row.b.id}`,
     });
   }
+  const complete = accept && updated?.status === "confirmee";
+  await mailTeam(
+    db,
+    `[${row.b.ref}] ${p.firstName} ${p.lastName} ${accept ? "accepte" : "refuse"} la mission${complete ? " · équipe complète" : ""}`,
+    [complete ? "Toute l’équipe a accepté : vous pouvez finaliser le contrat puis autoriser le contact." : "", ...(await bookingLines(db, row.b.id))],
+    `/admin/reservations/${row.b.id}`,
+  );
 }
 
 async function updateAcceptRate(db: Db, freelancerId: string) {
@@ -568,7 +630,7 @@ export async function withdrawFromMission(db: Db, assignmentId: string, freelanc
   const [p] = await db.select().from(s.profiles).where(eq(s.profiles.id, freelancerUserId));
   const newRate = replacement && replacement.hourlyRateCents !== row.a.hourlyRateCents ? replacement.hourlyRateCents : null;
   await notify(db, owner.ownerId, {
-    t: (n) => n.withdrew({ ref: row.b.ref, first: p.firstName, last: p.lastName, score: replacement ? replacement.score : null, rateCents: newRate }),
+    t: (n) => n.withdrew({ ref: row.b.ref, first: p.firstName, last: lastInitial(p.lastName), score: replacement ? replacement.score : null, rateCents: newRate }),
     link: `/entreprise/reservations/${row.b.id}`,
   });
   await notifyAdmins(db, {
@@ -578,5 +640,11 @@ export async function withdrawFromMission(db: Db, assignmentId: string, freelanc
     email: !replacement || daysBefore <= 2,
   });
   await audit(db, freelancerUserId, "assignment.withdraw", "assignment", assignmentId, { daysBefore, replaced: Boolean(replacement) });
+  await mailTeam(
+    db,
+    `[${row.b.ref}] Désistement de ${p.firstName} ${p.lastName} (J-${daysBefore})`,
+    [`Motif : ${motive}`, replacement ? "Un remplaçant a reçu la mission." : "Aucun remplaçant libre : à traiter.", "", ...(await bookingLines(db, row.b.id))],
+    `/admin/reservations/${row.b.id}`,
+  );
   return { replaced: Boolean(replacement), daysBefore };
 }

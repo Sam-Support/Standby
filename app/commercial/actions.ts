@@ -136,6 +136,8 @@ export async function updateIdentityAction(_: FormState, fd: FormData): Promise<
       phone: str(fd, "phone"),
       city: str(fd, "city") || f.city,
       bio: str(fd, "bio"),
+      linkedin: str(fd, "linkedin"),
+      instagram: str(fd, "instagram"),
     });
   } catch (e) {
     return fail(e);

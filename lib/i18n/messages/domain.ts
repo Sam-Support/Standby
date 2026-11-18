@@ -18,6 +18,7 @@ const ROLE_LABELS: Record<"en" | "es", Record<RoleKey, Role>> = {
     },
     animateur: { label: "Event host", short: "Animation", plural: "event hosts", desc: "microphone, games, crowd flow" },
     demonstrateur: { label: "Product demonstrator", short: "Product demo", plural: "demonstrators", desc: "demos, tastings, sales" },
+    prospecteur: { label: "Independent prospector", short: "Prospecting", plural: "prospectors", desc: "prospecting in the show aisles, no booth" },
   },
   es: {
     commercial: { label: "Comercial de stand", short: "Comercial", plural: "comerciales", desc: "pitch, cualificación de leads" },
@@ -31,6 +32,7 @@ const ROLE_LABELS: Record<"en" | "es", Record<RoleKey, Role>> = {
     },
     animateur: { label: "Animador/a", short: "Animación", plural: "animadores", desc: "micrófono, juegos, animación de público" },
     demonstrateur: { label: "Demostrador/a de producto", short: "Demo producto", plural: "demostradores", desc: "demostraciones, degustaciones, venta" },
+    prospecteur: { label: "Prospector/a autónomo/a", short: "Prospección", plural: "prospectores", desc: "prospección en los pasillos de la feria, sin stand" },
   },
 };
 

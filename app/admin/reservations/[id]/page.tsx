@@ -9,10 +9,13 @@ import { dateRange, dayLabel, euros, eurosPrecise, hourly, hoursLabel, longDate 
 import { loadAssignments } from "@/lib/services/booking";
 import { creditableCents, creditNotesFor, REFUND_LABELS } from "@/lib/services/credit-notes";
 import { requireAdmin } from "@/lib/auth/session";
+import { manualPayments } from "@/lib/payment-mode";
 import {
   adminCancelAction,
   adminValidateHours,
+  authorizeContactAction,
   issueCreditNoteAction,
+  markPaymentReceivedAction,
   markRefundedAction,
   retryPaymentAction,
   retryRefundAction,
@@ -112,10 +115,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 {euros(p.amountCents)} · <Status tone={p.status === "reussi" ? "ok" : p.status === "echoue" ? "warn" : "info"}>{p.status.replace("_", " ")}</Status>
                 {p.error ? <span className="muted small"> · {p.error}</span> : null}
               </span>
-              {p.status === "echoue" && (
-                <ActionForm action={retryPaymentAction.bind(null, p.id)}>
-                  <Submit className="clay s btn xs">Relancer</Submit>
+              {manualPayments() && p.status !== "reussi" ? (
+                <ActionForm action={markPaymentReceivedAction.bind(null, p.id)}>
+                  <Submit className="clay s btn xs ok">Paiement reçu</Submit>
                 </ActionForm>
+              ) : (
+                p.status === "echoue" && (
+                  <ActionForm action={retryPaymentAction.bind(null, p.id)}>
+                    <Submit className="clay s btn xs">Relancer</Submit>
+                  </ActionForm>
+                )
               )}
             </div>
           ))}
@@ -128,11 +137,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 <br />
                 <span className="muted small">{n.reason}{n.refundError ? ` · ${n.refundError}` : ""}</span>
               </span>
-              {n.refundStatus === "echoue" && (
+              {(n.refundStatus === "echoue" || (manualPayments() && n.refundStatus === "en_cours")) && (
                 <span className="inline">
-                  <ActionForm action={retryRefundAction.bind(null, n.id)}>
-                    <Submit className="clay s btn xs">Relancer le remboursement</Submit>
-                  </ActionForm>
+                  {!manualPayments() && (
+                    <ActionForm action={retryRefundAction.bind(null, n.id)}>
+                      <Submit className="clay s btn xs">Relancer le remboursement</Submit>
+                    </ActionForm>
+                  )}
                   <ActionForm action={markRefundedAction.bind(null, n.id)}>
                     <Submit className="clay s btn xs ghost">Remboursé par virement</Submit>
                   </ActionForm>
@@ -143,6 +154,31 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </section>
         <section className="clay panel">
           <h2>Actions</h2>
+          <div className="stack" style={{ gap: 8 }}>
+            <h3 className="stitle">Coordonnées</h3>
+            {b.contactAuthorizedAt ? (
+              <p className="muted small">
+                <Status tone="ok">contact autorisé</Status> le {longDate(b.contactAuthorizedAt)} : l’entreprise voit les noms complets et les téléphones
+                de l’équipe, les commerciaux voient le téléphone du référent.
+              </p>
+            ) : ["brouillon", "annulee"].includes(b.status) ? (
+              <p className="muted small">Disponible une fois la réservation confirmée.</p>
+            ) : (
+              <ActionForm action={authorizeContactAction.bind(null, b.id)} className="stack" style={{ gap: 8 }}>
+                <p className="muted small">
+                  Tant que le contact n’est pas autorisé, l’entreprise ne voit que « Prénom N. » et aucun téléphone. Autorisez-le une fois le contrat signé
+                  ou le paiement reçu : chacun reçoit alors les coordonnées de l’autre.
+                </p>
+                <label className="check">
+                  <input type="checkbox" name="confirm" required />
+                  Contrat signé ou paiement reçu pour {b.ref}
+                </label>
+                <div>
+                  <Submit className="clay s btn sm ok">Autoriser le contact</Submit>
+                </div>
+              </ActionForm>
+            )}
+          </div>
           {["brouillon", "envoyee", "partielle", "confirmee", "en_cours"].includes(b.status) ? (
             <ActionForm action={adminCancelAction.bind(null, b.id)} className="stack">
               <label className="check">

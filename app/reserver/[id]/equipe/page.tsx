@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isCommissionType } from "@/lib/commission";
 import { getLang } from "@/lib/i18n/server";
 import { localizePath } from "@/lib/i18n/config";
 import { Stepper } from "@/components/booking";
@@ -35,6 +36,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         id={id}
         action={saveTeam.bind(null, id)}
         kind={d.event.kind}
+        initialOffer={d.booking.offer === "prospection" ? "prospection" : "stand"}
+        initialCommission={{
+          type: isCommissionType(d.booking.commissionType) ? d.booking.commissionType : "aucune",
+          leadCents: d.booking.commissionLeadCents,
+          saleBps: d.booking.commissionSaleBps,
+        }}
+        commissionDefaults={d.pricing.commissionDefaults}
         initialQty={initialQty}
         initialLanguages={d.booking.languages}
         initialOutfit={(d.booking.outfit === "perso" ? "perso" : "exposant") as OutfitKey}

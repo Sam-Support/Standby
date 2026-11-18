@@ -4,6 +4,7 @@ import * as s from "@/db/schema";
 import { eurosPrecise } from "@/lib/format";
 import { refundPayment, stripeEnabled } from "@/lib/integrations/stripe";
 import { audit, notify } from "@/lib/notify";
+import { manualPayments } from "@/lib/payment-mode";
 import { markPaymentSucceeded } from "./billing";
 import { BookingError } from "./booking";
 
@@ -108,6 +109,12 @@ export async function refundCreditNote(db: Db, creditNoteId: string) {
   const { note } = row;
   if (note.refundStatus === "rembourse" || (note.refundStatus === "en_cours" && note.stripeRefundId)) return;
   const set = (v: Partial<CreditNote>) => db.update(s.creditNotes).set(v).where(eq(s.creditNotes.id, note.id));
+  if (manualPayments()) {
+    const payment = await latestPayment(db, row.booking.id);
+    // déjà encaissé : l'équipe rembourse par virement ; sinon, l'avoir est simplement déduit de la somme à régler
+    if (payment?.status === "reussi") await set({ refundStatus: "en_cours", refundError: "Paiement manuel : remboursez par virement, puis cliquez « Remboursé par virement »." });
+    return;
+  }
   if (!stripeEnabled()) {
     await set({ refundStatus: "rembourse", refundError: null });
     return;

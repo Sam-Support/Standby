@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { nameFor, lastInitial } from "@/lib/names";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getDb, schema as s } from "@/db";
@@ -12,7 +13,7 @@ import { domainLabels } from "@/lib/i18n/messages/domain";
 import { getFmt, getMessages, say } from "@/lib/i18n/server";
 import { getCompanyBooking, loadBookingContext } from "@/lib/services/booking";
 import { companyDashboard } from "@/lib/services/company-views";
-import { bookingLeads, templateColumns } from "@/lib/services/leads";
+import { bookingLeads, leadsCountByAssignment, templateColumns } from "@/lib/services/leads";
 import { fileUrl } from "@/lib/storage";
 import { cancel } from "@/app/reserver/actions";
 import { cancellationSchedule } from "@/lib/cancellation";
@@ -40,6 +41,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const [payment] = await db.select().from(s.payments).where(eq(s.payments.bookingId, id));
   const quote = (booking.quote as typeof ctx.quote | null) ?? ctx.quote;
   const team = ctx.assignments.filter((a) => a.status !== "selectionne");
+  const leadCounts = await leadsCountByAssignment(db, team.map((a) => a.id));
   const canCancel = CANCELLABLE.includes(booking.status);
   const terms = canCancel ? await cancellationTerms(db, booking) : null;
   const m = await getMessages(messages);
@@ -83,16 +85,17 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <section className="clay panel">
             <h2>{t.team}</h2>
             {team.length === 0 && <p className="muted">{t.noTeam}</p>}
+            {team.length > 0 && !booking.contactAuthorizedAt && <p className="note info">{t.contactPending}</p>}
             {team.map((a) => (
               <div key={a.id} className="brow">
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <Avatar first={a.firstName} last={a.lastName} color={a.avatarColor} />
+                  <Avatar first={a.firstName} last={lastInitial(a.lastName)} color={a.avatarColor} />
                   <span>
-                    <b>{a.firstName} {a.lastName}</b>
+                    <b>{nameFor(a.firstName, a.lastName, Boolean(booking.contactAuthorizedAt))}</b>
                     <br />
                     <span className="muted small">
                       {dl.role(a.role).short} · {f.hourly(a.hourlyRateCents)}
-                      {a.status === "acceptee" && a.phone ? ` · ${a.phone}` : ""}
+                      {a.status === "acceptee" && a.phone && booking.contactAuthorizedAt ? ` · ${a.phone}` : ""}
                       {a.topSize ? t.outfit(a.topSize, a.pantsSize, a.shoeSize) : ""}
                     </span>
                   </span>
@@ -110,7 +113,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 .filter((a) => a.status === "acceptee")
                 .map((a) => {
                   const r = reviews.find((x) => x.freelancerId === a.freelancerId);
-                  return <ReviewForm key={a.id} a={a} given={r ? { rating: r.rating, comment: r.comment } : undefined} />;
+                  return <ReviewForm key={a.id} a={a} authorized={Boolean(booking.contactAuthorizedAt)} given={r ? { rating: r.rating, comment: r.comment } : undefined} />;
                 })}
             </section>
           )}
@@ -120,7 +123,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <h2>{m.dash.hoursTitle}</h2>
               <div className="stack">
                 {row.hours.map((h) => (
-                  <HoursRow key={h.id} a={h} />
+                  <HoursRow
+                    key={h.id}
+                    a={h}
+                    authorized={Boolean(booking.contactAuthorizedAt)}
+                    commission={booking.commissionType === "lead" || booking.commissionType === "vente" ? { type: booking.commissionType, leads: leadCounts.get(h.id) ?? 0 } : null}
+                  />
                 ))}
               </div>
               <p className="muted small">{t.hoursHelp}</p>

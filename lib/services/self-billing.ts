@@ -83,7 +83,7 @@ export async function issueSelfBill(db: Db, payoutId: string): Promise<Freelance
     const minutes = sheets.reduce((n, t) => n + (t.minutesValidated ?? 0), 0);
     kind = "mission";
     label = `${ROLES[a.role as RoleKey]?.label ?? a.role} · ${where}`;
-    detail = `${hoursLabel(minutes)} validées × ${hourly(a.hourlyRateCents)} · réservation ${b.ref}`;
+    detail = `${hoursLabel(minutes)} validées × ${hourly(a.hourlyRateCents)}${a.commissionCents > 0 ? ` + commission ${(a.commissionCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : ""} · réservation ${b.ref}`;
   }
   const supplier: Supplier = {
     name: `${pr.firstName} ${pr.lastName}`,

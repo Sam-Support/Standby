@@ -1,4 +1,5 @@
 import Link from "@/components/link";
+import { features } from "@/lib/i18n/messages/features";
 import { getLang, getMessages } from "@/lib/i18n/server";
 import { booking } from "@/lib/i18n/messages/booking";
 import { localizePath } from "@/lib/i18n/config";
@@ -21,6 +22,7 @@ export async function generateMetadata() {
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const d = await loadDraft(id, "brief");
+  const x = await getMessages(features);
   if (!d.event) redirect(localizePath(`/reserver/${id}/evenement`, await getLang()));
   if (d.positions.length === 0) redirect(localizePath(`/reserver/${id}/equipe`, await getLang()));
   const referents = await d.db.select().from(s.companyReferents).where(eq(s.companyReferents.companyId, d.company.id));
@@ -97,6 +99,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 placeholder={t.briefPlaceholder}
               ></textarea>
             </label>
+            {d.booking.offer === "prospection" && (
+              <label className="field">
+                <span>
+                  {x.brief.target} <span className="req">*</span>
+                </span>
+                <textarea className="input" name="prospectionTarget" required defaultValue={d.booking.prospectionTarget ?? ""} placeholder={x.brief.targetPlaceholder}></textarea>
+                <span className="hint">{x.brief.targetHint}</span>
+              </label>
+            )}
 
             <h2 className="ptitle">{t.leads}</h2>
             {crm ? (

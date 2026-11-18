@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import { nameFor } from "@/lib/names";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { dateRange, daysUntil, todayIso } from "@/lib/format";
@@ -60,7 +61,7 @@ async function remindJ7(db: Db, b: B, e: E, c: C, left: number) {
   for (const a of admins) {
     await notify(db, a.id, {
       title: `Badges à demander (${b.ref})`,
-      body: `J-${left} : demander ${accepted.length} badge(s) exposant pour ${c.name} auprès de l’organisateur de ${when}.${waiting.length ? ` ${waiting.length} acceptation(s) encore en attente.` : ""}`,
+      body: `J-${left} : demander ${accepted.length} badge(s) ${b.offer === "prospection" ? "visiteur (prospection sans stand)" : "exposant"} pour ${c.name} auprès de l’organisateur de ${when}.${waiting.length ? ` ${waiting.length} acceptation(s) encore en attente.` : ""}`,
       link: `/admin/reservations/${b.id}`,
       email: false,
     });
@@ -78,11 +79,13 @@ async function remindJ7(db: Db, b: B, e: E, c: C, left: number) {
 async function remindJ2(db: Db, b: B, e: E, c: C, left: number) {
   const { accepted } = await team(db, b.id);
   const ref = await referentOf(db, b);
-  const contacts = accepted.map((a) => `${a.firstName} ${a.lastName}${a.phone ? ` (${a.phone})` : ""}`).join(", ");
-  await notify(db, c.ownerId, { t: (n) => n.briefingCompany({ event: e.name, left, referent: ref.name, contacts }), link: `/entreprise/reservations/${b.id}` });
+  // coordonnées des commerciaux seulement si l'équipe Stand-By a autorisé le contact (contrat signé)
+  const authorized = Boolean(b.contactAuthorizedAt);
+  const contacts = accepted.map((a) => `${nameFor(a.firstName, a.lastName, authorized)}${authorized && a.phone ? ` (${a.phone})` : ""}`).join(", ");
+  await notify(db, c.ownerId, { t: (n) => n.briefingCompany({ event: e.name, left, referent: ref.name, contacts, authorized }), link: `/entreprise/reservations/${b.id}` });
   for (const a of accepted) {
     await notify(db, a.userId, {
-      t: (n) => n.briefingFreelancer({ event: e.name, left, referent: ref.name, phone: ref.phone ?? null, startTime: b.startTime, endTime: b.endTime, stand: b.stand }),
+      t: (n) => n.briefingFreelancer({ event: e.name, left, referent: ref.name, phone: authorized ? (ref.phone ?? null) : null, startTime: b.startTime, endTime: b.endTime, stand: b.stand }),
       link: `/commercial/missions/${a.id}`,
     });
   }

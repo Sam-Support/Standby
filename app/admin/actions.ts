@@ -1,5 +1,6 @@
 "use server";
 
+import { authorizeContact } from "@/lib/services/contact";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -8,8 +9,9 @@ import { eurosToCents, fail, file, parseHours, str, type FormState } from "@/lib
 import { requireAdmin } from "@/lib/auth/session";
 import { PRICING_DEFAULTS } from "@/lib/domain";
 import { confirmCompanySiret, reviewDocument } from "@/lib/services/accounts";
+import { eventsWorkbookToCsv } from "@/lib/services/events-template";
 import { importEventsCsv, markMessageHandled, removeEventLogo, saveEvent, setFeaturedFreelancer, setPricing } from "@/lib/services/admin";
-import { chargeBooking, runPayouts } from "@/lib/services/billing";
+import { chargeBooking, markPaymentReceived, markPayoutPaid, runPayouts } from "@/lib/services/billing";
 import { advanceBookings } from "@/lib/services/booking";
 import { cancelBooking } from "@/lib/services/cancellation";
 import { issueCreditNote, markRefundedManually, refundCreditNote } from "@/lib/services/credit-notes";
@@ -19,7 +21,7 @@ import { checkCompliance } from "@/lib/services/compliance";
 import { purgeExpiredData } from "@/lib/services/privacy";
 import { sendReminders } from "@/lib/services/reminders";
 import { sendSignupReminders } from "@/lib/services/signup-reminders";
-import { deleteReview } from "@/lib/services/reviews";
+import { deleteReview, publishReview } from "@/lib/services/reviews";
 import { readUpload } from "@/lib/storage";
 import { appUrl, sendEmail } from "@/lib/integrations/email";
 
@@ -71,9 +73,11 @@ export async function removeLogoAction(id: string): Promise<FormState> {
 export async function importCsvAction(_: FormState, fd: FormData): Promise<FormState> {
   try {
     const admin = await requireAdmin();
-    const f = await readUpload(file(fd, "csv"), ["csv", "txt"]);
-    if (!f) return { error: "Choisissez un fichier CSV." };
-    const res = await importEventsCsv(await getDb(), admin.id, f.data.toString("utf8"));
+    const f = await readUpload(file(fd, "csv"), ["csv", "txt", "xlsx"]);
+    if (!f) return { error: "Choisissez un fichier CSV ou Excel." };
+    // le classeur Excel suit le même import que le CSV (mêmes colonnes, mêmes contrôles)
+    const text = f.name.toLowerCase().endsWith(".xlsx") ? await eventsWorkbookToCsv(f.data) : f.data.toString("utf8");
+    const res = await importEventsCsv(await getDb(), admin.id, text);
     revalidatePath("/", "layout");
     return res.errors.length ? { error: `${res.created} salon(s) importé(s). ${res.errors.slice(0, 5).join(" · ")}` } : { ok: `${res.created} salon(s) importé(s).` };
   } catch (e) {
@@ -194,6 +198,42 @@ export async function markRefundedAction(creditNoteId: string): Promise<FormStat
   return { ok: "Avoir marqué comme remboursé." };
 }
 
+/** Coordonnées débloquées pour une réservation (contrat signé, paiement reçu). */
+export async function authorizeContactAction(bookingId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await authorizeContact(await getDb(), admin.id, bookingId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Contact autorisé : l’entreprise et les commerciaux ont reçu les coordonnées." };
+}
+
+/** Paiement à la main : virement de l'entreprise reçu. */
+export async function markPaymentReceivedAction(paymentId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await markPaymentReceived(await getDb(), admin.id, paymentId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Paiement noté comme reçu : la paie des commerciaux est programmée." };
+}
+
+/** Paiement à la main : virement au commercial effectué. */
+export async function markPayoutPaidAction(payoutId: string): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await markPayoutPaid(await getDb(), admin.id, payoutId);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: "Virement noté comme fait." };
+}
+
 export async function retryPaymentAction(paymentId: string): Promise<FormState> {
   try {
     await requireAdmin();
@@ -267,7 +307,20 @@ export async function deleteReviewAction(reviewId: string): Promise<FormState> {
     return fail(e);
   }
   revalidatePath("/admin/avis");
+  revalidatePath("/");
   return { ok: "Avis supprimé, note recalculée." };
+}
+
+export async function publishReviewAction(reviewId: string, on: boolean): Promise<FormState> {
+  try {
+    const admin = await requireAdmin();
+    await publishReview(await getDb(), admin.id, reviewId, on);
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/admin/avis");
+  revalidatePath("/");
+  return { ok: on ? "Avis publié sur la page d’accueil." : "Avis retiré de la page d’accueil." };
 }
 
 export async function handleMessageAction(id: string): Promise<FormState> {

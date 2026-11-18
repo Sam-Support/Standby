@@ -81,6 +81,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
                   {t.bio}
                   <textarea className="input" name="bio" defaultValue={f?.bio ?? ""} placeholder={t.bioPlaceholder}></textarea>
                 </label>
+                <h2 className="ptitle">{t.social} <span className="req">*</span></h2>
+                <p className="muted small">{t.socialHint}</p>
+                <div className="fgrid">
+                  <label className="field">
+                    {t.linkedin}
+                    <input className="input" name="linkedin" type="text" inputMode="url" autoComplete="url" defaultValue={f?.linkedinUrl ?? ""} placeholder="linkedin.com/in/…" />
+                  </label>
+                  <label className="field">
+                    {t.instagram}
+                    <input className="input" name="instagram" type="text" defaultValue={f?.instagramUrl ?? ""} placeholder="instagram.com/… ou @identifiant" />
+                  </label>
+                </div>
               </>
             )}
             {step === 2 && (

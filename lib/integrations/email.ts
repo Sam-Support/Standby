@@ -35,7 +35,7 @@ export function emailConfig() {
   return { enabled: resendEnabled(), from, replyTo, webhook: Boolean(process.env.RESEND_WEBHOOK_SECRET), problems };
 }
 
-export type EmailCategory = "compte" | "notification" | "contact" | "crm" | "test";
+export type EmailCategory = "compte" | "notification" | "contact" | "crm" | "test" | "equipe";
 
 export type EmailMessage = {
   to: string;

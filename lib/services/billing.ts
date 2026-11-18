@@ -1,10 +1,15 @@
-import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { leadsCountByAssignment } from "./leads";
+import { commissionFor } from "@/lib/commission";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { ROLES, isRoleKey, type RoleKey } from "@/lib/domain";
 import { nextMonday, todayIso } from "@/lib/format";
 import { chargeCustomer, stripeEnabled, transferToFreelancer } from "@/lib/integrations/stripe";
 import { audit, notify } from "@/lib/notify";
+import { manualPayments, onlinePayments } from "@/lib/payment-mode";
+import { euros } from "@/lib/format";
+import { bookingLines, mailTeam } from "@/lib/team-mail";
 import { payoutBreakdown } from "@/lib/pricing";
 import { frVatNumber } from "@/lib/siret";
 import { getPricing } from "@/lib/settings";
@@ -74,6 +79,29 @@ export async function finalizeBooking(db: Db, bookingId: string) {
     detail: `${(v.minutes / 60).toLocaleString("fr-FR")} h validées`,
     totalCents: v.total,
   }));
+  // commission fixée dans l'offre : par lead qualifié (nombre retenu par l'entreprise, sinon leads remontés) ou sur les ventes
+  if (b.commissionType === "lead" || b.commissionType === "vente") {
+    const rows = asg.length ? await db.select().from(s.assignments).where(inArray(s.assignments.id, asg.map((a) => a.id))) : [];
+    const counted = b.commissionType === "lead" ? await leadsCountByAssignment(db, asg.map((a) => a.id)) : new Map<string, number>();
+    let leadsTotal = 0;
+    let salesTotal = 0;
+    let commissionTotal = 0;
+    for (const r of rows) {
+      const qualifiedLeads = r.qualifiedLeads ?? counted.get(r.id) ?? 0;
+      const amount = commissionFor(b, { qualifiedLeads, salesCents: r.salesCents });
+      await db.update(s.assignments).set({ commissionCents: amount, ...(b.commissionType === "lead" ? { qualifiedLeads } : {}) }).where(eq(s.assignments.id, r.id));
+      leadsTotal += qualifiedLeads;
+      salesTotal += r.salesCents ?? 0;
+      commissionTotal += amount;
+    }
+    if (commissionTotal > 0) {
+      lines.push(
+        b.commissionType === "lead"
+          ? { label: `Commission · ${leadsTotal} lead(s) qualifié(s)`, detail: `${(b.commissionLeadCents / 100).toLocaleString("fr-FR")} € par lead`, totalCents: commissionTotal }
+          : { label: `Commission · ${(b.commissionSaleBps / 100).toLocaleString("fr-FR")} % des ventes`, detail: `${(salesTotal / 100).toLocaleString("fr-FR")} € HT de ventes réalisées sur le stand`, totalCents: commissionTotal },
+      );
+    }
+  }
   const subtotalCents = lines.reduce((n, l) => n + l.totalCents, 0);
   const serviceFeeCents = Math.round((subtotalCents * pricing.serviceFeeBps) / 10000);
   const totalHtCents = subtotalCents + serviceFeeCents;
@@ -110,6 +138,22 @@ export async function chargeBooking(db: Db, paymentId: string) {
   if (!p || p.status === "reussi") return;
   const [b] = await db.select().from(s.bookings).where(eq(s.bookings.id, p.bookingId));
   const [company] = await db.select().from(s.companies).where(eq(s.companies.id, b.companyId));
+  if (manualPayments()) {
+    // paiement à la main : le paiement reste « en attente » jusqu'à « Paiement reçu » dans l'administration
+    const [invoice] = await db.select().from(s.invoices).where(eq(s.invoices.bookingId, b.id)).orderBy(desc(s.invoices.issuedAt)).limit(1);
+    await mailTeam(
+      db,
+      `[${b.ref}] Facture à encaisser : ${euros(p.amountCents)} TTC`,
+      [
+        `Facture ${invoice?.number ?? "—"} émise pour ${company.name} : ${euros(p.amountCents)} TTC à encaisser.`,
+        "Une fois le virement reçu, cliquez « Paiement reçu » sur la réservation : la paie des commerciaux est alors programmée.",
+        "",
+        ...(await bookingLines(db, b.id)),
+      ],
+      `/admin/reservations/${b.id}`,
+    );
+    return;
+  }
   if (!stripeEnabled()) {
     await markPaymentSucceeded(db, p.id, null);
     return;
@@ -163,7 +207,15 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
     await db.update(s.bookings).set({ status: "payee" }).where(eq(s.bookings.id, b.id));
     const asg = all.filter((a) => a.status === "acceptee");
     const minutes = await validatedMinutes(db, asg.map((a) => a.id));
-    due = asg.map((a) => ({ a, gross: Math.round((a.hourlyRateCents * (minutes.get(a.id) ?? 0)) / 60), commissionBps: pricing.freelancerCommissionBps }));
+    // la commission fixée par l'entreprise (leads ou ventes) s'ajoute aux heures
+    const extra = new Map(
+      asg.length ? (await db.select({ id: s.assignments.id, c: s.assignments.commissionCents }).from(s.assignments).where(inArray(s.assignments.id, asg.map((a) => a.id)))).map((r) => [r.id, r.c]) : [],
+    );
+    due = asg.map((a) => ({
+      a,
+      gross: Math.round((a.hourlyRateCents * (minutes.get(a.id) ?? 0)) / 60) + (extra.get(a.id) ?? 0),
+      commissionBps: pricing.freelancerCommissionBps,
+    }));
   }
   const regimes = new Map(
     due.length
@@ -191,7 +243,7 @@ export async function markPaymentSucceeded(db: Db, paymentId: string, chargeId: 
       .returning();
     if (!payout) continue;
     await issueSelfBill(db, payout.id);
-    if (stripeEnabled() && a.stripeAccountId) {
+    if (onlinePayments() && a.stripeAccountId) {
       try {
         const t = await transferToFreelancer({ amountCents: amount, accountId: a.stripeAccountId, transferGroup: b.ref, sourceCharge: chargeId });
         await db.update(s.payouts).set({ status: "transfere", stripeTransferId: t.id }).where(eq(s.payouts.id, payout.id));
@@ -217,6 +269,8 @@ async function missionCount(db: Db, freelancerId: string) {
 
 /** Tâche du lundi : virements programmés (simulés sans Stripe). */
 export async function runPayouts(db: Db, today = todayIso()) {
+  // paiement à la main : l'équipe vire elle-même, puis clique « Virement fait » dans l'administration
+  if (manualPayments()) return 0;
   const due = await db
     .select({ p: s.payouts, f: s.freelancers, b: s.bookings })
     .from(s.payouts)
@@ -242,6 +296,24 @@ export async function runPayouts(db: Db, today = todayIso()) {
     done++;
   }
   return done;
+}
+
+/** Paiement à la main : virement de l'entreprise reçu (bouton de l'administration). */
+export async function markPaymentReceived(db: Db, adminId: string, paymentId: string) {
+  const [p] = await db.select().from(s.payments).where(eq(s.payments.id, paymentId));
+  if (!p) throw new BookingError("Paiement introuvable.");
+  if (p.status === "reussi") return;
+  await markPaymentSucceeded(db, p.id, null);
+  await audit(db, adminId, "payment.manual_received", "payment", p.id, { amountCents: p.amountCents });
+}
+
+/** Paiement à la main : virement fait au commercial (bouton de l'administration). */
+export async function markPayoutPaid(db: Db, adminId: string, payoutId: string) {
+  const [p] = await db.select().from(s.payouts).where(eq(s.payouts.id, payoutId));
+  if (!p) throw new BookingError("Virement introuvable.");
+  if (p.status === "transfere") return;
+  await db.update(s.payouts).set({ status: "transfere" }).where(eq(s.payouts.id, p.id));
+  await audit(db, adminId, "payout.manual_paid", "payout", p.id, { amountCents: p.amountCents });
 }
 
 export async function assertInvoiceAccess(db: Db, invoiceId: string, companyId: string | null) {

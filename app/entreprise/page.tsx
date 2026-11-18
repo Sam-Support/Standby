@@ -1,4 +1,6 @@
 import Link from "@/components/link";
+import { leadsCountByAssignment } from "@/lib/services/leads";
+import { shortName, lastInitial } from "@/lib/names";
 import { eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import { HoursRow } from "@/components/hours-row";
@@ -43,6 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
 
   const upcoming = rows.filter((r) => ["envoyee", "partielle", "confirmee", "en_cours"].includes(r.booking.status));
   const toValidate = rows.filter((r) => r.booking.status === "heures_a_valider");
+  const leadCounts = await leadsCountByAssignment(db, toValidate.flatMap((r) => r.hours.map((h) => h.id)));
   const pendingMinutes = toValidate.flatMap((r) => r.hours.filter((h) => !h.validated && !h.pending)).reduce((n, h) => n + h.declared, 0);
   const leads = rows.reduce((n, r) => n + r.leads, 0);
   const columns =
@@ -158,7 +161,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
               </p>
               <div className="stack">
                 {r.hours.map((h) => (
-                  <HoursRow key={h.id} a={h} />
+                  <HoursRow
+                    key={h.id}
+                    a={h}
+                    authorized={Boolean(r.booking.contactAuthorizedAt)}
+                    commission={r.booking.commissionType === "lead" || r.booking.commissionType === "vente" ? { type: r.booking.commissionType, leads: leadCounts.get(h.id) ?? 0 } : null}
+                  />
                 ))}
               </div>
               <p className="muted small">{t.hoursHelp}</p>
@@ -222,9 +230,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
             <div className="inline" style={{ gap: 12 }}>
               {favorites.map(({ f: fr, p }) => (
                 <span key={fr.id} className="clay s" style={{ borderRadius: 14, padding: "8px 14px 8px 8px", display: "flex", gap: 10, alignItems: "center" }}>
-                  <Avatar first={p.firstName} last={p.lastName} color={fr.avatarColor} />
+                  <Avatar first={p.firstName} last={lastInitial(p.lastName)} color={fr.avatarColor} />
                   <span style={{ fontSize: 14 }}>
-                    <b>{p.firstName} {p.lastName}</b>
+                    <b>{shortName(p.firstName, p.lastName)}</b>
                     <br />
                     <span className="muted small">
                       {fr.roles[0] ? dl.role(fr.roles[0]).short : ""}

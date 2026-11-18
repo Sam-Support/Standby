@@ -126,6 +126,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
               </span>
               {f.siretCheckedAt && <span className="muted small">contrôlé le {longDate(f.siretCheckedAt)}</span>}
             </div>
+            <div className="brow">
+              <span>
+                <b>Réseaux</b>{" "}
+                {f.linkedinUrl ? <a href={f.linkedinUrl} target="_blank" rel="noopener noreferrer">LinkedIn</a> : <span className="muted small">LinkedIn non fourni</span>}
+                {" · "}
+                {f.instagramUrl ? <a href={f.instagramUrl} target="_blank" rel="noopener noreferrer">Instagram</a> : <span className="muted small">Instagram non fourni</span>}
+              </span>
+              <span className="muted small">visibles seulement par l’équipe</span>
+            </div>
             {f.blockedReason && <p className="note err">Retiré du matching : {f.blockedReason}</p>}
             {(Object.keys(DOCUMENT_TYPES) as DocumentKey[]).map((t) => {
               const d = docs.find((x) => x.freelancerId === f.id && x.type === t);

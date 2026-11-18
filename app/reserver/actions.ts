@@ -3,11 +3,12 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema as s } from "@/db";
-import { fail, oops, file, str, strs, type FormState } from "@/lib/action";
+import { eurosToCents, fail, oops, file, str, strs, type FormState } from "@/lib/action";
 import { localRedirect } from "@/lib/i18n/server";
 import { getCurrentUser, requireCompany } from "@/lib/auth/session";
 import { isRoleKey, ROLE_KEYS, type RoleKey } from "@/lib/domain";
-import { createCustomer, paymentMethodSession, stripeEnabled } from "@/lib/integrations/stripe";
+import { createCustomer, paymentMethodSession } from "@/lib/integrations/stripe";
+import { onlinePayments } from "@/lib/payment-mode";
 import {
   autoSelect,
   BookingError,
@@ -54,7 +55,19 @@ export async function saveTeam(id: string, _: FormState, fd: FormData): Promise<
     for (const r of ROLE_KEYS) positions[r] = Math.max(0, Math.min(20, Number(fd.get(`qty_${r}`)) || 0));
     const languages = [...strs(fd, "languages"), ...(str(fd, "otherLanguage") ? [str(fd, "otherLanguage")] : [])];
     const outfit = str(fd, "outfit");
-    await saveTeamStep(db, booking, { positions, languages, outfit: outfit === "perso" ? "perso" : "exposant" });
+    const commissionType = str(fd, "commissionType");
+    await saveTeamStep(db, booking, {
+      positions,
+      languages,
+      outfit: outfit === "perso" ? "perso" : "exposant",
+      offer: str(fd, "offer") === "prospection" ? "prospection" : "stand",
+      commission: {
+        type: commissionType === "lead" || commissionType === "vente" ? commissionType : "aucune",
+        leadCents: commissionType === "lead" ? eurosToCents(str(fd, "commissionLead")) : 0,
+        // « 5,5 » % → 550 points de base
+        saleBps: commissionType === "vente" ? eurosToCents(str(fd, "commissionSale")) : 0,
+      },
+    });
   } catch (e) {
     return fail(e);
   }
@@ -81,6 +94,7 @@ export async function saveBrief(id: string, _: FormState, fd: FormData): Promise
       leadTemplateId: str(fd, "template") || null,
       leadFrequency: str(fd, "frequency") === "fin" ? "fin" : "quotidien",
       brochure,
+      prospectionTarget: str(fd, "prospectionTarget"),
     });
     const fresh = await getCompanyBooking(db, id, booking.companyId);
     await autoSelect(db, fresh!);
@@ -133,7 +147,7 @@ export async function confirm(id: string, _: FormState, fd: FormData): Promise<F
     const user = await getCurrentUser();
     requireVerifiedEmail(user!);
     await confirmBooking(db, booking, user!.id);
-    if (stripeEnabled() && !company.stripePaymentMethodId) {
+    if (onlinePayments() && !company.stripePaymentMethodId) {
       let customerId = company.stripeCustomerId;
       if (!customerId) {
         customerId = await createCustomer(user!.email, company.name, company.id);
@@ -151,7 +165,7 @@ export async function paymentSetup(id: string): Promise<FormState> {
   let target = "";
   try {
     const { db, company, booking } = await ctx(id);
-    if (!stripeEnabled()) return oops("Paiement en ligne non configuré.");
+    if (!onlinePayments()) return oops("Paiement en ligne non configuré.");
     const user = await getCurrentUser();
     let customerId = company.stripeCustomerId;
     if (!customerId) {

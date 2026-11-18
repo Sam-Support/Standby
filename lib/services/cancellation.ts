@@ -1,4 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { euros } from "@/lib/format";
+import { bookingLines, mailTeam } from "@/lib/team-mail";
 import type { Db } from "@/db";
 import * as s from "@/db/schema";
 import { cancellationRate } from "@/lib/cancellation";
@@ -100,5 +102,11 @@ export async function cancelBooking(db: Db, b: Booking, actorId: string, opts: {
     await chargeBooking(db, payment.id);
   }
   await audit(db, actorId, "booking.cancel", "booking", b.id, { bps: record.bps, waived: record.waived, totalHtCents: record.totalHtCents });
+  await mailTeam(
+    db,
+    `[${b.ref}] Réservation annulée${record.totalTtcCents ? ` · frais ${euros(record.totalTtcCents)} TTC` : " sans frais"}`,
+    [record.waived ? "Annulation sans frais (geste commercial)." : `Frais d’annulation : ${record.bps / 100} % · ${euros(record.totalTtcCents)} TTC.`, "", ...(await bookingLines(db, b.id))],
+    `/admin/reservations/${b.id}`,
+  );
   return record;
 }
